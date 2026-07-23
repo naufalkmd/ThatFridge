@@ -1,0 +1,8 @@
+.env
+.env.local
+*.env
+frontend/node_modules/
+frontend/.next/
+backend/vendor/
+.DS_Store
+.vscode/
