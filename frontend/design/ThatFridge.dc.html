@@ -14,11 +14,14 @@
 @keyframes scanline { 0% { top:6%; } 100% { top:92%; } }
 @keyframes pop { 0% { transform:scale(.94); opacity:0; } 100% { transform:scale(1); opacity:1; } }
 @keyframes bounce { 0%,80%,100% { transform:translateY(0); } 40% { transform:translateY(-4px); } }
+@keyframes walk-patrol { 0%,100% { transform:translateX(-110px); } 50% { transform:translateX(110px); } }
+@keyframes walk-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-3px); } }
 body { margin:0; background:#cfe8fb; font-family:-apple-system,system-ui,sans-serif; }
 a { color:#2f6fb0; }
 a:hover { color:#22578f; }
 </style>
 <script src="./fridge-data.js"></script>
+<script src="./image-slot.js"></script>
 </helmet>
 <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402,874" style="margin:48px auto; display:block;">
 
@@ -43,13 +46,31 @@ a:hover { color:#22578f; }
       <div style="display:flex; width:{{ heroTrackWidth }}; transform:{{ heroTranslate }}; transition:transform .3s ease;" onTouchStart="{{ onHeroSwipeStart }}" onTouchEnd="{{ onHeroSwipeEnd }}">
         <sc-for list="{{ fridgesView }}" as="fr" hint-placeholder-count="2">
         <div style="width:362px; flex:none;">
-          <div style="position:relative; width:100%; height:236px; border-radius:28px; overflow:hidden; background:#4a89c9; animation:glow 5s ease-in-out infinite;">
-            <img src="./assets/fridge-hero.png" alt="Illustration of an open fridge stocked with fresh food" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 15%;" />
+          <div style="position:relative; width:100%; height:236px; border-radius:28px; overflow:hidden; background:{{ fr.pixelBg }}; animation:glow 5s ease-in-out infinite;">
+            <sc-if value="{{ fr.isPhoto }}" hint-placeholder-val="{{ true }}">
+              <img src="./assets/fridge-hero.png" alt="Illustration of an open fridge stocked with fresh food" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 15%;" />
+            </sc-if>
+            <sc-if value="{{ fr.isPixel }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+                <div style="position:relative; width:130px; height:170px;">
+                  <dc-import name="PixelIcon" cells="{{ fr.pixelIconData.cells }}" cols="{{ fr.pixelIconData.cols }}" rows="{{ fr.pixelIconData.rows }}" hint-size="130,170"></dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ fr.isCustom }}" hint-placeholder-val="{{ false }}">
+              <image-slot id="{{ fr.customImageId }}" shape="rect" placeholder="Drop your fridge photo" style="position:absolute; inset:0; width:100%; height:100%;"></image-slot>
+            </sc-if>
             <div style="position:absolute; top:22px; left:16%; width:3px; height:3px; border-radius:50%; background:#eaf3fb; animation:drip 4s ease-in infinite;"></div>
             <div style="position:absolute; top:18px; left:52%; width:3px; height:3px; border-radius:50%; background:#eaf3fb; animation:drip 4s ease-in infinite 1.3s;"></div>
             <div style="position:absolute; top:14px; left:14px; background:rgba(255,255,255,0.85); color:#16325c; font-size:12px; font-weight:800; padding:6px 11px; border-radius:14px;">{{ fr.name }}</div>
             <div style="position:absolute; bottom:12px; left:16px; background:rgba(22,50,92,0.55); backdrop-filter:blur(6px); color:#fff; font-size:11px; font-weight:600; padding:5px 10px; border-radius:20px;">{{ fr.itemCount }} items tracked</div>
             <div style="position:absolute; top:14px; right:14px; background:rgba(255,255,255,0.85); color:{{ fr.color }}; font-size:12px; font-weight:800; padding:6px 11px; border-radius:14px;">{{ fr.freshness }}% fresh</div>
+            <div onClick="{{ fr.onOpenStyle }}" style="position:absolute; right:14px; bottom:12px; width:30px; height:30px; border-radius:15px; background:rgba(255,255,255,0.85); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:2;">
+              <div style="display:grid; grid-template-columns:repeat(2,5px); grid-template-rows:repeat(2,5px); gap:2px;">
+                <div style="background:#16325c; border-radius:1px;"></div><div style="background:#16325c; border-radius:1px;"></div>
+                <div style="background:#16325c; border-radius:1px;"></div><div style="background:#16325c; border-radius:1px;"></div>
+              </div>
+            </div>
           </div>
         </div>
         </sc-for>
@@ -98,6 +119,62 @@ a:hover { color:#22578f; }
         <div style="font-size:13.5px; line-height:1.4; color:#16325c;">{{ chefMessage }}</div>
       </div>
       <img src="./assets/chef-mascot.png" alt="Chef mascot" style="position:absolute; right:2px; bottom:-8px; width:66px; height:66px; object-fit:contain;" />
+    </div>
+
+    <!-- meet your crew -->
+    <div style="margin-bottom:22px;">
+      <div style="font-size:15px; font-weight:700; margin-bottom:10px;">Meet your crew</div>
+      <div style="display:flex; flex-direction:column; background:#fff; box-shadow:0 6px 16px rgba(22,50,92,0.06); border-radius:16px; overflow:hidden;">
+
+        <div onMouseEnter="{{ hoverChef }}" onMouseLeave="{{ clearHoverAgent }}" style="position:relative; width:100%; padding:11px 13px; border-bottom:1px solid rgba(22,50,92,0.07); background:{{ chefRowBg }}; transition:background .18s ease; display:flex; align-items:center; gap:11px; cursor:pointer; box-sizing:border-box;">
+          <div style="position:relative; width:85px; height:106px; flex:none;">
+            <img src="./assets/chef-agent.png" alt="Chef" style="width:100%; height:100%; object-fit:contain; image-rendering:pixelated; transform:scaleX(-1);" />
+          </div>
+          <div style="position:relative; flex:1; background:#f7f5ef; color:#16325c; border:3px solid #1a1a1a; box-shadow:4px 4px 0 #1a1a1a; padding:10px 13px; font-size:12px; line-height:1.35;">
+            <div style="position:absolute; left:-6px; bottom:16px; width:6px; height:6px; background:#f7f5ef; border:3px solid #1a1a1a; border-right:none;"></div>
+            <div style="position:absolute; left:-12px; bottom:10px; width:6px; height:6px; background:#f7f5ef; border:3px solid #1a1a1a; border-right:none;"></div>
+            <div style="font-weight:800; font-size:13px; margin-bottom:2px; color:#b5702f;">Chef</div>
+            <div style="font-weight:500; opacity:.85;">Suggests meals from what's on hand</div>
+          </div>
+        </div>
+
+        <div onMouseEnter="{{ hoverGuardian }}" onMouseLeave="{{ clearHoverAgent }}" style="position:relative; width:100%; padding:11px 13px; border-bottom:1px solid rgba(22,50,92,0.07); background:{{ guardianRowBg }}; transition:background .18s ease; display:flex; flex-direction:row-reverse; align-items:center; gap:11px; cursor:pointer; box-sizing:border-box;">
+          <div style="position:relative; width:85px; height:106px; flex:none; overflow:visible;">
+            <img src="./assets/guardian-agent.png" alt="Guardian" style="position:absolute; width:128px; height:159px; left:50%; top:50%; transform:translate(-50%,-50%); object-fit:contain;" />
+          </div>
+          <div style="position:relative; flex:1; background:#f7f5ef; color:#16325c; border:3px solid #1a1a1a; box-shadow:4px 4px 0 #1a1a1a; padding:10px 13px; font-size:12px; line-height:1.35;">
+            <div style="position:absolute; right:-6px; bottom:16px; width:6px; height:6px; background:#f7f5ef; border:3px solid #1a1a1a; border-left:none;"></div>
+            <div style="position:absolute; right:-12px; bottom:10px; width:6px; height:6px; background:#f7f5ef; border:3px solid #1a1a1a; border-left:none;"></div>
+            <div style="font-weight:800; font-size:13px; margin-bottom:2px; color:#3f5c85;">Guardian</div>
+            <div style="font-weight:500; opacity:.85;">Flags risky items and food-safety calls</div>
+          </div>
+        </div>
+
+        <div onMouseEnter="{{ hoverOrganizer }}" onMouseLeave="{{ clearHoverAgent }}" style="position:relative; width:100%; padding:11px 13px; border-bottom:1px solid rgba(22,50,92,0.07); background:{{ organizerRowBg }}; transition:background .18s ease; display:flex; align-items:center; gap:11px; cursor:pointer; box-sizing:border-box;">
+          <div style="position:relative; width:85px; height:106px; flex:none; overflow:visible;">
+            <img src="./assets/organizer-agent.png" alt="Organizer" style="position:absolute; width:128px; height:159px; left:50%; top:50%; transform:translate(-50%,-50%) scaleX(-1); object-fit:contain;" />
+          </div>
+          <div style="position:relative; flex:1; background:#f7f5ef; color:#16325c; border:3px solid #1a1a1a; box-shadow:4px 4px 0 #1a1a1a; padding:10px 13px; font-size:12px; line-height:1.35;">
+            <div style="position:absolute; left:-6px; bottom:16px; width:6px; height:6px; background:#f7f5ef; border:3px solid #1a1a1a; border-right:none;"></div>
+            <div style="position:absolute; left:-12px; bottom:10px; width:6px; height:6px; background:#f7f5ef; border:3px solid #1a1a1a; border-right:none;"></div>
+            <div style="font-weight:800; font-size:13px; margin-bottom:2px; color:#2f6f47;">Organizer</div>
+            <div style="font-weight:500; opacity:.85;">Sorts groceries into fridge, freezer, pantry</div>
+          </div>
+        </div>
+
+        <div onMouseEnter="{{ hoverShopkeeper }}" onMouseLeave="{{ clearHoverAgent }}" style="position:relative; width:100%; padding:11px 13px; background:{{ shopkeeperRowBg }}; transition:background .18s ease; display:flex; flex-direction:row-reverse; align-items:center; gap:11px; cursor:pointer; box-sizing:border-box;">
+          <div style="position:relative; width:85px; height:106px; flex:none; overflow:visible;">
+            <img src="./assets/shopkeeper-agent.png" alt="Shopkeeper" style="position:absolute; width:128px; height:159px; left:50%; top:50%; transform:translate(-50%,-50%); object-fit:contain;" />
+          </div>
+          <div style="position:relative; flex:1; background:#f7f5ef; color:#16325c; border:3px solid #1a1a1a; box-shadow:4px 4px 0 #1a1a1a; padding:10px 13px; font-size:12px; line-height:1.35;">
+            <div style="position:absolute; right:-6px; bottom:16px; width:6px; height:6px; background:#f7f5ef; border:3px solid #1a1a1a; border-left:none;"></div>
+            <div style="position:absolute; right:-12px; bottom:10px; width:6px; height:6px; background:#f7f5ef; border:3px solid #1a1a1a; border-left:none;"></div>
+            <div style="font-weight:800; font-size:13px; margin-bottom:2px; color:#8a3320;">Shopkeeper</div>
+            <div style="font-weight:500; opacity:.85;">Builds your list, flags what not to rebuy</div>
+          </div>
+        </div>
+
+      </div>
     </div>
 
     <sc-for list="{{ sectionsView }}" as="sec" hint-placeholder-count="4">
@@ -269,6 +346,49 @@ a:hover { color:#22578f; }
   </div>
   </sc-if>
 
+
+  <!-- FRIDGE STYLE PICKER -->
+  <sc-if value="{{ isFridgeStyle }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute; inset:0; background:rgba(22,50,92,0.32);">
+    <div style="position:absolute; left:0; right:0; bottom:0; top:120px; background:#fff; border-radius:28px 28px 0 0; padding:14px 22px 26px; animation:pop .22s ease-out; display:flex; flex-direction:column;">
+      <div onClick="{{ closeStylePicker }}" style="width:36px; height:5px; border-radius:3px; background:rgba(22,50,92,0.18); margin:0 auto 16px; cursor:pointer; flex:none;"></div>
+      <div style="font-size:17px; font-weight:700; margin-bottom:2px;">Choose a look</div>
+      <div style="font-size:12.5px; color:rgba(22,50,92,0.5); margin-bottom:16px;">{{ stylingFridgeName }}</div>
+      <div style="flex:1; overflow-y:auto;">
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
+          <sc-for list="{{ fridgeStyleOptions }}" as="opt" hint-placeholder-count="5">
+          <div onClick="{{ opt.onSelect }}" style="cursor:pointer; border-radius:16px; padding:8px; background:#f6f8fa; border:2px solid {{ opt.borderColor }}; box-sizing:border-box;">
+            <sc-if value="{{ opt.isPhoto }}" hint-placeholder-val="{{ false }}">
+              <div style="width:100%; height:64px; border-radius:10px; overflow:hidden; margin-bottom:8px;">
+                <img src="./assets/fridge-hero.png" alt="" style="width:100%; height:100%; object-fit:cover;" />
+              </div>
+            </sc-if>
+            <sc-if value="{{ opt.isPixelOpt }}" hint-placeholder-val="{{ true }}">
+              <div style="width:100%; height:64px; border-radius:10px; background:{{ opt.bg }}; display:flex; align-items:center; justify-content:center; margin-bottom:8px;">
+                <div style="position:relative; width:36px; height:50px;">
+                  <dc-import name="PixelIcon" cells="{{ opt.iconData.cells }}" cols="{{ opt.iconData.cols }}" rows="{{ opt.iconData.rows }}" hint-size="36,50"></dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <div style="font-size:11px; font-weight:700; text-align:center; color:#16325c;">{{ opt.label }}</div>
+          </div>
+          </sc-for>
+        </div>
+        <div style="font-size:12px; font-weight:700; letter-spacing:.3px; color:rgba(22,50,92,0.5); margin-bottom:8px;">OR UPLOAD YOUR OWN</div>
+        <div onClick="{{ chooseCustomStyle }}" style="cursor:pointer; border-radius:16px; padding:14px; background:#f6f8fa; display:flex; align-items:center; gap:12px;">
+          <div style="width:44px; height:44px; border-radius:12px; background:#eaf6ff; display:flex; align-items:center; justify-content:center; flex:none;">
+            <div style="width:18px; height:18px; border-radius:5px; background:#4a6fa5;"></div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13.5px; font-weight:700; margin-bottom:2px;">Photo from gallery</div>
+            <div style="font-size:11.5px; color:rgba(22,50,92,0.5);">Drop your own fridge photo</div>
+          </div>
+          <div style="color:rgba(22,50,92,0.3); font-size:16px;">›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
 
   <!-- ITEM DETAIL SHEET -->
   <sc-if value="{{ isItemDetail }}" hint-placeholder-val="{{ false }}">
@@ -558,8 +678,8 @@ class Component extends DCLogic {
   state = {
     screen: 'home',
     fridges: (window.FridgeData ? [
-      { id: 'f0', name: 'Kitchen', sections: structuredClone(window.FridgeData.SECTIONS) },
-      { id: 'f1', name: 'Garage', sections: [
+      { id: 'f0', name: 'Kitchen', style: 'photo', sections: structuredClone(window.FridgeData.SECTIONS) },
+      { id: 'f1', name: 'Garage', style: 'classic', sections: [
         { id: 'drinks', name: 'Drinks shelf', items: [
           { id: 'g1', name: 'Soda cans', icon: 'milk', freshness: 92, days: 60, note: 'Full case' },
           { id: 'g2', name: 'Craft beer', icon: 'yogurt', freshness: 85, days: 90, note: '6 left' },
@@ -568,7 +688,7 @@ class Component extends DCLogic {
           { id: 'g3', name: 'Frozen peas', icon: 'spinach', freshness: 70, days: 120, note: 'Backup bag' },
         ] },
       ] },
-      { id: 'f2', name: 'Office', sections: [
+      { id: 'f2', name: 'Office', style: 'mini', sections: [
         { id: 'lunches', name: 'Lunches', items: [
           { id: 'o1', name: 'Turkey sandwich', icon: 'leftovers', freshness: 38, days: 1, note: 'Bring home tonight' },
           { id: 'o2', name: 'Yogurt cup', icon: 'yogurt', freshness: 75, days: 5, note: '2 cups' },
@@ -592,6 +712,8 @@ class Component extends DCLogic {
     chatMessages: [{ id: 'm0', from: 'bot', text: "Hi, I'm Guardian! Ask me anything about what's in your fridge." }],
     chatDraft: '',
     isTyping: false,
+    stylingFridgeIndex: 0,
+    hoveredAgent: null,
   };
 
   chatScrollRef = { current: null };
@@ -618,6 +740,15 @@ class Component extends DCLogic {
   openProfile = () => this.setState({ showProfilePanel: true });
   closeProfile = () => this.setState({ showProfilePanel: false });
   selectFridgeFromProfile = (i) => () => this.setState({ activeFridge: i, heroSlide: i, showProfilePanel: false, screen: 'home' });
+
+  openStylePicker = (i) => () => this.setState({ stylingFridgeIndex: i, screen: 'fridgeStyle' });
+  closeStylePicker = () => this.setState({ screen: 'home' });
+  selectFridgeStyle = (key) => () => this.setState(s => ({
+    fridges: s.fridges.map((f, i) => i === s.stylingFridgeIndex ? { ...f, style: key } : f),
+    screen: 'home',
+  }));
+  hoverAgent = (id) => () => this.setState({ hoveredAgent: id });
+  clearHoverAgent = () => this.setState({ hoveredAgent: null });
 
   addFridge = () => {
     const name = this.state.newFridgeName.trim() || 'New Fridge';
@@ -774,10 +905,24 @@ class Component extends DCLogic {
     const { screen, selectedItemId, addStep, detected } = this.state;
     const sections = this.getSections();
 
-    const fridgesView = this.state.fridges.map(f => {
+    const FRIDGE_STYLE_DEFS = (window.FridgeData && window.FridgeData.FRIDGE_STYLES) || [];
+    const styleDef = (key) => FRIDGE_STYLE_DEFS.find(s => s.key === key);
+    const fridgesView = this.state.fridges.map((f, i) => {
       const items = f.sections.flatMap(s => s.items);
       const freshness = items.length ? Math.round(items.reduce((a, i) => a + i.freshness, 0) / items.length) : 0;
-      return { name: f.name, itemCount: items.length, freshness, color: freshColor(freshness) };
+      const style = f.style || 'photo';
+      const isPhoto = style === 'photo';
+      const isCustom = style === 'custom';
+      const isPixel = !isPhoto && !isCustom;
+      const def = isPixel ? styleDef(style) : null;
+      return {
+        name: f.name, itemCount: items.length, freshness, color: freshColor(freshness),
+        isPhoto, isPixel, isCustom,
+        pixelIconData: def ? (ICONS[def.icon] || { cells: [], cols: 1, rows: 1 }) : { cells: [], cols: 1, rows: 1 },
+        pixelBg: def ? def.bg : '#4a89c9',
+        customImageId: 'fridge-custom-' + f.id,
+        onOpenStyle: this.openStylePicker(i),
+      };
     });
     const heroSlide = this.state.heroSlide;
     const heroTrackWidth = (fridgesView.length + 1) * 362 + 'px';
@@ -899,6 +1044,15 @@ class Component extends DCLogic {
     const quickAskLabels = ["What's expiring soon?", "What can I cook tonight?", "What do I need to buy?", "How's my fridge doing?"];
     const quickAsks = quickAskLabels.map(label => ({ label, onAsk: this.askQuick(label) }));
 
+    const stylingFridge = this.state.fridges[this.state.stylingFridgeIndex] || {};
+    const currentStyle = stylingFridge.style || 'photo';
+    const fridgeStyleOptions = [
+      { key: 'photo', label: 'Original photo', isPhoto: true, isPixelOpt: false },
+      ...FRIDGE_STYLE_DEFS.map(d => ({ key: d.key, label: d.label, isPhoto: false, isPixelOpt: true, iconData: ICONS[d.icon] || { cells: [], cols: 1, rows: 1 }, bg: d.bg })),
+    ].map(o => ({ ...o, borderColor: o.key === currentStyle ? '#16325c' : 'transparent', onSelect: this.selectFridgeStyle(o.key) }));
+
+    const hoveredAgent = this.state.hoveredAgent;
+
     return {
       isHome: screen === 'home',
       isItemDetail: screen === 'itemDetail',
@@ -907,6 +1061,32 @@ class Component extends DCLogic {
       isSearch: screen === 'search',
       isFoodHub: screen === 'foodHub',
       isRecipeDetail: screen === 'recipeDetail',
+      isFridgeStyle: screen === 'fridgeStyle',
+      stylingFridgeName: stylingFridge.name || '',
+      fridgeStyleOptions,
+      chooseCustomStyle: this.selectFridgeStyle('custom'),
+      closeStylePicker: this.closeStylePicker,
+      agentChefIcon: ICONS.agentChef || { cells: [], cols: 1, rows: 1 },
+      agentGuardianIcon: ICONS.agentGuardian || { cells: [], cols: 1, rows: 1 },
+      agentOrganizerIcon: ICONS.agentOrganizer || { cells: [], cols: 1, rows: 1 },
+      agentShopkeeperIcon: ICONS.agentShopkeeper || { cells: [], cols: 1, rows: 1 },
+      hoveredIsChef: hoveredAgent === 'chef',
+      hoveredIsGuardian: hoveredAgent === 'guardian',
+      hoveredIsOrganizer: hoveredAgent === 'organizer',
+      hoveredIsShopkeeper: hoveredAgent === 'shopkeeper',
+      chefRoaming: hoveredAgent !== 'chef',
+      guardianRoaming: hoveredAgent !== 'guardian',
+      organizerRoaming: hoveredAgent !== 'organizer',
+      shopkeeperRoaming: hoveredAgent !== 'shopkeeper',
+      chefRowBg: hoveredAgent === 'chef' ? 'rgba(181,112,47,0.14)' : 'transparent',
+      guardianRowBg: hoveredAgent === 'guardian' ? 'rgba(63,92,133,0.14)' : 'transparent',
+      organizerRowBg: hoveredAgent === 'organizer' ? 'rgba(47,111,71,0.14)' : 'transparent',
+      shopkeeperRowBg: hoveredAgent === 'shopkeeper' ? 'rgba(138,51,32,0.14)' : 'transparent',
+      hoverChef: this.hoverAgent('chef'),
+      hoverGuardian: this.hoverAgent('guardian'),
+      hoverOrganizer: this.hoverAgent('organizer'),
+      hoverShopkeeper: this.hoverAgent('shopkeeper'),
+      clearHoverAgent: this.clearHoverAgent,
       showTabBar: screen === 'home' || screen === 'foodHub' || screen === 'chat',
       recipesView, hasTonightPick: !!tonightPick, tonightPick: tonightPick || {},
       selectedRecipe,
