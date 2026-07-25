@@ -1,0 +1,208 @@
+(function(){
+// Pixel icon patterns + sample fridge inventory data for ThatFridge.
+// Each icon is drawn as rows of a legend string; '.' = transparent.
+function makeIcon(rows, legend) {
+  const cells = [];
+  for (const row of rows) {
+    for (const ch of row) cells.push(ch === '.' ? null : legend[ch]);
+  }
+  return { cells, cols: rows[0].length, rows: rows.length };
+}
+
+const ICONS = {
+  milk: makeIcon([
+    '..aaaa..',
+    '.abbbba.',
+    '.accccc.',
+    '.ccccccc',
+    '.ccdcccc',
+    '.ccccccc',
+    '.ccccccc',
+    '..ccccc.',
+  ], { a: '#8fa8c9', b: '#3f5c85', c: '#f6f3ec', d: '#3f5c85' }),
+  eggs: makeIcon([
+    '........',
+    '.ee..ee.',
+    'eff.eff.',
+    'efffefff',
+    'efffefff',
+    '.efff.e.',
+    '..ee....',
+    '........',
+  ], { e: '#c9a769', f: '#faf3e2' }),
+  spinach: makeIcon([
+    '..g..g..',
+    '.ghg.ghg',
+    'ghhgghhg',
+    'ghhhhhhg',
+    '.ghhhhg.',
+    '..gigi..',
+    '...ii...',
+    '........',
+  ], { g: '#3f7d4a', h: '#5fa668', i: '#7a8f52' }),
+  cheese: makeIcon([
+    '........',
+    'jjjjjjj.',
+    'jkjkjkj.',
+    'jjkjkjj.',
+    'jkjkjkj.',
+    'jjjjjjj.',
+    '........',
+    '........',
+  ], { j: '#f0b93d', k: '#e2a422' }),
+  apple: makeIcon([
+    '...l....',
+    '..mmm...',
+    '.nnnnn..',
+    'nnnnnnn.',
+    'nnnnnnn.',
+    '.nnnnn..',
+    '..nnn...',
+    '........',
+  ], { l: '#5fa668', m: '#8a5a34', n: '#c94f3c' }),
+  leftovers: makeIcon([
+    '........',
+    'oooooooo',
+    'opppppo.',
+    'opppppo.',
+    'opppppo.',
+    'oooooooo',
+    '........',
+    '........',
+  ], { o: '#b9c2c9', p: '#dfe6ea' }),
+  yogurt: makeIcon([
+    '.qqqqqq.',
+    '.rrrrrr.',
+    '.rssssr.',
+    '.rssssr.',
+    '.rssssr.',
+    '..rrrr..',
+    '........',
+    '........',
+  ], { q: '#3f5c85', r: '#e8ecef', s: '#f6f3ec' }),
+  meat: makeIcon([
+    '........',
+    '..ttt...',
+    '.ttuuutt',
+    'ttuuuutt',
+    '.ttuuutt',
+    '..ttt...',
+    '........',
+    '........',
+  ], { t: '#b5502f', u: '#dd8a63' }),
+  berries: makeIcon([
+    '........',
+    '.v.v.v..',
+    'vwwvwwv.',
+    'wwwwwww.',
+    '.wwwww..',
+    '..www...',
+    '........',
+    '........',
+  ], { v: '#4c6b3a', w: '#5a3a6b' }),
+  carrot: makeIcon([
+    '..x.x...',
+    '..xxx...',
+    '..yyy...',
+    '.yyyy...',
+    'yyyyy...',
+    '.yyy....',
+    '..y.....',
+    '........',
+  ], { x: '#5fa668', y: '#dd7a2f' }),
+};
+
+const SECTIONS = [
+  {
+    id: 'dairy', name: 'Dairy shelf',
+    items: [
+      { id: 'd1', name: 'Whole milk', icon: 'milk', freshness: 78, days: 6, note: 'Best before Tue' },
+      { id: 'd2', name: 'Greek yogurt', icon: 'yogurt', freshness: 54, days: 3, note: '2 tubs left' },
+      { id: 'd3', name: 'Cheddar block', icon: 'cheese', freshness: 88, days: 12, note: 'Just opened' },
+      { id: 'd4', name: 'Salted butter', icon: 'cheese', freshness: 95, days: 20, note: 'Barely touched' },
+    ],
+  },
+  {
+    id: 'produce', name: 'Produce drawer',
+    items: [
+      { id: 'p1', name: 'Spinach', icon: 'spinach', freshness: 22, days: 1, note: 'Wilting fast' },
+      { id: 'p2', name: 'Apples', icon: 'apple', freshness: 71, days: 9, note: '4 left' },
+      { id: 'p3', name: 'Carrots', icon: 'carrot', freshness: 65, days: 8, note: 'Half bag' },
+      { id: 'p4', name: 'Blueberries', icon: 'berries', freshness: 34, days: 2, note: 'Small punnet' },
+      { id: 'p5', name: 'Eggs', icon: 'eggs', freshness: 60, days: 10, note: '7 remaining' },
+    ],
+  },
+  {
+    id: 'protein', name: 'Protein bin',
+    items: [
+      { id: 'r1', name: 'Chicken thighs', icon: 'meat', freshness: 41, days: 2, note: 'Use or freeze' },
+      { id: 'r2', name: 'Ground beef', icon: 'meat', freshness: 18, days: 1, note: 'Cook tonight' },
+      { id: 'r3', name: 'Eggs (spare)', icon: 'eggs', freshness: 82, days: 14, note: 'Backup carton' },
+    ],
+  },
+  {
+    id: 'leftovers', name: 'Leftovers row',
+    items: [
+      { id: 'l1', name: 'Roast veggies', icon: 'leftovers', freshness: 30, days: 2, note: 'From Sunday' },
+      { id: 'l2', name: 'Pasta bake', icon: 'leftovers', freshness: 12, days: 1, note: 'Last portion' },
+      { id: 'l3', name: 'Soup', icon: 'leftovers', freshness: 66, days: 4, note: 'Quart jar' },
+    ],
+  },
+];
+
+ICONS.fridgeHero = makeIcon([
+  '.oooooooo.',
+  'obbbbbbbbo',
+  'obbbbbbbbo',
+  'obbbhbbbbo',
+  'obbbhbbbbo',
+  'oiiiiiiiio',
+  'obbbbbbbbo',
+  'obbbhbbbbo',
+  'obbbhbbbbo',
+  'obbbhbbbbo',
+  'obbbhbbbbo',
+  'obbbhbbbbo',
+  'obbbbbbbbo',
+  '.oooooooo.',
+], { o: '#c7c0ae', b: '#f6f1e4', h: '#8fa8c9', i: '#4a6fa5' });
+
+ICONS.guardian = makeIcon([
+  '..oooo..',
+  '.oaaaao.',
+  '.oaeeao.',
+  '.oaaaao.',
+  '..oooo..',
+  '.bbbbbb.',
+  'bbffffbb',
+  'bbffffbb',
+  '.bb..bb.',
+  '.bb..bb.',
+], { o: '#7c8a99', a: '#b9c2c9', e: '#4a6fa5', b: '#8fa8c9', f: '#5f7c9e' });
+
+const RECIPES = [
+  { id: 'rc1', name: 'Veggie Stir-Fry', minutes: 20, ingredients: [
+    { icon: 'carrot', name: 'Carrots' }, { icon: 'spinach', name: 'Spinach' }, { icon: 'eggs', name: 'Eggs' }, { icon: 'meat', name: 'Chicken or beef' },
+  ], steps: ['Heat oil in a wok over high heat.', 'Add carrots and stir-fry 2 minutes.', 'Add spinach and protein, cook until done.', 'Season with soy sauce and serve over rice.'] },
+  { id: 'rc2', name: 'Creamy Veggie Soup', minutes: 30, ingredients: [
+    { icon: 'spinach', name: 'Spinach' }, { icon: 'carrot', name: 'Carrots' }, { icon: 'cheese', name: 'Cheese' }, { icon: 'milk', name: 'Milk' },
+  ], steps: ['Sauté carrots until soft.', 'Add spinach and cook until wilted.', 'Pour in milk and simmer.', 'Stir in cheese until melted and creamy.'] },
+  { id: 'rc3', name: 'Veggie Omelet', minutes: 12, ingredients: [
+    { icon: 'eggs', name: 'Eggs' }, { icon: 'cheese', name: 'Cheese' }, { icon: 'spinach', name: 'Spinach' },
+  ], steps: ['Whisk eggs in a bowl.', 'Pour into a hot buttered pan.', 'Add spinach and cheese, fold once set.', 'Cook until golden and serve.'] },
+  { id: 'rc4', name: 'Berry Oat Bowl', minutes: 8, ingredients: [
+    { icon: 'berries', name: 'Berries' }, { icon: 'yogurt', name: 'Yogurt' }, { icon: 'milk', name: 'Milk' },
+  ], steps: ['Combine oats and milk, let sit 5 minutes.', 'Top with yogurt.', 'Finish with fresh berries.'] },
+  { id: 'rc5', name: 'Leftover Fried Rice', minutes: 15, ingredients: [
+    { icon: 'leftovers', name: 'Leftovers' }, { icon: 'eggs', name: 'Eggs' }, { icon: 'carrot', name: 'Carrots' },
+  ], steps: ['Scramble eggs in a hot pan, set aside.', 'Stir-fry carrots for 2 minutes.', 'Add chopped leftovers and rice, toss well.', 'Fold in eggs and season to taste.'] },
+  { id: 'rc6', name: 'Apple Crumble', minutes: 35, ingredients: [
+    { icon: 'apple', name: 'Apples' }, { icon: 'cheese', name: 'Butter' }, { icon: 'milk', name: 'Milk' },
+  ], steps: ['Slice apples into a baking dish.', 'Rub butter into a crumble topping.', 'Scatter topping over apples.', 'Bake until golden, serve with milk.'] },
+];
+
+const ICON_SECTION = { milk: 'dairy', yogurt: 'dairy', cheese: 'dairy', eggs: 'dairy', spinach: 'produce', carrot: 'produce', apple: 'produce', berries: 'produce', meat: 'protein', leftovers: 'leftovers' };
+
+window.FridgeData = { ICONS, SECTIONS, RECIPES, ICON_SECTION };
+
+})();
