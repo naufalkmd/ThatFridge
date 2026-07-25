@@ -1,0 +1,103 @@
+"use client";
+
+import { getFridgeSummaries } from "@/lib/thatfridge/selectors";
+import { useThatFridgeCtx } from "./ThatFridgeContext";
+
+const SETTINGS_ROWS = ["Notifications", "Units & measurements", "Household members", "About ThatFridge"];
+
+export default function ProfileDrawer() {
+  const { state, actions } = useThatFridgeCtx();
+  if (!state.showProfilePanel) return null;
+
+  const fridges = getFridgeSummaries(state);
+
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 20 }}>
+      <div onClick={actions.closeProfile} style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.4)" }} />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: "78%",
+          maxWidth: 300,
+          background: "#fff",
+          boxShadow: "8px 0 30px rgba(22,50,92,0.2)",
+          padding: "58px 20px 24px",
+          display: "flex",
+          flexDirection: "column",
+          animation: "pop .2s ease-out",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              background: "#16325c",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              fontSize: 16,
+              fontWeight: 800,
+              flex: "none",
+            }}
+          >
+            JD
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#16325c" }}>Jordan Diaz</div>
+            <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>jordan@example.com</div>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>
+          YOUR FRIDGES
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 22 }}>
+          {fridges.map((f, i) => (
+            <div
+              key={f.id}
+              onClick={() => actions.selectFridgeFromProfile(i)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 4px", cursor: "pointer" }}
+            >
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: i === state.activeFridge ? "#2f6fb0" : "#16325c" }}>{f.name}</div>
+              <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.4)" }}>{f.itemCount} items</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>SETTINGS</div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {SETTINGS_ROWS.map((label) => (
+            <div
+              key={label}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "11px 4px",
+                borderBottom: "1px solid rgba(22,50,92,0.06)",
+                cursor: "pointer",
+              }}
+            >
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: "#16325c" }}>{label}</div>
+              <div style={{ color: "rgba(22,50,92,0.3)", fontSize: 14 }}>›</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ flex: 1 }} />
+        <div
+          onClick={actions.closeProfile}
+          style={{ textAlign: "center", padding: 12, borderRadius: 14, background: "#eef2f7", color: "#16325c", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+        >
+          Sign out
+        </div>
+      </div>
+    </div>
+  );
+}
