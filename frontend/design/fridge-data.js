@@ -203,6 +203,90 @@ const RECIPES = [
 
 const ICON_SECTION = { milk: 'dairy', yogurt: 'dairy', cheese: 'dairy', eggs: 'dairy', spinach: 'produce', carrot: 'produce', apple: 'produce', berries: 'produce', meat: 'protein', leftovers: 'leftovers' };
 
-window.FridgeData = { ICONS, SECTIONS, RECIPES, ICON_SECTION };
+// Alternate pixel fridge styles (the hero photo remains the default "Original photo" option).
+ICONS.fridgeFrench = makeIcon([
+  '.oooooooo.',
+  'obbbjbbbbo',
+  'obbhjhbbbo',
+  'obbbjbbbbo',
+  'osssssssso',
+  'obbhjhbbbo',
+  'obbbjbbbbo',
+  'obbbjbbbbo',
+  'offffffffo',
+  'offffhfffo',
+  'offffffffo',
+  'offffffffo',
+  'offffffffo',
+  '.oooooooo.',
+], { o: '#9aa4ad', b: '#eef2f6', j: '#5f7c9e', h: '#16325c', f: '#dfe6ea', s: '#c7ddf0' });
+
+ICONS.fridgeRetro = makeIcon([
+  '.rrrrrrrr.',
+  'rttttttttr',
+  'rttttttttr',
+  'rrrrrrrrrr',
+  'rccccccccr',
+  'rccccccccr',
+  'rccchccccr',
+  'rccccccccr',
+  'rccccccccr',
+  'rssssssssr',
+  'rccccccccr',
+  'rccccccccr',
+  'rrrrrrrrrr',
+  '.rrrrrrrr.',
+], { r: '#3f8f5c', t: '#eaf6ff', c: '#bfe3d0', h: '#16325c', s: '#eaf6ff' });
+
+ICONS.fridgeMini = makeIcon([
+  '.mmmmmmmm.',
+  'mccccccccm',
+  'mccccccccm',
+  'mcccchcccm',
+  'mccccccccm',
+  'mssssssssm',
+  'mccccccccm',
+  '.mmmmmmmm.',
+], { m: '#8fa8c9', c: '#f6f3ec', h: '#16325c', s: '#dbe6f2' });
+
+const FRIDGE_STYLES = [
+  { key: 'classic', label: 'Classic Blue', icon: 'fridgeHero', bg: '#4a89c9' },
+  { key: 'french', label: 'French Door', icon: 'fridgeFrench', bg: '#dbe6f2' },
+  { key: 'retro', label: 'Retro Mint', icon: 'fridgeRetro', bg: '#8fcda6' },
+  { key: 'mini', label: 'Mini Bar', icon: 'fridgeMini', bg: '#eaf3fb' },
+];
+
+// Pixel-agent crew — chibi character with thick black outline, hat, apron and a held prop, recolored per role.
+const AGENT_BODY = [
+  '..kkkkkkkk..',
+  '.kwwwwwwwwk.',
+  '.kwwwwwwwwk.',
+  '.kwwwwwwwwk.',
+  '..kkkkkkkk..',
+  '...kssssk...',
+  '..ksseessk..',
+  '..kssssssk..',
+  '...kbbbbk...',
+  '.kbaaaaabk..',
+  'wpkaaaaaak..',
+  '.wkaaaaaak..',
+  '..kaaaaaak..',
+  '...kddddk...',
+  '...kd..dk...',
+  '..kkk..kkk..',
+];
+ICONS.agentChef = makeIcon(AGENT_BODY, { k: '#1a1a1a', w: '#f7f5ef', s: '#e8b98a', e: '#1a1a1a', b: '#4a6fa5', a: '#e0c39a', p: '#9db3c9', d: '#2b3542' });
+ICONS.agentGuardian = makeIcon(AGENT_BODY, { k: '#1a1a1a', w: '#8fa8c9', s: '#e8b98a', e: '#1a1a1a', b: '#3f5c85', a: '#5f7c9e', p: '#f0b93d', d: '#2b3542' });
+ICONS.agentOrganizer = makeIcon(AGENT_BODY, { k: '#1a1a1a', w: '#f0b93d', s: '#e8b98a', e: '#1a1a1a', b: '#2f6f47', a: '#3f8f5c', p: '#eef2f6', d: '#2b3542' });
+ICONS.agentShopkeeper = makeIcon(AGENT_BODY, { k: '#1a1a1a', w: '#c9a769', s: '#e8b98a', e: '#1a1a1a', b: '#8a3320', a: '#c1452e', p: '#f6f3ec', d: '#2b3542' });
+
+const AGENTS = [
+  { id: 'chef', name: 'Chef', icon: 'agentChef', summary: 'Suggests meals from what you already have, prioritizing items closest to expiry.' },
+  { id: 'guardian', name: 'Guardian', icon: 'agentGuardian', summary: 'Watches food safety and flags risky or uncertain items before they go bad.' },
+  { id: 'organizer', name: 'Organizer', icon: 'agentOrganizer', summary: 'Tells you where to store each item and keeps fridge, freezer and pantry tidy.' },
+  { id: 'shopkeeper', name: 'Shopkeeper', icon: 'agentShopkeeper', summary: 'Builds your next grocery list and tells you what not to rebuy.' },
+];
+
+window.FridgeData = { ICONS, SECTIONS, RECIPES, ICON_SECTION, FRIDGE_STYLES, AGENTS };
 
 })();
