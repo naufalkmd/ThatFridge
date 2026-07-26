@@ -12,6 +12,9 @@ import ItemDetailSheet from "./screens/ItemDetailSheet";
 import AddScreen from "./screens/AddScreen";
 import SearchScreen from "./screens/SearchScreen";
 import ChatScreen from "./screens/ChatScreen";
+import GuardianScreen from "./screens/GuardianScreen";
+import OrganizerScreen from "./screens/OrganizerScreen";
+import ShopkeeperScreen from "./screens/ShopkeeperScreen";
 
 function Screens() {
   const { state } = useThatFridgeCtx();
@@ -32,6 +35,12 @@ function Screens() {
       return <SearchScreen />;
     case "chat":
       return <ChatScreen />;
+    case "guardian":
+      return <GuardianScreen />;
+    case "organizer":
+      return <OrganizerScreen />;
+    case "shopkeeper":
+      return <ShopkeeperScreen />;
     default:
       return null;
   }

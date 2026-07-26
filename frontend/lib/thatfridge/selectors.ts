@@ -41,6 +41,23 @@ export function getLowStockItem(state: ThatFridgeState): ItemWithSection | null 
   return getAllItems(state).find((i) => /left|remaining/i.test(i.note) && i.id !== guardian?.id) || null;
 }
 
+export interface BuyAgainSuggestion {
+  key: string;
+  name: string;
+  icon: string;
+  count: number;
+}
+
+export function getBuyAgainSuggestions(state: ThatFridgeState, limit = 5): BuyAgainSuggestion[] {
+  const stockedNames = new Set(getAllItems(state).map((i) => i.name.trim().toLowerCase()));
+  const listedNames = new Set(state.shoppingList.filter((i) => !i.checked).map((i) => i.name.trim().toLowerCase()));
+  return state.usageHistory
+    .filter((h) => !stockedNames.has(h.key) && !listedNames.has(h.key))
+    .sort((a, b) => b.count - a.count || b.lastAt - a.lastAt)
+    .slice(0, limit)
+    .map((h) => ({ key: h.key, name: h.name, icon: h.icon, count: h.count }));
+}
+
 export interface FridgeSummary {
   id: string;
   name: string;
@@ -117,17 +134,17 @@ export function styleDef(key: string) {
   return FRIDGE_STYLES.find((s) => s.key === key);
 }
 
+const DEFAULT_FRIDGE_PHOTO = "/images/thatfridge/fridge-hero.png";
+
 export interface FridgeHeroView {
   id: string;
   name: string;
   itemCount: number;
   freshness: number;
   color: string;
-  isPhoto: boolean;
-  isPixel: boolean;
   isCustom: boolean;
-  pixelIconData: typeof EMPTY_ICON;
-  pixelBg: string;
+  photoSrc: string;
+  bg: string;
 }
 
 export function getFridgeHeroViews(state: ThatFridgeState): FridgeHeroView[] {
@@ -135,21 +152,17 @@ export function getFridgeHeroViews(state: ThatFridgeState): FridgeHeroView[] {
     const items = f.sections.flatMap((s) => s.items);
     const freshness = items.length ? Math.round(items.reduce((a, i) => a + i.freshness, 0) / items.length) : 0;
     const style = f.style || "photo";
-    const isPhoto = style === "photo";
     const isCustom = style === "custom";
-    const isPixel = !isPhoto && !isCustom;
-    const def = isPixel ? styleDef(style) : undefined;
+    const def = isCustom ? undefined : styleDef(style);
     return {
       id: f.id,
       name: f.name,
       itemCount: items.length,
       freshness,
       color: freshColor(freshness),
-      isPhoto,
-      isPixel,
       isCustom,
-      pixelIconData: def ? iconFor(def.icon) : EMPTY_ICON,
-      pixelBg: def ? def.bg : "#4a89c9",
+      photoSrc: def ? def.photo : DEFAULT_FRIDGE_PHOTO,
+      bg: def ? def.bg : "#4a89c9",
     };
   });
 }
