@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ICON_SECTION, RECIPES, SECTIONS } from "./data";
+import { findItem } from "./selectors";
 import type {
   ChatMessage,
   DetectedItem,
@@ -12,8 +13,17 @@ import type {
   ScanMethod,
   Section,
   ShoppingItem,
+  StorageLocation,
+  UsageHistoryEntry,
 } from "./types";
 import { chatBotReply } from "./chat";
+
+const DEFAULT_ICON_BY_SECTION: Record<string, string> = {
+  dairy: "milk",
+  produce: "carrot",
+  protein: "meat",
+  leftovers: "leftovers",
+};
 
 export interface ThatFridgeState {
   screen: Screen;
@@ -26,6 +36,11 @@ export interface ThatFridgeState {
   addStep: number;
   scanMethod: ScanMethod | null;
   detected: DetectedItem[];
+  manualName: string;
+  manualSectionId: string;
+  manualDays: string;
+  manualNote: string;
+  usageHistory: UsageHistoryEntry[];
   searchQuery: string;
   foodSubtab: FoodSubtab;
   selectedRecipeId: string | null;
@@ -88,6 +103,11 @@ function initialState(): ThatFridgeState {
     addStep: 0,
     scanMethod: null,
     detected: [],
+    manualName: "",
+    manualSectionId: "",
+    manualDays: "7",
+    manualNote: "",
+    usageHistory: [],
     searchQuery: "",
     foodSubtab: "recipes",
     selectedRecipeId: null,
@@ -116,6 +136,16 @@ export function useThatFridge() {
 
   const setSections = (sections: Section[]) => {
     patch((s) => ({ fridges: s.fridges.map((f, i) => (i === s.activeFridge ? { ...f, sections } : f)) }));
+  };
+
+  const setItemLocation = (id: string, location: StorageLocation) => {
+    patch((s) => ({
+      fridges: s.fridges.map((f, i) =>
+        i === s.activeFridge
+          ? { ...f, sections: f.sections.map((sec) => ({ ...sec, items: sec.items.map((it) => (it.id === id ? { ...it, location } : it)) })) }
+          : f
+      ),
+    }));
   };
 
   const selectHero = (i: number) =>
@@ -190,6 +220,12 @@ export function useThatFridge() {
     ensureShoppingSeed();
     patch({ screen: "foodHub", foodSubtab: "shopping" });
   };
+  const openGuardianHub = () => patch({ screen: "guardian" });
+  const openOrganizerHub = () => patch({ screen: "organizer" });
+  const openShopkeeperHub = () => {
+    ensureShoppingSeed();
+    patch({ screen: "shopkeeper" });
+  };
   const selectRecipesTab = () => patch({ foodSubtab: "recipes" });
   const selectShoppingTab = () => patch({ foodSubtab: "shopping" });
 
@@ -241,6 +277,20 @@ export function useThatFridge() {
     });
   };
 
+  const addPredictedToShopping = (name: string, icon: string) => {
+    patch((s) => {
+      if (s.shoppingList.some((i) => !i.checked && i.name.toLowerCase() === name.toLowerCase())) return {};
+      const entry: ShoppingItem = {
+        id: "pr-" + icon + "-" + Date.now(),
+        name,
+        icon,
+        section: ICON_SECTION[icon] || "other",
+        checked: false,
+      };
+      return { shoppingList: [...s.shoppingList, entry] };
+    });
+  };
+
   const cookRecipe = () => {
     patch((s) => {
       const recipe = RECIPES.find((r) => r.id === s.selectedRecipeId);
@@ -289,10 +339,41 @@ export function useThatFridge() {
   };
   const askQuick = (label: string) => sendChat(label);
 
-  const goHome = () => patch({ screen: "home", selectedItemId: null, addStep: 0, scanMethod: null, detected: [] });
+  const goHome = () =>
+    patch({
+      screen: "home",
+      selectedItemId: null,
+      addStep: 0,
+      scanMethod: null,
+      detected: [],
+      manualName: "",
+      manualSectionId: "",
+      manualDays: "7",
+      manualNote: "",
+    });
   const goTab = (screen: Screen) => patch({ screen });
-  const openAdd = () => patch({ screen: "add", addStep: 0, scanMethod: null, detected: [] });
+  const openAdd = () =>
+    patch((s) => ({
+      screen: "add",
+      addStep: 0,
+      scanMethod: null,
+      detected: [],
+      manualName: "",
+      manualSectionId: s.fridges[s.activeFridge].sections[0]?.id || "",
+      manualDays: "7",
+      manualNote: "",
+    }));
   const selectItem = (id: string) => patch({ screen: "itemDetail", selectedItemId: id });
+
+  const recordUsage = (s: ThatFridgeState, name: string, icon: string): UsageHistoryEntry[] => {
+    const key = name.trim().toLowerCase();
+    if (!key) return s.usageHistory;
+    const existing = s.usageHistory.find((h) => h.key === key);
+    if (existing) {
+      return s.usageHistory.map((h) => (h.key === key ? { ...h, count: h.count + 1, lastAt: Date.now() } : h));
+    }
+    return [...s.usageHistory, { key, name, icon, count: 1, lastAt: Date.now() }];
+  };
 
   const removeItem = (id: string) => {
     patch((s) => ({
@@ -304,13 +385,27 @@ export function useThatFridge() {
     }));
   };
   const markUsed = () => {
-    if (state.selectedItemId) removeItem(state.selectedItemId);
+    if (!state.selectedItemId) return;
+    const found = findItem(state, state.selectedItemId);
+    if (found) patch((s) => ({ usageHistory: recordUsage(s, found.item.name, found.item.icon) }));
+    removeItem(state.selectedItemId);
   };
   const discardItem = () => {
     if (state.selectedItemId) removeItem(state.selectedItemId);
   };
 
   const chooseMethod = (method: ScanMethod) => {
+    if (method === "manual") {
+      patch((s) => ({
+        scanMethod: method,
+        addStep: 3,
+        manualName: "",
+        manualSectionId: s.fridges[s.activeFridge].sections[0]?.id || "",
+        manualDays: "7",
+        manualNote: "",
+      }));
+      return;
+    }
     const detected: DetectedItem[] = [
       { id: "nd1", name: method === "barcode" ? "Scanned item" : "Orange juice", icon: "milk", section: "dairy", checked: true },
       { id: "nd2", name: "Bell peppers", icon: "carrot", section: "produce", checked: true },
@@ -321,6 +416,39 @@ export function useThatFridge() {
   };
   const toggleDetected = (id: string) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, checked: !d.checked } : d)) }));
+
+  const onManualNameChange = (value: string) => patch({ manualName: value });
+  const onManualSectionChange = (value: string) => patch({ manualSectionId: value });
+  const onManualDaysChange = (value: string) => patch({ manualDays: value });
+  const onManualNoteChange = (value: string) => patch({ manualNote: value });
+  const confirmManualAdd = () => {
+    const name = state.manualName.trim();
+    if (!name) return;
+    patch((s) => {
+      const days = Math.max(0, parseInt(s.manualDays, 10) || 0);
+      const fridge = s.fridges[s.activeFridge];
+      const sectionId = s.manualSectionId || fridge.sections[0]?.id;
+      const newItem = {
+        id: "man-" + Date.now(),
+        name,
+        icon: (sectionId && DEFAULT_ICON_BY_SECTION[sectionId]) || "leftovers",
+        freshness: 100,
+        days,
+        note: s.manualNote.trim() || "Added manually",
+      };
+      const sections = fridge.sections.some((sec) => sec.id === sectionId)
+        ? fridge.sections.map((sec) => (sec.id === sectionId ? { ...sec, items: [...sec.items, newItem] } : sec))
+        : [...fridge.sections, { id: "general", name: "General", items: [newItem] }];
+      return {
+        fridges: s.fridges.map((f, i) => (i === s.activeFridge ? { ...f, sections } : f)),
+        screen: "home",
+        addStep: 0,
+        scanMethod: null,
+        manualName: "",
+        manualNote: "",
+      };
+    });
+  };
 
   const confirmAdd = () => {
     patch((s) => {
@@ -373,6 +501,7 @@ export function useThatFridge() {
     removeShoppingItem,
     clearBought,
     addMissingToShopping,
+    addPredictedToShopping,
     cookRecipe,
     onSearchChange,
     onDraftChange,
@@ -384,12 +513,21 @@ export function useThatFridge() {
     goTab,
     openAdd,
     selectItem,
+    openGuardianHub,
+    openOrganizerHub,
+    openShopkeeperHub,
     markUsed,
     discardItem,
     chooseMethod,
     toggleDetected,
+    onManualNameChange,
+    onManualSectionChange,
+    onManualDaysChange,
+    onManualNoteChange,
+    confirmManualAdd,
     confirmAdd,
     setSections,
+    setItemLocation,
   };
 
   return { state, actions, chatScrollRef };

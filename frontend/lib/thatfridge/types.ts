@@ -4,6 +4,8 @@ export interface IconData {
   rows: number;
 }
 
+export type StorageLocation = "fridge" | "freezer" | "pantry";
+
 export interface Item {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ export interface Item {
   freshness: number;
   days: number;
   note: string;
+  location?: StorageLocation;
 }
 
 export interface Section {
@@ -44,7 +47,7 @@ export interface Recipe {
 export interface FridgeStyleDef {
   key: string;
   label: string;
-  icon: string;
+  photo: string;
   bg: string;
 }
 
@@ -69,7 +72,7 @@ export interface ChatMessage {
   text: string;
 }
 
-export type ScanMethod = "receipt" | "barcode" | "photo";
+export type ScanMethod = "receipt" | "barcode" | "photo" | "manual";
 
 export interface DetectedItem {
   id: string;
@@ -87,6 +90,17 @@ export type Screen =
   | "itemDetail"
   | "add"
   | "search"
-  | "chat";
+  | "chat"
+  | "guardian"
+  | "organizer"
+  | "shopkeeper";
 
 export type FoodSubtab = "recipes" | "shopping";
+
+export interface UsageHistoryEntry {
+  key: string;
+  name: string;
+  icon: string;
+  count: number;
+  lastAt: number;
+}
