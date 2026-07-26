@@ -30,6 +30,7 @@ function CrewRow({
   bg,
   onEnter,
   onLeave,
+  onClick,
   image,
   tailSide,
   color,
@@ -41,6 +42,7 @@ function CrewRow({
   bg: string;
   onEnter: () => void;
   onLeave: () => void;
+  onClick: () => void;
   image: ReactNode;
   tailSide: "left" | "right";
   color: string;
@@ -51,6 +53,7 @@ function CrewRow({
     <div
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
+      onClick={onClick}
       style={{
         position: "relative",
         width: "100%",
@@ -198,25 +201,18 @@ export default function HomeScreen() {
                   height: 236,
                   borderRadius: 28,
                   overflow: "hidden",
-                  background: fr.pixelBg,
+                  background: fr.bg,
                   animation: "glow 5s ease-in-out infinite",
                 }}
               >
-                {fr.isPhoto && (
+                {!fr.isCustom && (
                   <Image
-                    src="/images/thatfridge/fridge-hero.png"
-                    alt="Illustration of an open fridge stocked with fresh food"
+                    src={fr.photoSrc}
+                    alt="Illustration of a stocked fridge"
                     fill
                     sizes="362px"
                     style={{ objectFit: "cover", objectPosition: "center 15%" }}
                   />
-                )}
-                {fr.isPixel && (
-                  <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ position: "relative", width: 130, height: 170 }}>
-                      <PixelIcon icon={fr.pixelIconData} />
-                    </div>
-                  </div>
                 )}
                 {fr.isCustom && (
                   <div
@@ -363,6 +359,7 @@ export default function HomeScreen() {
             bg={state.hoveredAgent === "chef" ? "rgba(181,112,47,0.14)" : "transparent"}
             onEnter={() => actions.hoverAgent("chef")}
             onLeave={actions.clearHoverAgent}
+            onClick={actions.openRecipesHub}
             tailSide="left"
             color="#b5702f"
             name="Chef"
@@ -383,6 +380,7 @@ export default function HomeScreen() {
             bg={state.hoveredAgent === "guardian" ? "rgba(63,92,133,0.14)" : "transparent"}
             onEnter={() => actions.hoverAgent("guardian")}
             onLeave={actions.clearHoverAgent}
+            onClick={actions.openGuardianHub}
             tailSide="right"
             color="#3f5c85"
             name="Guardian"
@@ -391,9 +389,9 @@ export default function HomeScreen() {
               <Image
                 src="/images/thatfridge/guardian-agent.png"
                 alt="Guardian"
-                width={128}
-                height={159}
-                style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", objectFit: "contain" }}
+                width={120}
+                height={120}
+                style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", objectFit: "contain", maxWidth: "none", maxHeight: "none" }}
               />
             }
           />
@@ -403,6 +401,7 @@ export default function HomeScreen() {
             bg={state.hoveredAgent === "organizer" ? "rgba(47,111,71,0.14)" : "transparent"}
             onEnter={() => actions.hoverAgent("organizer")}
             onLeave={actions.clearHoverAgent}
+            onClick={actions.openOrganizerHub}
             tailSide="left"
             color="#2f6f47"
             name="Organizer"
@@ -411,9 +410,9 @@ export default function HomeScreen() {
               <Image
                 src="/images/thatfridge/organizer-agent.png"
                 alt="Organizer"
-                width={128}
-                height={159}
-                style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%) scaleX(-1)", objectFit: "contain" }}
+                width={112}
+                height={112}
+                style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%) scaleX(-1)", objectFit: "contain", maxWidth: "none", maxHeight: "none" }}
               />
             }
           />
@@ -423,6 +422,7 @@ export default function HomeScreen() {
             bg={state.hoveredAgent === "shopkeeper" ? "rgba(138,51,32,0.14)" : "transparent"}
             onEnter={() => actions.hoverAgent("shopkeeper")}
             onLeave={actions.clearHoverAgent}
+            onClick={actions.openShopkeeperHub}
             tailSide="right"
             color="#8a3320"
             name="Shopkeeper"
@@ -431,9 +431,9 @@ export default function HomeScreen() {
               <Image
                 src="/images/thatfridge/shopkeeper-agent.png"
                 alt="Shopkeeper"
-                width={128}
-                height={159}
-                style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", objectFit: "contain" }}
+                width={116}
+                height={116}
+                style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", objectFit: "contain", maxWidth: "none", maxHeight: "none" }}
               />
             }
           />

@@ -2,18 +2,16 @@
 
 import Image from "next/image";
 import { FRIDGE_STYLES } from "@/lib/thatfridge/data";
-import { iconFor } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
-import PixelIcon from "../PixelIcon";
 
 export default function FridgeStyleSheet() {
   const { state, actions } = useThatFridgeCtx();
   const stylingFridge = state.fridges[state.stylingFridgeIndex];
   const currentStyle = stylingFridge?.style || "photo";
 
-  const options: { key: string; label: string; isPhoto: boolean; iconData?: ReturnType<typeof iconFor>; bg?: string }[] = [
-    { key: "photo", label: "Original photo", isPhoto: true },
-    ...FRIDGE_STYLES.map((d) => ({ key: d.key, label: d.label, isPhoto: false, iconData: iconFor(d.icon), bg: d.bg })),
+  const options: { key: string; label: string; photo: string }[] = [
+    { key: "photo", label: "Original photo", photo: "/images/thatfridge/fridge-hero.png" },
+    ...FRIDGE_STYLES.map((d) => ({ key: d.key, label: d.label, photo: d.photo })),
   ];
 
   return (
@@ -30,17 +28,9 @@ export default function FridgeStyleSheet() {
                 onClick={() => actions.selectFridgeStyle(opt.key as Parameters<typeof actions.selectFridgeStyle>[0])}
                 style={{ cursor: "pointer", borderRadius: 16, padding: 8, background: "#f6f8fa", border: `2px solid ${opt.key === currentStyle ? "#16325c" : "transparent"}`, boxSizing: "border-box" }}
               >
-                {opt.isPhoto ? (
-                  <div style={{ width: "100%", height: 64, borderRadius: 10, overflow: "hidden", marginBottom: 8, position: "relative" }}>
-                    <Image src="/images/thatfridge/fridge-hero.png" alt="" fill sizes="120px" style={{ objectFit: "cover" }} />
-                  </div>
-                ) : (
-                  <div style={{ width: "100%", height: 64, borderRadius: 10, background: opt.bg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
-                    <div style={{ position: "relative", width: 36, height: 50 }}>
-                      <PixelIcon icon={opt.iconData!} />
-                    </div>
-                  </div>
-                )}
+                <div style={{ width: "100%", height: 64, borderRadius: 10, overflow: "hidden", marginBottom: 8, position: "relative" }}>
+                  <Image src={opt.photo} alt="" fill sizes="120px" style={{ objectFit: "cover" }} />
+                </div>
                 <div style={{ fontSize: 11, fontWeight: 700, textAlign: "center", color: "#16325c" }}>{opt.label}</div>
               </div>
             ))}

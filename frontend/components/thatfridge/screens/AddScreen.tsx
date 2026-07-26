@@ -1,6 +1,6 @@
 "use client";
 
-import { iconFor } from "@/lib/thatfridge/selectors";
+import { getActiveSections, iconFor } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import PixelIcon from "../PixelIcon";
 import type { ScanMethod } from "@/lib/thatfridge/types";
@@ -9,13 +9,36 @@ const SCAN_METHODS: { key: ScanMethod; title: string; desc: string }[] = [
   { key: "receipt", title: "Scan receipt", desc: "Snap your grocery receipt" },
   { key: "barcode", title: "Scan barcode", desc: "Point at a product barcode" },
   { key: "photo", title: "Photo of fridge", desc: "Let AI spot what changed" },
+  { key: "manual", title: "Add manually", desc: "Type in the item yourself" },
 ];
+
+const fieldStyle: React.CSSProperties = {
+  width: "100%",
+  border: "none",
+  outline: "none",
+  background: "#fff",
+  boxShadow: "0 6px 16px rgba(22,50,92,0.06)",
+  borderRadius: 14,
+  padding: "12px 14px",
+  fontSize: 13.5,
+  color: "#16325c",
+  boxSizing: "border-box",
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 700,
+  letterSpacing: 0.3,
+  color: "rgba(22,50,92,0.5)",
+  marginBottom: 6,
+};
 
 export default function AddScreen() {
   const { state, actions } = useThatFridgeCtx();
   const scanningLabel =
     state.scanMethod === "barcode" ? "Reading barcode…" : state.scanMethod === "receipt" ? "Reading receipt…" : "Scanning fridge photo…";
   const checkedCount = state.detected.filter((d) => d.checked).length;
+  const sections = getActiveSections(state);
 
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb)", padding: "28px 20px 30px", display: "flex", flexDirection: "column" }}>
@@ -86,6 +109,73 @@ export default function AddScreen() {
           </div>
           <div onClick={actions.confirmAdd} style={{ textAlign: "center", padding: 14, borderRadius: 14, background: "#16325c", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 14 }}>
             Add {checkedCount} items
+          </div>
+        </>
+      )}
+
+      {state.addStep === 3 && (
+        <>
+          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: 16 }}>Fill in the details for this item</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, overflowY: "auto" }}>
+            <div>
+              <div style={labelStyle}>NAME</div>
+              <input
+                autoFocus
+                value={state.manualName}
+                onChange={(e) => actions.onManualNameChange(e.target.value)}
+                placeholder="e.g. Sourdough bread"
+                style={fieldStyle}
+              />
+            </div>
+            <div>
+              <div style={labelStyle}>STORE IN</div>
+              <select
+                value={state.manualSectionId}
+                onChange={(e) => actions.onManualSectionChange(e.target.value)}
+                style={{ ...fieldStyle, appearance: "none" }}
+              >
+                {sections.map((sec) => (
+                  <option key={sec.id} value={sec.id}>
+                    {sec.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={labelStyle}>USE WITHIN (DAYS)</div>
+              <input
+                type="number"
+                min={0}
+                value={state.manualDays}
+                onChange={(e) => actions.onManualDaysChange(e.target.value)}
+                style={fieldStyle}
+              />
+            </div>
+            <div>
+              <div style={labelStyle}>NOTE (OPTIONAL)</div>
+              <input
+                value={state.manualNote}
+                onChange={(e) => actions.onManualNoteChange(e.target.value)}
+                placeholder="e.g. 2 loaves"
+                style={fieldStyle}
+              />
+            </div>
+          </div>
+          <div
+            onClick={actions.confirmManualAdd}
+            style={{
+              textAlign: "center",
+              padding: 14,
+              borderRadius: 14,
+              background: state.manualName.trim() ? "#16325c" : "rgba(22,50,92,0.25)",
+              color: "#fff",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: "pointer",
+              marginTop: 14,
+            }}
+          >
+            Add item
           </div>
         </>
       )}
