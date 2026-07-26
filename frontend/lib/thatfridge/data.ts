@@ -95,26 +95,6 @@ export const SECTIONS: Section[] = [
   },
 ];
 
-ICONS.fridgeHero = makeIcon(
-  [
-    ".oooooooo.",
-    "obbbbbbbbo",
-    "obbbbbbbbo",
-    "obbbhbbbbo",
-    "obbbhbbbbo",
-    "oiiiiiiiio",
-    "obbbbbbbbo",
-    "obbbhbbbbo",
-    "obbbhbbbbo",
-    "obbbhbbbbo",
-    "obbbhbbbbo",
-    "obbbhbbbbo",
-    "obbbbbbbbo",
-    ".oooooooo.",
-  ],
-  { o: "#c7c0ae", b: "#f6f1e4", h: "#8fa8c9", i: "#4a6fa5" }
-);
-
 export const RECIPES: Recipe[] = [
   {
     id: "rc1",
@@ -224,66 +204,12 @@ export const ICON_SECTION: Record<string, string> = {
   leftovers: "leftovers",
 };
 
-// Alternate pixel fridge styles (the hero photo remains the default "Original photo" option).
-ICONS.fridgeFrench = makeIcon(
-  [
-    ".oooooooo.",
-    "obbbjbbbbo",
-    "obbhjhbbbo",
-    "obbbjbbbbo",
-    "osssssssso",
-    "obbhjhbbbo",
-    "obbbjbbbbo",
-    "obbbjbbbbo",
-    "offffffffo",
-    "offffhfffo",
-    "offffffffo",
-    "offffffffo",
-    "offffffffo",
-    ".oooooooo.",
-  ],
-  { o: "#9aa4ad", b: "#eef2f6", j: "#5f7c9e", h: "#16325c", f: "#dfe6ea", s: "#c7ddf0" }
-);
-
-ICONS.fridgeRetro = makeIcon(
-  [
-    ".rrrrrrrr.",
-    "rttttttttr",
-    "rttttttttr",
-    "rrrrrrrrrr",
-    "rccccccccr",
-    "rccccccccr",
-    "rccchccccr",
-    "rccccccccr",
-    "rccccccccr",
-    "rssssssssr",
-    "rccccccccr",
-    "rccccccccr",
-    "rrrrrrrrrr",
-    ".rrrrrrrr.",
-  ],
-  { r: "#3f8f5c", t: "#eaf6ff", c: "#bfe3d0", h: "#16325c", s: "#eaf6ff" }
-);
-
-ICONS.fridgeMini = makeIcon(
-  [
-    ".mmmmmmmm.",
-    "mccccccccm",
-    "mccccccccm",
-    "mcccchcccm",
-    "mccccccccm",
-    "mssssssssm",
-    "mccccccccm",
-    ".mmmmmmmm.",
-  ],
-  { m: "#8fa8c9", c: "#f6f3ec", h: "#16325c", s: "#dbe6f2" }
-);
-
+// Alternate fridge look photos (the hero photo remains the default "Original photo" option).
 export const FRIDGE_STYLES: FridgeStyleDef[] = [
-  { key: "classic", label: "Classic Blue", icon: "fridgeHero", bg: "#4a89c9" },
-  { key: "french", label: "French Door", icon: "fridgeFrench", bg: "#dbe6f2" },
-  { key: "retro", label: "Retro Mint", icon: "fridgeRetro", bg: "#8fcda6" },
-  { key: "mini", label: "Mini Bar", icon: "fridgeMini", bg: "#eaf3fb" },
+  { key: "classic", label: "Classic Blue", photo: "/images/thatfridge/fridge-classic.png", bg: "#4a89c9" },
+  { key: "french", label: "French Door", photo: "/images/thatfridge/fridge-french.png", bg: "#dbe6f2" },
+  { key: "retro", label: "Retro Mint", photo: "/images/thatfridge/fridge-retro.png", bg: "#8fcda6" },
+  { key: "mini", label: "Mini Bar", photo: "/images/thatfridge/fridge-mini.png", bg: "#eaf3fb" },
 ];
 
 // Pixel-agent crew — chibi character with thick black outline, hat, apron and a held prop, recolored per role.
