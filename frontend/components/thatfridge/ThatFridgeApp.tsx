@@ -4,6 +4,7 @@ import { ThatFridgeProvider, useThatFridgeCtx } from "./ThatFridgeContext";
 import TabBar from "./TabBar";
 import Fab from "./Fab";
 import ProfileDrawer from "./ProfileDrawer";
+import UndoToast from "./UndoToast";
 import HomeScreen from "./screens/HomeScreen";
 import FoodHubScreen from "./screens/FoodHubScreen";
 import RecipeDetailSheet from "./screens/RecipeDetailSheet";
@@ -12,9 +13,8 @@ import ItemDetailSheet from "./screens/ItemDetailSheet";
 import AddScreen from "./screens/AddScreen";
 import SearchScreen from "./screens/SearchScreen";
 import ChatScreen from "./screens/ChatScreen";
-import GuardianScreen from "./screens/GuardianScreen";
-import OrganizerScreen from "./screens/OrganizerScreen";
-import ShopkeeperScreen from "./screens/ShopkeeperScreen";
+import NotificationsScreen from "./screens/NotificationsScreen";
+import AboutScreen from "./screens/AboutScreen";
 
 function Screens() {
   const { state } = useThatFridgeCtx();
@@ -35,34 +35,43 @@ function Screens() {
       return <SearchScreen />;
     case "chat":
       return <ChatScreen />;
-    case "guardian":
-      return <GuardianScreen />;
-    case "organizer":
-      return <OrganizerScreen />;
-    case "shopkeeper":
-      return <ShopkeeperScreen />;
+    case "notifications":
+      return <NotificationsScreen />;
+    case "about":
+      return <AboutScreen />;
     default:
       return null;
   }
 }
 
+const shellStyle: React.CSSProperties = {
+  position: "relative",
+  width: "100%",
+  height: "100vh",
+  maxWidth: 480,
+  margin: "0 auto",
+  overflow: "hidden",
+  background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)",
+  fontFamily: "-apple-system, system-ui, sans-serif",
+  color: "#16325c",
+};
+
 function AppShell() {
+  const { state } = useThatFridgeCtx();
+
+  if (state.isLoading) {
+    return (
+      <div style={{ ...shellStyle, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600 }}>
+        Loading your fridge…
+      </div>
+    );
+  }
+
   return (
-    <div
-      style={{
-        position: "relative",
-        width: "100%",
-        height: "100vh",
-        maxWidth: 480,
-        margin: "0 auto",
-        overflow: "hidden",
-        background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)",
-        fontFamily: "-apple-system, system-ui, sans-serif",
-        color: "#16325c",
-      }}
-    >
+    <div style={shellStyle}>
       <Screens />
       <Fab />
+      <UndoToast />
       <TabBar />
       <ProfileDrawer />
     </div>

@@ -1,4 +1,6 @@
-import type { Agent, FridgeStyleDef, IconData, Recipe, Section } from "./types";
+import type { Agent, FoodSubtab, FridgeStyleDef, IconData, Recipe, Section } from "./types";
+
+export const FOOD_TAB_ORDER: FoodSubtab[] = ["recipes", "shopping", "guardian", "organizer"];
 
 // Pixel icon patterns + sample fridge inventory data for ThatFridge.
 // Each icon is drawn as rows of a legend string; '.' = transparent.

@@ -2,8 +2,7 @@
 
 import { getRecipesView } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
-import PixelIcon from "../PixelIcon";
-import { EMPTY_ICON } from "@/lib/thatfridge/data";
+import FoodIcon from "../FoodIcon";
 
 export default function RecipeDetailSheet() {
   const { state, actions } = useThatFridgeCtx();
@@ -12,7 +11,7 @@ export default function RecipeDetailSheet() {
     name: "",
     minutes: 0,
     ratioLabel: "",
-    iconData: EMPTY_ICON,
+    icon: "",
     ingredientsView: [],
     stepsView: [],
   };
@@ -25,7 +24,7 @@ export default function RecipeDetailSheet() {
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
             <div style={{ width: 76, height: 76, background: "#eaf6ff", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <div style={{ position: "relative", width: 44, height: 44 }}>
-                <PixelIcon icon={selectedRecipe.iconData} />
+                <FoodIcon icon={selectedRecipe.icon} />
               </div>
             </div>
           </div>

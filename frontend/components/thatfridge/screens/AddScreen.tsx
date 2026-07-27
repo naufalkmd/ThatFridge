@@ -1,8 +1,8 @@
 "use client";
 
-import { getActiveSections, iconFor } from "@/lib/thatfridge/selectors";
+import { getActiveSections } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
-import PixelIcon from "../PixelIcon";
+import FoodIcon from "../FoodIcon";
 import type { ScanMethod } from "@/lib/thatfridge/types";
 
 const SCAN_METHODS: { key: ScanMethod; title: string; desc: string }[] = [
@@ -85,7 +85,7 @@ export default function AddScreen() {
             {state.detected.map((d) => (
               <div key={d.id} onClick={() => actions.toggleDetected(d.id)} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "12px 14px", cursor: "pointer" }}>
                 <div style={{ position: "relative", width: 28, height: 28, flex: "none" }}>
-                  <PixelIcon icon={iconFor(d.icon)} />
+                  <FoodIcon icon={d.icon} />
                 </div>
                 <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{d.name}</div>
                 <div

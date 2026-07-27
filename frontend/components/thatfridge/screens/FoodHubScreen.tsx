@@ -1,45 +1,151 @@
 "use client";
 
-import { getRecipesView, getTonightPick } from "@/lib/thatfridge/selectors";
+import Image from "next/image";
+import { FOOD_TAB_ORDER } from "@/lib/thatfridge/data";
+import { getAllItems, getBuyAgainSuggestions, getRecipesView, getTonightPick, type ItemWithSection } from "@/lib/thatfridge/selectors";
+import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
+import type { FoodSubtab, StorageLocation } from "@/lib/thatfridge/types";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
-import PixelIcon from "../PixelIcon";
+import FoodIcon from "../FoodIcon";
 import ShoppingListPanel from "../ShoppingListPanel";
+
+const TAB_META: Record<FoodSubtab, { label: string; color: string; icon: string; blurb: string }> = {
+  recipes: { label: "Recipes", color: "#b5702f", icon: "/images/thatfridge/chef-agent.png", blurb: "Chef's picks from what you already have" },
+  shopping: { label: "Shopping", color: "#8a3320", icon: "/images/thatfridge/shopkeeper-agent.png", blurb: "Your list, plus what to buy again" },
+  guardian: { label: "Guardian", color: "#3f5c85", icon: "/images/thatfridge/guardian-agent.png", blurb: "Riskiest items are listed first" },
+  organizer: { label: "Organizer", color: "#2f6f47", icon: "/images/thatfridge/organizer-agent.png", blurb: "Tap a spot to move an item there" },
+};
+
+const RISK_BUCKETS: { key: string; label: string; test: (f: number) => boolean; hint: string }[] = [
+  { key: "risk", label: "Act now", test: (f) => f < 30, hint: "Going bad soon — use or lose it" },
+  { key: "watch", label: "Use soon", test: (f) => f >= 30 && f < 60, hint: "Plan to use within a few days" },
+  { key: "fresh", label: "Fresh", test: (f) => f >= 60, hint: "Holding up well" },
+];
+
+const STORAGE_LOCATIONS: { key: StorageLocation; label: string; short: string; blurb: string; color: string }[] = [
+  { key: "fridge", label: "Fridge", short: "Fr", blurb: "Everyday chilled items", color: "#2f6fb0" },
+  { key: "freezer", label: "Freezer", short: "Fz", blurb: "Long-term frozen items", color: "#3f5c85" },
+  { key: "pantry", label: "Pantry", short: "Pa", blurb: "Shelf-stable, room temp", color: "#b5702f" },
+];
+
+function RingTimer({ freshness }: { freshness: number }) {
+  const size = 44;
+  const stroke = 4;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const color = freshColor(freshness);
+  return (
+    <svg width={size} height={size} style={{ flex: "none", transform: "rotate(-90deg)" }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(22,50,92,0.1)" strokeWidth={stroke} />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeDasharray={c}
+        strokeDashoffset={c - (freshness / 100) * c}
+        strokeLinecap="round"
+      />
+      <text
+        x={size / 2}
+        y={size / 2}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={11}
+        fontWeight={800}
+        fill={color}
+        transform={`rotate(90 ${size / 2} ${size / 2})`}
+      >
+        {freshness}
+      </text>
+    </svg>
+  );
+}
 
 export default function FoodHubScreen() {
   const { state, actions } = useThatFridgeCtx();
+  const activeTab = state.foodSubtab;
+  const activeIndex = FOOD_TAB_ORDER.indexOf(activeTab);
+  const activeMeta = TAB_META[activeTab];
+
   const recipesView = getRecipesView(state);
   const tonightPick = getTonightPick(recipesView);
-
-  const foodTranslate = state.foodSubtab === "recipes" ? "0%" : "-50%";
-  const recipesTabBg = state.foodSubtab === "recipes" ? "#16325c" : "transparent";
-  const recipesTabColor = state.foodSubtab === "recipes" ? "#fff" : "rgba(22,50,92,0.55)";
-  const shoppingTabBg = state.foodSubtab === "shopping" ? "#16325c" : "transparent";
-  const shoppingTabColor = state.foodSubtab === "shopping" ? "#fff" : "rgba(22,50,92,0.55)";
+  const suggestions = getBuyAgainSuggestions(state);
+  const allItems = getAllItems(state);
+  const riskGroups = RISK_BUCKETS.map((b) => ({
+    ...b,
+    items: allItems.slice().sort((a, b2) => a.freshness - b2.freshness).filter((i) => b.test(i.freshness)),
+  })).filter((g) => g.items.length > 0);
 
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
       <div style={{ flex: "none", padding: "28px 20px 14px" }}>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 14 }}>Kitchen</div>
-        <div style={{ display: "flex", background: "rgba(255,255,255,0.6)", borderRadius: 14, padding: 4, gap: 4 }}>
-          <div onClick={actions.selectRecipesTab} style={{ flex: 1, textAlign: "center", padding: 9, borderRadius: 11, fontSize: 13, fontWeight: 700, cursor: "pointer", background: recipesTabBg, color: recipesTabColor }}>
-            Recipes
+
+        <div style={{ display: "flex", background: "rgba(255,255,255,0.6)", borderRadius: 14, padding: 4, gap: 4, marginBottom: 10 }}>
+          {FOOD_TAB_ORDER.map((tab) => {
+            const meta = TAB_META[tab];
+            const active = tab === activeTab;
+            return (
+              <div
+                key={tab}
+                onClick={() => actions.selectFoodTab(tab)}
+                style={{
+                  flex: 1,
+                  textAlign: "center",
+                  padding: "9px 2px",
+                  borderRadius: 11,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: active ? meta.color : "transparent",
+                  color: active ? "#fff" : meta.color,
+                  transition: "background .15s ease, color .15s ease",
+                }}
+              >
+                {meta.label}
+              </div>
+            );
+          })}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "9px 12px",
+            borderRadius: 13,
+            background: `${activeMeta.color}14`,
+          }}
+        >
+          <div style={{ position: "relative", width: 26, height: 26, flex: "none" }}>
+            <Image src={activeMeta.icon} alt="" width={26} height={26} style={{ objectFit: "contain" }} />
           </div>
-          <div onClick={actions.selectShoppingTab} style={{ flex: 1, textAlign: "center", padding: 9, borderRadius: 11, fontSize: 13, fontWeight: 700, cursor: "pointer", background: shoppingTabBg, color: shoppingTabColor }}>
-            Shopping
-          </div>
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: activeMeta.color }}>{activeMeta.blurb}</div>
         </div>
       </div>
 
       <div style={{ flex: 1, overflow: "hidden", position: "relative" }} onTouchStart={actions.onSwipeStart} onTouchEnd={actions.onSwipeEnd}>
-        <div style={{ display: "flex", width: "200%", height: "100%", transform: `translateX(${foodTranslate})`, transition: "transform .28s ease" }}>
+        <div
+          style={{
+            display: "flex",
+            width: `${FOOD_TAB_ORDER.length * 100}%`,
+            height: "100%",
+            transform: `translateX(-${activeIndex * (100 / FOOD_TAB_ORDER.length)}%)`,
+            transition: "transform .28s ease",
+          }}
+        >
           {/* recipes pane */}
-          <div style={{ width: "50%", flex: "none", overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
+          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
             {tonightPick && (
               <div onClick={() => actions.openRecipeDetail(tonightPick.id)} style={{ position: "relative", background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", marginBottom: 18, cursor: "pointer" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c", marginBottom: 8 }}>TONIGHT&apos;S PICK</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ position: "relative", width: 46, height: 46, flex: "none", borderRadius: 13, background: "#f6f1e4", padding: 8, boxSizing: "border-box" }}>
-                    <PixelIcon icon={tonightPick.iconData} />
+                    <FoodIcon icon={tonightPick.icon} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 3 }}>{tonightPick.name}</div>
@@ -56,7 +162,7 @@ export default function FoodHubScreen() {
               {recipesView.map((r) => (
                 <div key={r.id} onClick={() => actions.openRecipeDetail(r.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}>
                   <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
-                    <PixelIcon icon={r.iconData} />
+                    <FoodIcon icon={r.icon} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{r.name}</div>
@@ -69,8 +175,139 @@ export default function FoodHubScreen() {
           </div>
 
           {/* shopping pane */}
-          <div style={{ width: "50%", flex: "none", overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
+          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
+            {suggestions.length > 0 && (
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>BUY AGAIN?</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {suggestions.map((s) => (
+                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "10px 14px" }}>
+                      <div style={{ position: "relative", width: 26, height: 26, flex: "none" }}>
+                        <FoodIcon icon={s.icon} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 600 }}>{s.name}</div>
+                        <div style={{ fontSize: 11, color: "rgba(22,50,92,0.45)" }}>Used {s.count}× before</div>
+                      </div>
+                      <div
+                        onClick={() => actions.addPredictedToShopping(s.name, s.icon)}
+                        style={{ width: 30, height: 30, borderRadius: 10, background: "#16325c", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, flex: "none" }}
+                      >
+                        +
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>SHOPPING LIST</div>
             <ShoppingListPanel />
+          </div>
+
+          {/* guardian pane */}
+          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
+            {allItems.length === 0 && (
+              <div style={{ textAlign: "center", color: "rgba(22,50,92,0.45)", fontSize: 13, marginTop: 40 }}>
+                Nothing in this fridge yet — add items to have Guardian watch over them.
+              </div>
+            )}
+            {riskGroups.map((g) => (
+              <div key={g.key} style={{ marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: "rgba(22,50,92,0.55)" }}>
+                    {g.label.toUpperCase()} ({g.items.length})
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(22,50,92,0.4)" }}>{g.hint}</div>
+                </div>
+                <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
+                  {g.items.map((item: ItemWithSection) => (
+                    <div
+                      key={item.id}
+                      onClick={() => actions.selectItem(item.id)}
+                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}
+                    >
+                      <RingTimer freshness={item.freshness} />
+                      <div style={{ position: "relative", width: 28, height: 28, flex: "none" }}>
+                        <FoodIcon icon={item.icon} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{item.name}</div>
+                        <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)" }}>
+                          {item.sectionName} · {item.note}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* organizer pane */}
+          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
+            {allItems.length === 0 && (
+              <div style={{ textAlign: "center", color: "rgba(22,50,92,0.45)", fontSize: 13, marginTop: 40 }}>
+                Nothing to organize yet — add items to sort them into place.
+              </div>
+            )}
+            {STORAGE_LOCATIONS.map((loc) => {
+              const locItems = allItems.filter((i) => (i.location || "fridge") === loc.key);
+              return (
+                <div key={loc.key} style={{ marginBottom: 20 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.3, color: loc.color }}>
+                      {loc.label.toUpperCase()} ({locItems.length})
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(22,50,92,0.4)" }}>{loc.blurb}</div>
+                  </div>
+                  <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
+                    {locItems.length === 0 && (
+                      <div style={{ padding: "14px", fontSize: 12.5, color: "rgba(22,50,92,0.35)", textAlign: "center" }}>Nothing here yet</div>
+                    )}
+                    {locItems.map((item) => {
+                      const current = item.location || "fridge";
+                      return (
+                        <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
+                          <div style={{ position: "relative", width: 26, height: 26, flex: "none" }}>
+                            <FoodIcon icon={item.icon} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600 }}>{item.name}</div>
+                          <div style={{ display: "flex", gap: 4, flex: "none" }}>
+                            {STORAGE_LOCATIONS.map((opt) => {
+                              const active = opt.key === current;
+                              return (
+                                <div
+                                  key={opt.key}
+                                  onClick={() => actions.setItemLocation(item.id, opt.key)}
+                                  title={opt.label}
+                                  style={{
+                                    width: 26,
+                                    height: 26,
+                                    borderRadius: 8,
+                                    background: active ? opt.color : "rgba(22,50,92,0.06)",
+                                    color: active ? "#fff" : "rgba(22,50,92,0.4)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 9.5,
+                                    fontWeight: 800,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  {opt.short}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

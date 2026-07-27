@@ -1,4 +1,4 @@
-import { EMPTY_ICON, FRIDGE_STYLES, ICONS, RECIPES } from "./data";
+import { EMPTY_ICON, FRIDGE_STYLES, ICONS } from "./data";
 import { freshColor } from "./utils";
 import type { Item, Section } from "./types";
 import type { ThatFridgeState } from "./useThatFridge";
@@ -83,7 +83,7 @@ export interface RecipeView {
   id: string;
   name: string;
   minutes: number;
-  iconData: typeof EMPTY_ICON;
+  icon: string;
   haveCount: number;
   total: number;
   ratioLabel: string;
@@ -95,7 +95,7 @@ export interface RecipeView {
 
 export function getRecipesView(state: ThatFridgeState): RecipeView[] {
   const allItems = getAllItems(state);
-  return RECIPES.map((r) => {
+  return state.recipes.map((r) => {
     const ingredientsView = r.ingredients.map((ing) => {
       const have = allItems.some((i) => i.icon === ing.icon);
       return {
@@ -112,7 +112,7 @@ export function getRecipesView(state: ThatFridgeState): RecipeView[] {
       id: r.id,
       name: r.name,
       minutes: r.minutes,
-      iconData: iconFor(r.ingredients[0].icon),
+      icon: r.ingredients[0].icon,
       ingredientsView,
       stepsView: r.steps.map((text, i) => ({ text, n: i + 1 })),
       haveCount,
