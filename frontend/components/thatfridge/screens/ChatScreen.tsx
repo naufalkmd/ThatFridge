@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect } from "react";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
@@ -21,11 +20,8 @@ export default function ChatScreen() {
         <div onClick={actions.goHome} style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", color: "#16325c", fontSize: 20, fontWeight: 600, cursor: "pointer", flex: "none" }}>
           ‹
         </div>
-        <div style={{ width: 38, height: 38, borderRadius: 12, overflow: "hidden", flex: "none", background: "#eaf6ff", position: "relative" }}>
-          <Image src="/images/thatfridge/guardian-mascot.png" alt="Guardian mascot" fill sizes="38px" style={{ objectFit: "contain" }} />
-        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15.5, fontWeight: 800 }}>Ask Guardian</div>
+          <div style={{ fontSize: 15.5, fontWeight: 800 }}>Quick Chat</div>
           <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>Quick answers about your fridge</div>
         </div>
         <div onClick={actions.clearChat} style={{ fontSize: 11.5, fontWeight: 700, color: "#2f6fb0", cursor: "pointer", padding: "6px 4px" }}>
@@ -37,11 +33,8 @@ export default function ChatScreen() {
         {state.chatMessages.map((m) => (
           <div key={m.id} style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start", animation: "pop .18s ease-out" }}>
             {m.from === "bot" ? (
-              <div style={{ display: "flex", gap: 8, maxWidth: "82%" }}>
-                <div style={{ width: 26, height: 26, borderRadius: 8, overflow: "hidden", flex: "none", marginTop: 2, background: "#eaf6ff", position: "relative" }}>
-                  <Image src="/images/thatfridge/guardian-mascot.png" alt="" fill sizes="26px" style={{ objectFit: "contain" }} />
-                </div>
-                <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.08)", borderRadius: "4px 16px 16px 16px", padding: "11px 14px", fontSize: 13.5, lineHeight: 1.5 }}>{m.text}</div>
+              <div style={{ maxWidth: "82%", background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.08)", borderRadius: "4px 16px 16px 16px", padding: "11px 14px", fontSize: 13.5, lineHeight: 1.5 }}>
+                {m.text}
               </div>
             ) : (
               <div style={{ maxWidth: "78%", background: "#16325c", color: "#fff", borderRadius: "16px 4px 16px 16px", padding: "11px 14px", fontSize: 13.5, lineHeight: 1.5 }}>{m.text}</div>
@@ -50,15 +43,10 @@ export default function ChatScreen() {
         ))}
 
         {state.isTyping && (
-          <div style={{ display: "flex", gap: 8, maxWidth: "82%" }}>
-            <div style={{ width: 26, height: 26, borderRadius: 8, overflow: "hidden", flex: "none", background: "#eaf6ff", position: "relative" }}>
-              <Image src="/images/thatfridge/guardian-mascot.png" alt="" fill sizes="26px" style={{ objectFit: "contain" }} />
-            </div>
-            <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.08)", borderRadius: "4px 16px 16px 16px", padding: "13px 16px", display: "flex", gap: 4, alignItems: "center" }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite" }} />
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite .15s" }} />
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite .3s" }} />
-            </div>
+          <div style={{ maxWidth: "82%", background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.08)", borderRadius: "4px 16px 16px 16px", padding: "13px 16px", display: "flex", gap: 4, alignItems: "center" }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite" }} />
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite .15s" }} />
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite .3s" }} />
           </div>
         )}
       </div>

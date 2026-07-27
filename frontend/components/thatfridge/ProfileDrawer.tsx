@@ -3,13 +3,15 @@
 import { getFridgeSummaries } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
-const SETTINGS_ROWS = ["Notifications", "Units & measurements", "Household members", "About ThatFridge"];
-
 export default function ProfileDrawer() {
   const { state, actions } = useThatFridgeCtx();
   if (!state.showProfilePanel) return null;
 
   const fridges = getFridgeSummaries(state);
+  const settingsRows: { label: string; onClick: () => void }[] = [
+    { label: "Notifications", onClick: actions.openNotifications },
+    { label: "About ThatFridge", onClick: actions.openAbout },
+  ];
 
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 20 }}>
@@ -72,9 +74,10 @@ export default function ProfileDrawer() {
 
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "rgba(22,50,92,0.45)", marginBottom: 8 }}>SETTINGS</div>
         <div style={{ display: "flex", flexDirection: "column" }}>
-          {SETTINGS_ROWS.map((label) => (
+          {settingsRows.map((row) => (
             <div
-              key={label}
+              key={row.label}
+              onClick={row.onClick}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -84,7 +87,7 @@ export default function ProfileDrawer() {
                 cursor: "pointer",
               }}
             >
-              <div style={{ fontSize: 13.5, fontWeight: 600, color: "#16325c" }}>{label}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: "#16325c" }}>{row.label}</div>
               <div style={{ color: "rgba(22,50,92,0.3)", fontSize: 14 }}>›</div>
             </div>
           ))}

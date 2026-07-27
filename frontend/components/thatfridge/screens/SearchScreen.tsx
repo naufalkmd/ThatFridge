@@ -1,9 +1,9 @@
 "use client";
 
-import { getAllItems, iconFor } from "@/lib/thatfridge/selectors";
+import { getAllItems } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
-import PixelIcon from "../PixelIcon";
+import FoodIcon from "../FoodIcon";
 
 const SUGGESTIONS = ["Dairy", "Produce", "Leftovers", "Meat"];
 
@@ -47,7 +47,7 @@ export default function SearchScreen() {
             {results.map((item) => (
               <div key={item.id} onClick={() => actions.selectItem(item.id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}>
                 <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
-                  <PixelIcon icon={iconFor(item.icon)} />
+                  <FoodIcon icon={item.icon} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{item.name}</div>

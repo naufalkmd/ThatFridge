@@ -91,11 +91,17 @@ export type Screen =
   | "add"
   | "search"
   | "chat"
-  | "guardian"
-  | "organizer"
-  | "shopkeeper";
+  | "notifications"
+  | "about";
 
-export type FoodSubtab = "recipes" | "shopping";
+export type FoodSubtab = "recipes" | "shopping" | "guardian" | "organizer";
+
+export interface NotificationPrefs {
+  expiryAlerts: boolean;
+  lowStock: boolean;
+  recipeTips: boolean;
+  weeklyDigest: boolean;
+}
 
 export interface UsageHistoryEntry {
   key: string;

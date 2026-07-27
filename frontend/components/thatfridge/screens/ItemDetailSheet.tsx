@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
-import { findItem, iconFor } from "@/lib/thatfridge/selectors";
+import { findItem } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
-import PixelIcon from "../PixelIcon";
+import FoodIcon from "../FoodIcon";
+import AgentFaceIcon from "../AgentFaceIcon";
 
 export default function ItemDetailSheet() {
   const { state, actions } = useThatFridgeCtx();
@@ -26,7 +26,7 @@ export default function ItemDetailSheet() {
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
           <div style={{ width: 88, height: 88, background: "#eaf6ff", borderRadius: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ position: "relative", width: 52, height: 52 }}>
-              <PixelIcon icon={iconFor(item.icon)} />
+              <FoodIcon icon={item.icon} />
             </div>
           </div>
         </div>
@@ -47,7 +47,9 @@ export default function ItemDetailSheet() {
         </div>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center", background: "#eef2f7", borderRadius: 14, padding: "10px 14px", marginBottom: 20 }}>
-          <Image src="/images/thatfridge/guardian-mascot.png" alt="" width={32} height={32} style={{ objectFit: "contain", flex: "none" }} />
+          <div style={{ position: "relative", width: 32, height: 32, flex: "none", borderRadius: 8, overflow: "hidden" }}>
+            <AgentFaceIcon agent="guardian" />
+          </div>
           <div style={{ fontSize: 12.5, lineHeight: 1.45, color: "#16325c" }}>{tip}</div>
         </div>
 

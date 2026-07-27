@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { ICON_SECTION, RECIPES, SECTIONS } from "./data";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FOOD_TAB_ORDER, ICON_SECTION } from "./data";
+import { fetchFridges, fetchRecipes } from "./api";
 import { findItem } from "./selectors";
 import type {
   ChatMessage,
@@ -9,6 +10,8 @@ import type {
   FoodSubtab,
   Fridge,
   FridgeStyleKey,
+  NotificationPrefs,
+  Recipe,
   Screen,
   ScanMethod,
   Section,
@@ -27,7 +30,9 @@ const DEFAULT_ICON_BY_SECTION: Record<string, string> = {
 
 export interface ThatFridgeState {
   screen: Screen;
+  isLoading: boolean;
   fridges: Fridge[];
+  recipes: Recipe[];
   activeFridge: number;
   heroSlide: number;
   newFridgeName: string;
@@ -52,49 +57,16 @@ export interface ThatFridgeState {
   isTyping: boolean;
   stylingFridgeIndex: number;
   hoveredAgent: string | null;
+  undoMessage: string | null;
+  notificationPrefs: NotificationPrefs;
 }
 
 function initialState(): ThatFridgeState {
   return {
     screen: "home",
-    fridges: [
-      { id: "f0", name: "Kitchen", style: "photo", sections: structuredClone(SECTIONS) },
-      {
-        id: "f1",
-        name: "Garage",
-        style: "classic",
-        sections: [
-          {
-            id: "drinks",
-            name: "Drinks shelf",
-            items: [
-              { id: "g1", name: "Soda cans", icon: "milk", freshness: 92, days: 60, note: "Full case" },
-              { id: "g2", name: "Craft beer", icon: "yogurt", freshness: 85, days: 90, note: "6 left" },
-            ],
-          },
-          {
-            id: "overflow",
-            name: "Overflow",
-            items: [{ id: "g3", name: "Frozen peas", icon: "spinach", freshness: 70, days: 120, note: "Backup bag" }],
-          },
-        ],
-      },
-      {
-        id: "f2",
-        name: "Office",
-        style: "mini",
-        sections: [
-          {
-            id: "lunches",
-            name: "Lunches",
-            items: [
-              { id: "o1", name: "Turkey sandwich", icon: "leftovers", freshness: 38, days: 1, note: "Bring home tonight" },
-              { id: "o2", name: "Yogurt cup", icon: "yogurt", freshness: 75, days: 5, note: "2 cups" },
-            ],
-          },
-        ],
-      },
-    ],
+    isLoading: true,
+    fridges: [],
+    recipes: [],
     activeFridge: 0,
     heroSlide: 0,
     newFridgeName: "",
@@ -114,13 +86,17 @@ function initialState(): ThatFridgeState {
     newShoppingText: "",
     shoppingList: [],
     shoppingSeeded: false,
-    chatMessages: [{ id: "m0", from: "bot", text: "Hi, I'm Guardian! Ask me anything about what's in your fridge." }],
+    chatMessages: [{ id: "m0", from: "bot", text: "Hi! Ask me anything about what's in your fridge." }],
     chatDraft: "",
     isTyping: false,
     stylingFridgeIndex: 0,
     hoveredAgent: null,
+    undoMessage: null,
+    notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false },
   };
 }
+
+const UNDO_WINDOW_MS = 5000;
 
 type Patch = Partial<ThatFridgeState> | ((s: ThatFridgeState) => Partial<ThatFridgeState>);
 
@@ -130,8 +106,52 @@ export function useThatFridge() {
   const foodSwipeX = useRef(0);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
-  const patch = (updater: Patch) => {
+  const patch = useCallback((updater: Patch) => {
     setState((prev) => ({ ...prev, ...(typeof updater === "function" ? updater(prev) : updater) }));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([fetchFridges(), fetchRecipes()]).then(([fridges, recipes]) => {
+      if (cancelled) return;
+      patch({ fridges, recipes, isLoading: false });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [patch]);
+
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoActions = useRef<{ onCommit: () => void; onRestore: () => void } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (undoTimer.current) clearTimeout(undoTimer.current);
+    };
+  }, []);
+
+  const scheduleUndo = (message: string, onRestore: () => void, onCommit: () => void = () => {}) => {
+    if (undoTimer.current) {
+      clearTimeout(undoTimer.current);
+      undoActions.current?.onCommit();
+    }
+    undoActions.current = { onCommit, onRestore };
+    patch({ undoMessage: message });
+    undoTimer.current = setTimeout(() => {
+      undoActions.current?.onCommit();
+      undoActions.current = null;
+      undoTimer.current = null;
+      patch({ undoMessage: null });
+    }, UNDO_WINDOW_MS);
+  };
+
+  const undoLastRemoval = () => {
+    if (!undoActions.current || !undoTimer.current) return;
+    clearTimeout(undoTimer.current);
+    undoActions.current.onRestore();
+    undoActions.current = null;
+    undoTimer.current = null;
+    patch({ undoMessage: null });
   };
 
   const setSections = (sections: Section[]) => {
@@ -182,6 +202,11 @@ export function useThatFridge() {
   const selectFridgeFromProfile = (i: number) =>
     patch({ activeFridge: i, heroSlide: i, showProfilePanel: false, screen: "home" });
 
+  const openNotifications = () => patch({ screen: "notifications", showProfilePanel: false });
+  const openAbout = () => patch({ screen: "about", showProfilePanel: false });
+  const toggleNotificationPref = (key: keyof NotificationPrefs) =>
+    patch((s) => ({ notificationPrefs: { ...s.notificationPrefs, [key]: !s.notificationPrefs[key] } }));
+
   const openStylePicker = (i: number) => patch({ stylingFridgeIndex: i, screen: "fridgeStyle" });
   const closeStylePicker = () => patch({ screen: "home" });
   const selectFridgeStyle = (key: FridgeStyleKey) =>
@@ -212,30 +237,27 @@ export function useThatFridge() {
       return { shoppingList: seeded, shoppingSeeded: true };
     });
   };
-  const openRecipesHub = () => {
+  const openKitchenTab = (tab: FoodSubtab) => {
     ensureShoppingSeed();
-    patch({ screen: "foodHub", foodSubtab: "recipes" });
+    patch({ screen: "foodHub", foodSubtab: tab });
   };
-  const openShoppingHub = () => {
-    ensureShoppingSeed();
-    patch({ screen: "foodHub", foodSubtab: "shopping" });
-  };
-  const openGuardianHub = () => patch({ screen: "guardian" });
-  const openOrganizerHub = () => patch({ screen: "organizer" });
-  const openShopkeeperHub = () => {
-    ensureShoppingSeed();
-    patch({ screen: "shopkeeper" });
-  };
-  const selectRecipesTab = () => patch({ foodSubtab: "recipes" });
-  const selectShoppingTab = () => patch({ foodSubtab: "shopping" });
+  const openRecipesHub = () => openKitchenTab("recipes");
+  const openShoppingHub = () => openKitchenTab("shopping");
+  const openGuardianTab = () => openKitchenTab("guardian");
+  const openOrganizerTab = () => openKitchenTab("organizer");
+  const selectFoodTab = (tab: FoodSubtab) => patch({ foodSubtab: tab });
 
   const onSwipeStart = (e: React.TouchEvent) => {
     foodSwipeX.current = e.touches[0].clientX;
   };
   const onSwipeEnd = (e: React.TouchEvent) => {
     const dx = e.changedTouches[0].clientX - foodSwipeX.current;
-    if (dx < -40) patch({ foodSubtab: "shopping" });
-    else if (dx > 40) patch({ foodSubtab: "recipes" });
+    if (Math.abs(dx) <= 40) return;
+    patch((s) => {
+      const idx = FOOD_TAB_ORDER.indexOf(s.foodSubtab);
+      const nextIdx = dx < 0 ? Math.min(FOOD_TAB_ORDER.length - 1, idx + 1) : Math.max(0, idx - 1);
+      return { foodSubtab: FOOD_TAB_ORDER[nextIdx] };
+    });
   };
 
   const openRecipeDetail = (id: string) => patch({ screen: "recipeDetail", selectedRecipeId: id });
@@ -259,7 +281,7 @@ export function useThatFridge() {
 
   const addMissingToShopping = () => {
     patch((s) => {
-      const recipe = RECIPES.find((r) => r.id === s.selectedRecipeId);
+      const recipe = s.recipes.find((r) => r.id === s.selectedRecipeId);
       if (!recipe) return {};
       const allItems = s.fridges[s.activeFridge].sections.flatMap((sec) => sec.items);
       const missing = recipe.ingredients.filter((ing) => !allItems.some((i) => i.icon === ing.icon));
@@ -293,7 +315,7 @@ export function useThatFridge() {
 
   const cookRecipe = () => {
     patch((s) => {
-      const recipe = RECIPES.find((r) => r.id === s.selectedRecipeId);
+      const recipe = s.recipes.find((r) => r.id === s.selectedRecipeId);
       if (!recipe) return {};
       let sections = s.fridges[s.activeFridge].sections;
       recipe.ingredients.forEach((ing) => {
@@ -319,7 +341,7 @@ export function useThatFridge() {
   const onDraftChange = (value: string) => patch({ chatDraft: value });
   const clearChat = () =>
     patch({
-      chatMessages: [{ id: "m0", from: "bot", text: "Hi, I'm Guardian! Ask me anything about what's in your fridge." }],
+      chatMessages: [{ id: "m0", from: "bot", text: "Hi! Ask me anything about what's in your fridge." }],
       chatDraft: "",
       isTyping: false,
     });
@@ -375,23 +397,52 @@ export function useThatFridge() {
     return [...s.usageHistory, { key, name, icon, count: 1, lastAt: Date.now() }];
   };
 
-  const removeItem = (id: string) => {
+  const removeItemWithUndo = (id: string, message: string, onCommit?: () => void) => {
+    const found = findItem(state, id);
+    if (!found) return;
+    const { item, section } = found;
+    const fridgeIndex = state.activeFridge;
+    const itemIndex = section.items.findIndex((it) => it.id === id);
+
     patch((s) => ({
       fridges: s.fridges.map((f, i) =>
-        i === s.activeFridge ? { ...f, sections: f.sections.map((sec) => ({ ...sec, items: sec.items.filter((it) => it.id !== id) })) } : f
+        i === fridgeIndex
+          ? { ...f, sections: f.sections.map((sec) => (sec.id === section.id ? { ...sec, items: sec.items.filter((it) => it.id !== id) } : sec)) }
+          : f
       ),
       screen: "home",
       selectedItemId: null,
     }));
+
+    scheduleUndo(message, () => {
+      patch((s) => ({
+        fridges: s.fridges.map((f, i) =>
+          i === fridgeIndex
+            ? {
+                ...f,
+                sections: f.sections.map((sec) =>
+                  sec.id === section.id ? { ...sec, items: [...sec.items.slice(0, itemIndex), item, ...sec.items.slice(itemIndex)] } : sec
+                ),
+              }
+            : f
+        ),
+      }));
+    }, onCommit);
   };
   const markUsed = () => {
     if (!state.selectedItemId) return;
     const found = findItem(state, state.selectedItemId);
-    if (found) patch((s) => ({ usageHistory: recordUsage(s, found.item.name, found.item.icon) }));
-    removeItem(state.selectedItemId);
+    if (!found) return;
+    const { item } = found;
+    removeItemWithUndo(state.selectedItemId, `Marked "${item.name}" as used`, () => {
+      patch((s) => ({ usageHistory: recordUsage(s, item.name, item.icon) }));
+    });
   };
   const discardItem = () => {
-    if (state.selectedItemId) removeItem(state.selectedItemId);
+    if (!state.selectedItemId) return;
+    const found = findItem(state, state.selectedItemId);
+    if (!found) return;
+    removeItemWithUndo(state.selectedItemId, `Removed "${found.item.name}"`);
   };
 
   const chooseMethod = (method: ScanMethod) => {
@@ -479,6 +530,9 @@ export function useThatFridge() {
     openProfile,
     closeProfile,
     selectFridgeFromProfile,
+    openNotifications,
+    openAbout,
+    toggleNotificationPref,
     openStylePicker,
     closeStylePicker,
     selectFridgeStyle,
@@ -488,8 +542,9 @@ export function useThatFridge() {
     openSearch,
     openRecipesHub,
     openShoppingHub,
-    selectRecipesTab,
-    selectShoppingTab,
+    openGuardianTab,
+    openOrganizerTab,
+    selectFoodTab,
     onSwipeStart,
     onSwipeEnd,
     openRecipeDetail,
@@ -513,11 +568,9 @@ export function useThatFridge() {
     goTab,
     openAdd,
     selectItem,
-    openGuardianHub,
-    openOrganizerHub,
-    openShopkeeperHub,
     markUsed,
     discardItem,
+    undoLastRemoval,
     chooseMethod,
     toggleDetected,
     onManualNameChange,

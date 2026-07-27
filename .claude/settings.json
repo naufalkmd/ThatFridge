@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Replicate__get_models",
+      "Bash(python3 -c ' *)",
+      "Bash(cp /tmp/style-ref.b64 /tmp/style-ref-b64.txt *)"
+    ],
+    "additionalDirectories": [
+      "/private/tmp"
+    ]
+  }
+}
