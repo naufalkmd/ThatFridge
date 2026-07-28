@@ -105,6 +105,7 @@ export type Screen =
   | "chatHistory"
   | "notifications"
   | "notificationHistory"
+  | "aiData"
   | "about";
 
 export type FoodSubtab = "recipes" | "shopping" | "guardian" | "organizer";

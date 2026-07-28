@@ -19,7 +19,6 @@ import type {
   Recipe,
   Screen,
   ScanMethod,
-  Section,
   ShoppingItem,
   StorageLocation,
   UsageHistoryEntry,
@@ -292,10 +291,6 @@ export function useThatFridge() {
     patch({ undoMessage: null });
   };
 
-  const setSections = (sections: Section[]) => {
-    patch((s) => ({ fridges: s.fridges.map((f, i) => (i === s.activeFridge ? { ...f, sections } : f)) }));
-  };
-
   const setItemLocation = (id: string, location: StorageLocation) => {
     patch((s) => ({
       fridges: s.fridges.map((f) => ({
@@ -357,6 +352,18 @@ export function useThatFridge() {
   const toggleNotificationPref = (key: keyof NotificationPrefs) =>
     patch((s) => ({ notificationPrefs: { ...s.notificationPrefs, [key]: !s.notificationPrefs[key] } }));
 
+  const openAIDataSettings = () => patch({ screen: "aiData", showProfilePanel: false });
+  const deleteChatThread = (id: string) => patch((s) => ({ chatThreads: s.chatThreads.filter((t) => t.id !== id) }));
+  const clearAllChatData = () =>
+    patch({
+      chatThreads: [],
+      chatMessages: DEFAULT_CHAT_MESSAGES,
+      chatDraft: "",
+      isTyping: false,
+    });
+  const deleteUsageHistoryEntry = (key: string) => patch((s) => ({ usageHistory: s.usageHistory.filter((h) => h.key !== key) }));
+  const clearUsageHistory = () => patch({ usageHistory: [] });
+
   const openStylePicker = (i: number) => patch({ stylingFridgeIndex: i, screen: "fridgeStyle" });
   const closeStylePicker = () => patch({ screen: "home" });
   const selectFridgeStyle = (key: FridgeStyleKey) =>
@@ -382,7 +389,6 @@ export function useThatFridge() {
       return { fridges, activeFridge, heroSlide: activeFridge, screen: "home" };
     });
 
-  const openChat = () => patch({ screen: "chat" });
   const openSearch = () => patch({ screen: "search", searchQuery: "" });
 
   const ensureShoppingSeed = () => {
@@ -401,14 +407,14 @@ export function useThatFridge() {
       return { shoppingList: seeded, shoppingSeeded: true };
     });
   };
-  const openKitchenTab = (tab: FoodSubtab) => {
+  const openFoodHubTab = (tab: FoodSubtab) => {
     ensureShoppingSeed();
     patch({ screen: "foodHub", foodSubtab: tab });
   };
-  const openRecipesHub = () => openKitchenTab("recipes");
-  const openShoppingHub = () => openKitchenTab("shopping");
-  const openGuardianTab = () => openKitchenTab("guardian");
-  const openOrganizerTab = () => openKitchenTab("organizer");
+  const openRecipesHub = () => openFoodHubTab("recipes");
+  const openShoppingHub = () => openFoodHubTab("shopping");
+  const openGuardianTab = () => openFoodHubTab("guardian");
+  const openOrganizerTab = () => openFoodHubTab("organizer");
   const selectFoodTab = (tab: FoodSubtab) => patch({ foodSubtab: tab });
 
   const onSwipeStart = (e: React.TouchEvent) => {
@@ -791,13 +797,17 @@ export function useThatFridge() {
     dismissNotificationWithUndo,
     openAbout,
     toggleNotificationPref,
+    openAIDataSettings,
+    deleteChatThread,
+    clearAllChatData,
+    deleteUsageHistoryEntry,
+    clearUsageHistory,
     openStylePicker,
     closeStylePicker,
     selectFridgeStyle,
     renameFridge,
     renameFridgeBlur,
     deleteFridge,
-    openChat,
     openSearch,
     openRecipesHub,
     openShoppingHub,
@@ -848,7 +858,6 @@ export function useThatFridge() {
     onManualNoteChange,
     confirmManualAdd,
     confirmAdd,
-    setSections,
     setItemLocation,
     selectFridgeScope,
     setInventorySortMode,
