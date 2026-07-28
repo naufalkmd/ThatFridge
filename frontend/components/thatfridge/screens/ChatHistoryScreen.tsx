@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageCircle, X } from "lucide-react";
+import { MessageCircle, Trash2, X } from "lucide-react";
 import { timeAgo } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
@@ -51,6 +51,15 @@ export default function ChatHistoryScreen() {
                   <div style={{ fontSize: 11, color: "rgba(22,50,92,0.4)" }}>
                     {thread.messages.length} message{thread.messages.length === 1 ? "" : "s"} · {timeAgo(thread.updatedAt)}
                   </div>
+                </div>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    actions.deleteChatThread(thread.id);
+                  }}
+                  style={{ width: 30, height: 30, borderRadius: 15, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+                >
+                  <Trash2 size={15} color="rgba(22,50,92,0.35)" strokeWidth={2} />
                 </div>
               </div>
             ))}

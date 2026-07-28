@@ -3,10 +3,6 @@ import { freshColor } from "./utils";
 import type { Fridge, Item, NotificationEvent, Section } from "./types";
 import type { ThatFridgeState } from "./useThatFridge";
 
-export function getActiveSections(state: ThatFridgeState): Section[] {
-  return state.fridges[state.activeFridge].sections;
-}
-
 export function findSectionIdForGroup(sections: Section[], group: string): string | null {
   const byId = sections.find((sec) => sec.id === group);
   if (byId) return byId.id;
