@@ -5,7 +5,7 @@ import { useThatFridgeCtx } from "./ThatFridgeContext";
 const TAB_DEFS = [
   { key: "home" as const, label: "Home" },
   { key: "chat" as const, label: "Chat" },
-  { key: "activity" as const, label: "Kitchen" },
+  { key: "activity" as const, label: "Crew" },
 ];
 
 export default function TabBar() {

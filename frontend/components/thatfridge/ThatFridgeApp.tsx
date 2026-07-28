@@ -15,6 +15,7 @@ import SearchScreen from "./screens/SearchScreen";
 import ChatScreen from "./screens/ChatScreen";
 import NotificationsScreen from "./screens/NotificationsScreen";
 import AboutScreen from "./screens/AboutScreen";
+import AuthScreen from "./screens/AuthScreen";
 
 function Screens() {
   const { state } = useThatFridgeCtx();
@@ -58,6 +59,14 @@ const shellStyle: React.CSSProperties = {
 
 function AppShell() {
   const { state } = useThatFridgeCtx();
+
+  if (!state.isAuthenticated) {
+    return (
+      <div style={shellStyle}>
+        <AuthScreen />
+      </div>
+    );
+  }
 
   if (state.isLoading) {
     return (
