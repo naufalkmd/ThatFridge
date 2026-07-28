@@ -51,7 +51,6 @@ function Screens() {
 const shellStyle: React.CSSProperties = {
   position: "relative",
   width: "100%",
-  height: "100vh",
   maxWidth: 480,
   margin: "0 auto",
   overflow: "hidden",
@@ -65,7 +64,7 @@ function AppShell() {
 
   if (!state.isAuthenticated) {
     return (
-      <div style={shellStyle}>
+      <div className="thatfridge-shell" style={shellStyle}>
         <AuthScreen />
       </div>
     );
@@ -73,14 +72,17 @@ function AppShell() {
 
   if (state.isLoading) {
     return (
-      <div style={{ ...shellStyle, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600 }}>
+      <div
+        className="thatfridge-shell"
+        style={{ ...shellStyle, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600 }}
+      >
         Loading your fridge…
       </div>
     );
   }
 
   return (
-    <div style={shellStyle}>
+    <div className="thatfridge-shell" style={shellStyle}>
       <Screens />
       <Fab />
       <UndoToast />
