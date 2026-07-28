@@ -14,8 +14,6 @@ import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import ChefMascot from "../ChefMascot";
 
-const HERO_CARD_WIDTH = 362;
-
 const cardStyle: React.CSSProperties = {
   background: "#fff",
   boxShadow: "0 10px 24px rgba(22,50,92,0.1)",
@@ -35,8 +33,10 @@ export default function HomeScreen() {
   const { state, actions } = useThatFridgeCtx();
   const fridgesView = getFridgeHeroViews(state);
   const heroSlide = state.heroSlide;
-  const heroTrackWidth = (fridgesView.length + 1) * HERO_CARD_WIDTH;
-  const heroTranslate = `translateX(-${heroSlide * HERO_CARD_WIDTH}px)`;
+  const heroSlideCount = fridgesView.length + 1;
+  const heroSlideWidthPct = 100 / heroSlideCount;
+  const heroTrackWidth = `${heroSlideCount * 100}%`;
+  const heroTranslate = `translateX(-${heroSlide * heroSlideWidthPct}%)`;
 
   const guardianItem = getGuardianItem(state);
   const lowStockItem = getLowStockItem(state);
@@ -52,7 +52,14 @@ export default function HomeScreen() {
       : `Use ${guardianItem.name.toLowerCase()} within ${guardianItem.days} day${guardianItem.days === 1 ? "" : "s"} for best quality.`
     : "";
 
-  const dotCount = fridgesView.length + 1;
+  const dotCount = heroSlideCount;
+
+  const userInitials = (state.currentUser?.name || "Friend")
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <div style={{ position: "absolute", inset: 0, overflowY: "auto", padding: "28px 20px 150px" }}>
@@ -75,7 +82,7 @@ export default function HomeScreen() {
             flex: "none",
           }}
         >
-          JD
+          {userInitials}
         </div>
         <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>ThatFridge</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -95,9 +102,10 @@ export default function HomeScreen() {
               flex: "none",
             }}
           >
-            <div style={{ width: 13, height: 13, border: "1.6px solid #16325c", borderRadius: "50%", position: "relative" }}>
-              <div style={{ position: "absolute", width: 1.6, height: 7, background: "#16325c", bottom: -6, right: -1, transform: "rotate(45deg)" }} />
-            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="11" cy="11" r="7" stroke="#16325c" strokeWidth="2" />
+              <path d="M21 21L16.65 16.65" stroke="#16325c" strokeWidth="2" strokeLinecap="round" />
+            </svg>
           </div>
         </div>
       </div>
@@ -110,7 +118,7 @@ export default function HomeScreen() {
           onTouchEnd={actions.onHeroSwipeEnd}
         >
           {fridgesView.map((fr, i) => (
-            <div key={fr.id} style={{ width: HERO_CARD_WIDTH, flex: "none" }}>
+            <div key={fr.id} style={{ width: `${heroSlideWidthPct}%`, flex: "none" }}>
               <div
                 style={{
                   position: "relative",
@@ -127,7 +135,7 @@ export default function HomeScreen() {
                     src={fr.photoSrc}
                     alt="Illustration of a stocked fridge"
                     fill
-                    sizes="362px"
+                    sizes="420px"
                     style={{ objectFit: "cover", objectPosition: "center 15%" }}
                   />
                 )}
@@ -188,7 +196,7 @@ export default function HomeScreen() {
               </div>
             </div>
           ))}
-          <div style={{ width: HERO_CARD_WIDTH, flex: "none" }}>
+          <div style={{ width: `${heroSlideWidthPct}%`, flex: "none" }}>
             <div
               style={{
                 width: "100%",
