@@ -1,13 +1,28 @@
 "use client";
 
 import Image from "next/image";
+import { MapPin, Plus } from "lucide-react";
 import { FOOD_TAB_ORDER } from "@/lib/thatfridge/data";
-import { getAllItems, getBuyAgainSuggestions, getRecipesView, getTonightPick, type ItemWithSection } from "@/lib/thatfridge/selectors";
+import {
+  getExpiringOwnedItems,
+  getRecipesView,
+  getScopedItems,
+  getShoppingRecommendations,
+  getTonightPick,
+  type ItemWithSection,
+  type ShoppingRecommendation,
+} from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import type { FoodSubtab, StorageLocation } from "@/lib/thatfridge/types";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import ShoppingListPanel from "../ShoppingListPanel";
+
+const REC_SOURCE_META: Record<ShoppingRecommendation["source"], { label: string; color: string }> = {
+  recipe: { label: "Recipe", color: "#b5702f" },
+  nutrition: { label: "Nutrition", color: "#2f6f47" },
+  habit: { label: "Habit", color: "#8a3320" },
+};
 
 const TAB_META: Record<FoodSubtab, { label: string; color: string; icon: string; blurb: string }> = {
   recipes: { label: "Recipes", color: "#b5702f", icon: "/images/thatfridge/chef-agent.png", blurb: "Chef's picks from what you already have" },
@@ -72,8 +87,10 @@ export default function FoodHubScreen() {
 
   const recipesView = getRecipesView(state);
   const tonightPick = getTonightPick(recipesView);
-  const suggestions = getBuyAgainSuggestions(state);
-  const allItems = getAllItems(state);
+  const expiringOwned = getExpiringOwnedItems(state, 5);
+  const recommendations = getShoppingRecommendations(state, 6);
+  const allItems = getScopedItems(state);
+  const showFridgeTags = state.kitchenScope === "all";
   const riskGroups = RISK_BUCKETS.map((b) => ({
     ...b,
     items: allItems.slice().sort((a, b2) => a.freshness - b2.freshness).filter((i) => b.test(i.freshness)),
@@ -82,7 +99,28 @@ export default function FoodHubScreen() {
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
       <div style={{ flex: "none", padding: "28px 20px 14px" }}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 14 }}>Kitchen</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div style={{ fontSize: 20, fontWeight: 800 }}>Kitchen</div>
+          <div style={{ display: "flex", background: "rgba(255,255,255,0.6)", borderRadius: 10, padding: 3, gap: 2 }}>
+            {(["all", "active"] as const).map((scope) => (
+              <div
+                key={scope}
+                onClick={() => actions.setKitchenScope(scope)}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  background: state.kitchenScope === scope ? "#16325c" : "transparent",
+                  color: state.kitchenScope === scope ? "#fff" : "rgba(22,50,92,0.5)",
+                }}
+              >
+                {scope === "all" ? "All Fridges" : "This Fridge"}
+              </div>
+            ))}
+          </div>
+        </div>
 
         <div style={{ display: "flex", background: "rgba(255,255,255,0.6)", borderRadius: 14, padding: 4, gap: 4, marginBottom: 10 }}>
           {FOOD_TAB_ORDER.map((tab) => {
@@ -176,25 +214,24 @@ export default function FoodHubScreen() {
 
           {/* shopping pane */}
           <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
-            {suggestions.length > 0 && (
+            {expiringOwned.length > 0 && (
               <div style={{ marginBottom: 22 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>BUY AGAIN?</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {suggestions.map((s) => (
-                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "10px 14px" }}>
-                      <div style={{ position: "relative", width: 26, height: 26, flex: "none" }}>
-                        <FoodIcon icon={s.icon} />
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 2 }}>ALREADY HAVE — DON&apos;T REBUY</div>
+                <div style={{ fontSize: 11, color: "rgba(22,50,92,0.4)", marginBottom: 8 }}>Use these up before buying more</div>
+                <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, overflow: "hidden" }}>
+                  {expiringOwned.map((item, i) => (
+                    <div
+                      key={item.id}
+                      style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderBottom: i < expiringOwned.length - 1 ? "1px solid rgba(22,50,92,0.06)" : undefined }}
+                    >
+                      <div style={{ position: "relative", width: 22, height: 22, flex: "none" }}>
+                        <FoodIcon icon={item.icon} />
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 600 }}>{s.name}</div>
-                        <div style={{ fontSize: 11, color: "rgba(22,50,92,0.45)" }}>Used {s.count}× before</div>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600 }}>
+                        {item.name}
+                        {showFridgeTags && <span style={{ fontWeight: 500, color: "rgba(22,50,92,0.4)" }}> · {item.fridgeName}</span>}
                       </div>
-                      <div
-                        onClick={() => actions.addPredictedToShopping(s.name, s.icon)}
-                        style={{ width: 30, height: 30, borderRadius: 10, background: "#16325c", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, flex: "none" }}
-                      >
-                        +
-                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: freshColor(item.freshness), flex: "none" }}>{daysLabel(item.days)}</div>
                     </div>
                   ))}
                 </div>
@@ -203,6 +240,39 @@ export default function FoodHubScreen() {
 
             <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>SHOPPING LIST</div>
             <ShoppingListPanel />
+
+            {recommendations.length > 0 && (
+              <div style={{ marginTop: 22 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>RECOMMENDED FOR YOU</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {recommendations.map((rec) => {
+                    const meta = REC_SOURCE_META[rec.source];
+                    return (
+                      <div key={rec.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "10px 14px" }}>
+                        <div style={{ position: "relative", width: 26, height: 26, flex: "none" }}>
+                          <FoodIcon icon={rec.icon} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{rec.name}</div>
+                            <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.2, color: meta.color, background: `${meta.color}1a`, padding: "2px 6px", borderRadius: 6, flex: "none" }}>
+                              {meta.label.toUpperCase()}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 11, color: "rgba(22,50,92,0.45)" }}>{rec.reason}</div>
+                        </div>
+                        <div
+                          onClick={() => actions.addPredictedToShopping(rec.name, rec.icon)}
+                          style={{ width: 30, height: 30, borderRadius: 10, background: "#16325c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+                        >
+                          <Plus size={16} color="#fff" strokeWidth={2.3} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* guardian pane */}
@@ -233,8 +303,14 @@ export default function FoodHubScreen() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{item.name}</div>
-                        <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)" }}>
+                        <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)", display: "flex", alignItems: "center", gap: 4 }}>
                           {item.sectionName} · {item.note}
+                          {showFridgeTags && (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 2, background: "rgba(22,50,92,0.06)", color: "rgba(22,50,92,0.55)", fontWeight: 700, padding: "1px 6px", borderRadius: 6 }}>
+                              <MapPin size={9} strokeWidth={2.5} />
+                              {item.fridgeName}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div style={{ fontSize: 11.5, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
@@ -273,7 +349,15 @@ export default function FoodHubScreen() {
                           <div style={{ position: "relative", width: 26, height: 26, flex: "none" }}>
                             <FoodIcon icon={item.icon} />
                           </div>
-                          <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600 }}>{item.name}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13.5, fontWeight: 600 }}>{item.name}</div>
+                            {showFridgeTags && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 10.5, fontWeight: 700, color: "rgba(22,50,92,0.4)" }}>
+                                <MapPin size={9} strokeWidth={2.5} />
+                                {item.fridgeName}
+                              </div>
+                            )}
+                          </div>
                           <div style={{ display: "flex", gap: 4, flex: "none" }}>
                             {STORAGE_LOCATIONS.map((opt) => {
                               const active = opt.key === current;

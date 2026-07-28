@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { ChevronRight, ImagePlus } from "lucide-react";
 import { FRIDGE_STYLES } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
@@ -38,13 +39,13 @@ export default function FridgeStyleSheet() {
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>OR UPLOAD YOUR OWN</div>
           <div onClick={() => actions.selectFridgeStyle("custom")} style={{ cursor: "pointer", borderRadius: 16, padding: 14, background: "#f6f8fa", display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: "#eaf6ff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-              <div style={{ width: 18, height: 18, borderRadius: 5, background: "#4a6fa5" }} />
+              <ImagePlus size={19} color="#4a6fa5" strokeWidth={2} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2 }}>Photo from gallery</div>
               <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>Drop your own fridge photo</div>
             </div>
-            <div style={{ color: "rgba(22,50,92,0.3)", fontSize: 16 }}>›</div>
+            <ChevronRight size={17} color="rgba(22,50,92,0.3)" />
           </div>
         </div>
       </div>

@@ -1,11 +1,12 @@
 "use client";
 
+import { ChefHat, House, MessageCircle } from "lucide-react";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
 const TAB_DEFS = [
-  { key: "home" as const, label: "Home" },
-  { key: "chat" as const, label: "Chat" },
-  { key: "activity" as const, label: "Kitchen" },
+  { key: "home" as const, label: "Home", Icon: House },
+  { key: "chat" as const, label: "Chat", Icon: MessageCircle },
+  { key: "activity" as const, label: "Kitchen", Icon: ChefHat },
 ];
 
 export default function TabBar() {
@@ -49,7 +50,7 @@ export default function TabBar() {
               background: pillBg,
             }}
           >
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
+            <tab.Icon size={16} color={color} strokeWidth={2.2} />
             <div style={{ fontSize: 12, fontWeight: 700, color }}>{tab.label}</div>
           </div>
         );

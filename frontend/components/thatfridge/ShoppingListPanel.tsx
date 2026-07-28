@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Plus, X } from "lucide-react";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
 const SECTION_NAMES: Record<string, string> = { dairy: "Dairy", produce: "Produce", protein: "Protein", leftovers: "Leftovers", other: "Other" };
@@ -28,8 +29,8 @@ export default function ShoppingListPanel() {
           placeholder="Add an item…"
           style={{ flex: 1, border: "none", outline: "none", background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "11px 14px", fontSize: 13.5, color: "#16325c" }}
         />
-        <div onClick={actions.addShoppingItem} style={{ width: 40, height: 40, borderRadius: 14, background: "#16325c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", color: "#fff", fontSize: 16 }}>
-          +
+        <div onClick={actions.addShoppingItem} style={{ width: 40, height: 40, borderRadius: 14, background: "#16325c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
+          <Plus size={18} color="#fff" strokeWidth={2.3} />
         </div>
       </div>
 
@@ -47,7 +48,9 @@ export default function ShoppingListPanel() {
               <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
                 <div onClick={() => actions.toggleShoppingItem(item.id)} style={{ width: 22, height: 22, borderRadius: 7, border: "1.5px solid rgba(22,50,92,0.25)", flex: "none", cursor: "pointer" }} />
                 <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600 }}>{item.name}</div>
-                <div onClick={() => actions.removeShoppingItem(item.id)} style={{ color: "rgba(22,50,92,0.3)", fontSize: 14, cursor: "pointer", padding: 4 }}>✕</div>
+                <div onClick={() => actions.removeShoppingItem(item.id)} style={{ display: "flex", cursor: "pointer", padding: 4 }}>
+                  <X size={14} color="rgba(22,50,92,0.3)" strokeWidth={2} />
+                </div>
               </div>
             ))}
           </div>
@@ -67,9 +70,9 @@ export default function ShoppingListPanel() {
               <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", opacity: 0.55 }}>
                 <div
                   onClick={() => actions.toggleShoppingItem(item.id)}
-                  style={{ width: 22, height: 22, borderRadius: 7, background: "#2f6fb0", display: "flex", alignItems: "center", justifyContent: "center", flex: "none", cursor: "pointer", color: "#fff", fontSize: 12 }}
+                  style={{ width: 22, height: 22, borderRadius: 7, background: "#2f6fb0", display: "flex", alignItems: "center", justifyContent: "center", flex: "none", cursor: "pointer" }}
                 >
-                  ✓
+                  <Check size={13} color="#fff" strokeWidth={2.5} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, textDecoration: "line-through" }}>{item.name}</div>
               </div>

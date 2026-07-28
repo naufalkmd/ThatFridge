@@ -92,6 +92,7 @@ export type Screen =
   | "search"
   | "chat"
   | "notifications"
+  | "notificationHistory"
   | "about";
 
 export type FoodSubtab = "recipes" | "shopping" | "guardian" | "organizer";
@@ -109,4 +110,16 @@ export interface UsageHistoryEntry {
   icon: string;
   count: number;
   lastAt: number;
+}
+
+export type NotificationKind = "expiring" | "lowStock" | "recipe";
+
+export interface NotificationEvent {
+  id: string;
+  fridgeId: string;
+  fridgeName: string;
+  kind: NotificationKind;
+  message: string;
+  createdAt: number;
+  done: boolean;
 }
