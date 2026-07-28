@@ -1,10 +1,10 @@
 "use client";
 
-import { Camera, Check, ChevronRight, Keyboard, Receipt, Refrigerator, ScanBarcode, X } from "lucide-react";
-import { FOOD_ICON_KEYS } from "@/lib/thatfridge/data";
+import { Camera, Check, ChevronRight, Keyboard, Minus, Plus, Receipt, Refrigerator, ScanBarcode, Sparkles, X } from "lucide-react";
+import { FOOD_ICON_KEYS, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
-import type { ScanMethod } from "@/lib/thatfridge/types";
+import type { ScanMethod, StorageLocation } from "@/lib/thatfridge/types";
 
 const SCAN_METHODS: { key: ScanMethod; title: string; desc: string; Icon: typeof Receipt }[] = [
   { key: "receipt", title: "Scan receipt", desc: "Snap your grocery receipt", Icon: Receipt },
@@ -33,6 +33,56 @@ const labelStyle: React.CSSProperties = {
   color: "rgba(22,50,92,0.5)",
   marginBottom: 6,
 };
+
+const AGENT_SUGGEST_META = {
+  guardian: { label: "Guardian", color: "#c1452e" },
+  organizer: { label: "Organizer", color: "#2f6fb0" },
+} as const;
+
+function AgentSuggestButton({ agent, onClick }: { agent: keyof typeof AGENT_SUGGEST_META; onClick: () => void }) {
+  const meta = AGENT_SUGGEST_META[agent];
+  return (
+    <div
+      onClick={onClick}
+      style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 10px", borderRadius: 10, background: `${meta.color}1a`, color: meta.color, fontSize: 11.5, fontWeight: 700, cursor: "pointer", flex: "none" }}
+    >
+      <Sparkles size={13} strokeWidth={2.2} />
+      {meta.label}
+    </div>
+  );
+}
+
+function LocationPicker({ value, onChange }: { value: StorageLocation; onChange: (loc: StorageLocation) => void }) {
+  return (
+    <div style={{ display: "flex", gap: 4, flex: "none" }}>
+      {STORAGE_LOCATIONS.map((opt) => {
+        const active = opt.key === value;
+        return (
+          <div
+            key={opt.key}
+            onClick={() => onChange(opt.key)}
+            title={opt.label}
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 8,
+              background: active ? opt.color : "#eaf6ff",
+              color: active ? "#fff" : "rgba(22,50,92,0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 9.5,
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            {opt.short}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function AddScreen() {
   const { state, actions } = useThatFridgeCtx();
@@ -105,27 +155,71 @@ export default function AddScreen() {
 
       {state.addStep === 2 && (
         <>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: 14 }}>Found {state.detected.length} items — confirm what to add</div>
+          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: 14 }}>
+            Found {state.detected.length} items — the scan can&apos;t tell expiry dates, so set one below or let Guardian estimate it
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, overflowY: "auto" }}>
             {state.detected.map((d) => (
-              <div key={d.id} onClick={() => actions.toggleDetected(d.id)} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "12px 14px", cursor: "pointer" }}>
-                <div style={{ position: "relative", width: 28, height: 28, flex: "none" }}>
-                  <FoodIcon icon={d.icon} />
+              <div key={d.id} style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+                <div onClick={() => actions.toggleDetected(d.id)} style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                  <div style={{ position: "relative", width: 28, height: 28, flex: "none" }}>
+                    <FoodIcon icon={d.icon} />
+                  </div>
+                  <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{d.name}</div>
+                  <div
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 7,
+                      border: `1.5px solid ${d.checked ? "#2f6fb0" : "rgba(22,50,92,0.25)"}`,
+                      background: d.checked ? "#2f6fb0" : "transparent",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flex: "none",
+                    }}
+                  >
+                    {d.checked && <Check size={13} color="#fff" strokeWidth={2.5} />}
+                  </div>
                 </div>
-                <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{d.name}</div>
-                <div
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 7,
-                    border: `1.5px solid ${d.checked ? "#2f6fb0" : "rgba(22,50,92,0.25)"}`,
-                    background: d.checked ? "#2f6fb0" : "transparent",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {d.checked && <Check size={13} color="#fff" strokeWidth={2.5} />}
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  <select
+                    value={d.section}
+                    onChange={(e) => actions.onDetectedSectionChange(d.id, e.target.value)}
+                    style={{ flex: 1, border: "none", outline: "none", background: "#eaf6ff", borderRadius: 10, padding: "8px 10px", fontSize: 12.5, color: "#16325c", appearance: "none" }}
+                  >
+                    {sections.map((sec) => (
+                      <option key={sec.id} value={sec.id}>
+                        {sec.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#eaf6ff", borderRadius: 10, padding: "0 8px", flex: "none" }}>
+                    <div onClick={() => actions.adjustDetectedQty(d.id, -1)} style={{ cursor: "pointer", padding: 4, display: "flex" }}>
+                      <Minus size={12} color="#16325c" strokeWidth={2.4} />
+                    </div>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: "#16325c", minWidth: 14, textAlign: "center" }}>{d.qty}</div>
+                    <div onClick={() => actions.adjustDetectedQty(d.id, 1)} style={{ cursor: "pointer", padding: 4, display: "flex" }}>
+                      <Plus size={12} color="#16325c" strokeWidth={2.4} />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="date"
+                    value={d.expiryDate}
+                    onChange={(e) => actions.onDetectedExpiryChange(d.id, e.target.value)}
+                    style={{ flex: 1, border: "none", outline: "none", background: "#eaf6ff", borderRadius: 10, padding: "8px 10px", fontSize: 12.5, color: "#16325c" }}
+                  />
+                  <AgentSuggestButton agent="guardian" onClick={() => actions.suggestDetectedExpiry(d.id)} />
+                </div>
+
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <LocationPicker value={d.location} onChange={(loc) => actions.onDetectedLocationChange(d.id, loc)} />
+                  <div style={{ flex: 1 }} />
+                  <AgentSuggestButton agent="organizer" onClick={() => actions.suggestDetectedLocation(d.id)} />
                 </div>
               </div>
             ))}
@@ -191,13 +285,24 @@ export default function AddScreen() {
               </select>
             </div>
             <div>
+              <div style={labelStyle}>STORE WHERE</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <LocationPicker value={state.manualLocation} onChange={actions.onManualLocationChange} />
+                <div style={{ flex: 1 }} />
+                <AgentSuggestButton agent="organizer" onClick={actions.suggestManualLocation} />
+              </div>
+            </div>
+            <div>
               <div style={labelStyle}>BEST BEFORE</div>
-              <input
-                type="date"
-                value={state.manualExpiryDate}
-                onChange={(e) => actions.onManualExpiryDateChange(e.target.value)}
-                style={fieldStyle}
-              />
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="date"
+                  value={state.manualExpiryDate}
+                  onChange={(e) => actions.onManualExpiryDateChange(e.target.value)}
+                  style={{ ...fieldStyle, flex: 1 }}
+                />
+                <AgentSuggestButton agent="guardian" onClick={actions.suggestManualExpiry} />
+              </div>
             </div>
             <div>
               <div style={labelStyle}>NOTE (OPTIONAL)</div>

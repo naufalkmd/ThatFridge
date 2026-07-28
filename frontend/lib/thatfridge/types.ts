@@ -90,6 +90,9 @@ export interface DetectedItem {
   icon: string;
   section: string;
   checked: boolean;
+  qty: number;
+  expiryDate: string;
+  location: StorageLocation;
 }
 
 export type Screen =

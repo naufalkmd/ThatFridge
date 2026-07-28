@@ -2,28 +2,28 @@
   {
     "id": 1,
     "file": "icon-001.png",
-    "label": "bacon strip",
+    "label": "fish fillet",
     "w": 16,
     "h": 16
   },
   {
     "id": 2,
     "file": "icon-002.png",
-    "label": "bacon strip",
+    "label": "tuna",
     "w": 16,
     "h": 16
   },
   {
     "id": 3,
     "file": "icon-003.png",
-    "label": "bacon strip",
+    "label": "salmon / sashimi slice",
     "w": 16,
     "h": 15
   },
   {
     "id": 4,
     "file": "icon-004.png",
-    "label": "bacon strip",
+    "label": "sushi",
     "w": 16,
     "h": 15
   },
@@ -51,56 +51,56 @@
   {
     "id": 8,
     "file": "icon-008.png",
-    "label": "jam jar",
+    "label": "tomato soup bowl",
     "w": 16,
     "h": 13
   },
   {
     "id": 9,
     "file": "icon-009.png",
-    "label": "drumstick",
+    "label": "fried fish / bunggeopang",
     "w": 17,
     "h": 16
   },
   {
     "id": 10,
     "file": "icon-010.png",
-    "label": "rice ball in bowl",
+    "label": "ramen bowl",
     "w": 15,
     "h": 15
   },
   {
     "id": 11,
     "file": "icon-011.png",
-    "label": "shrimp",
+    "label": "pizza slice",
     "w": 15,
     "h": 14
   },
   {
     "id": 12,
     "file": "icon-012.png",
-    "label": "ham slice",
+    "label": "raw steak / beef slice / meat",
     "w": 16,
     "h": 16
   },
   {
     "id": 13,
     "file": "icon-013.png",
-    "label": "ham slice",
+    "label": "cooked steak / grilled beef",
     "w": 16,
     "h": 16
   },
   {
     "id": 14,
     "file": "icon-014.png",
-    "label": "red onion slice",
+    "label": "raw chicken",
     "w": 16,
     "h": 16
   },
   {
     "id": 15,
     "file": "icon-015.png",
-    "label": "beef slice",
+    "label": "cooked / grilled chicken",
     "w": 16,
     "h": 16
   },
@@ -121,28 +121,28 @@
   {
     "id": 18,
     "file": "icon-018.png",
-    "label": "mushroom cluster (white)",
+    "label": "popcorn",
     "w": 14,
     "h": 16
   },
   {
     "id": 19,
     "file": "icon-019.png",
-    "label": "fried dumpling",
+    "label": "fried egg",
     "w": 15,
     "h": 13
   },
   {
     "id": 20,
     "file": "icon-020.png",
-    "label": "roasted drumstick",
+    "label": "roasted drumstick chicken / chicken leg / wings",
     "w": 16,
     "h": 17
   },
   {
     "id": 21,
     "file": "icon-021.png",
-    "label": "rice plate",
+    "label": "pancakes",
     "w": 16,
     "h": 12
   },
@@ -156,14 +156,14 @@
   {
     "id": 23,
     "file": "icon-023.png",
-    "label": "shrimp",
+    "label": "raw whole chicken / turkey",
     "w": 16,
     "h": 16
   },
   {
     "id": 24,
     "file": "icon-024.png",
-    "label": "chicken pieces",
+    "label": "cooked / grilled chicken / turkey",
     "w": 16,
     "h": 17
   },
@@ -191,42 +191,42 @@
   {
     "id": 28,
     "file": "icon-028.png",
-    "label": "fried egg",
+    "label": "boiled egg",
     "w": 15,
     "h": 15
   },
   {
     "id": 29,
     "file": "icon-029.png",
-    "label": "peanut",
+    "label": "hotdog bun",
     "w": 16,
     "h": 15
   },
   {
     "id": 30,
     "file": "icon-030.png",
-    "label": "bread roll",
+    "label": "kebab / taco / tortilla wrap",
     "w": 14,
     "h": 14
   },
   {
     "id": 31,
     "file": "icon-031.png",
-    "label": "folded dumpling",
+    "label": "kebab skewer / meat on stick / satay",
     "w": 15,
     "h": 16
   },
   {
     "id": 32,
     "file": "icon-032.png",
-    "label": "meat chunk",
+    "label": "sushi",
     "w": 16,
     "h": 13
   },
   {
     "id": 33,
     "file": "icon-033.png",
-    "label": "portobello mushroom",
+    "label": "teriyaki chicken bowl / rice bowl",
     "w": 17,
     "h": 13
   },
@@ -268,21 +268,21 @@
   {
     "id": 39,
     "file": "icon-039.png",
-    "label": "burger",
+    "label": "burger / sandwiches",
     "w": 17,
     "h": 16
   },
   {
     "id": 40,
     "file": "icon-040.png",
-    "label": "dumpling cluster",
+    "label": "rice ball / onigiri",
     "w": 15,
     "h": 16
   },
   {
     "id": 41,
     "file": "icon-041.png",
-    "label": "steak",
+    "label": "sausage bun / hotdog bun",
     "w": 14,
     "h": 14
   },
@@ -303,14 +303,14 @@
   {
     "id": 44,
     "file": "icon-044.png",
-    "label": "sausage",
+    "label": "wine bottle",
     "w": 16,
     "h": 17
   },
   {
     "id": 45,
     "file": "icon-045.png",
-    "label": "herb sprig with berry",
+    "label": "oat",
     "w": 16,
     "h": 16
   },
@@ -366,7 +366,7 @@
   {
     "id": 53,
     "file": "icon-053.png",
-    "label": "sour cream",
+    "label": "salad bowl",
     "w": 16,
     "h": 15
   },
@@ -380,35 +380,35 @@
   {
     "id": 55,
     "file": "icon-055.png",
-    "label": "thin chili",
+    "label": "raddish",
     "w": 16,
     "h": 16
   },
   {
     "id": 56,
     "file": "icon-056.png",
-    "label": "carrot",
+    "label": "broccoli",
     "w": 16,
     "h": 13
   },
   {
     "id": 57,
     "file": "icon-057.png",
-    "label": "corn",
+    "label": "bamboo / sugarcane",
     "w": 16,
     "h": 16
   },
   {
     "id": 58,
     "file": "icon-058.png",
-    "label": "potato",
+    "label": "capcicum / bell pepper",
     "w": 15,
     "h": 16
   },
   {
     "id": 59,
     "file": "icon-059.png",
-    "label": "tomato",
+    "label": "avocado",
     "w": 16,
     "h": 14
   },
@@ -443,7 +443,7 @@
   {
     "id": 64,
     "file": "icon-064.png",
-    "label": "pea pod",
+    "label": "baked potato",
     "w": 14,
     "h": 15
   },
@@ -457,42 +457,42 @@
   {
     "id": 66,
     "file": "icon-066.png",
-    "label": "rice dish bowl",
+    "label": "carrot",
     "w": 18,
     "h": 16
   },
   {
     "id": 67,
     "file": "icon-067.png",
-    "label": "pumpkin",
+    "label": "corn",
     "w": 16,
     "h": 16
   },
   {
     "id": 68,
     "file": "icon-068.png",
-    "label": "green bean",
+    "label": "potato / sweet potato",
     "w": 16,
     "h": 18
   },
   {
     "id": 69,
     "file": "icon-069.png",
-    "label": "clover leaf",
+    "label": "persimmon",
     "w": 17,
     "h": 13
   },
   {
     "id": 70,
     "file": "icon-070.png",
-    "label": "parsnip",
+    "label": "pumpkin",
     "w": 16,
     "h": 15
   },
   {
     "id": 71,
     "file": "icon-071.png",
-    "label": "green chili",
+    "label": "chicken soup",
     "w": 14,
     "h": 13
   },
@@ -506,21 +506,21 @@
   {
     "id": 73,
     "file": "icon-073.png",
-    "label": "bread loaf",
+    "label": "stew / chilli / soup",
     "w": 16,
     "h": 17
   },
   {
     "id": 74,
     "file": "icon-074.png",
-    "label": "macaron",
+    "label": "lobster",
     "w": 15,
     "h": 15
   },
   {
     "id": 75,
     "file": "icon-075.png",
-    "label": "cake slice",
+    "label": "sushi",
     "w": 14,
     "h": 15
   },
@@ -534,14 +534,14 @@
   {
     "id": 77,
     "file": "icon-077.png",
-    "label": "steak",
+    "label": "tempura",
     "w": 16,
     "h": 15
   },
   {
     "id": 78,
     "file": "icon-078.png",
-    "label": "steak",
+    "label": "green",
     "w": 16,
     "h": 16
   },
@@ -555,28 +555,28 @@
   {
     "id": 80,
     "file": "icon-080.png",
-    "label": "cucumber",
+    "label": "green onion / scallion",
     "w": 16,
     "h": 16
   },
   {
     "id": 81,
     "file": "icon-081.png",
-    "label": "cabbage",
+    "label": "green chili",
     "w": 16,
     "h": 16
   },
   {
     "id": 82,
     "file": "icon-082.png",
-    "label": "broccoli",
+    "label": "sweet potato",
     "w": 17,
     "h": 16
   },
   {
     "id": 83,
     "file": "icon-083.png",
-    "label": "parsley",
+    "label": "bread loaf",
     "w": 17,
     "h": 15
   },
@@ -590,35 +590,35 @@
   {
     "id": 85,
     "file": "icon-085.png",
-    "label": "red grapes",
+    "label": "carrot cake",
     "w": 16,
     "h": 15
   },
   {
     "id": 86,
     "file": "icon-086.png",
-    "label": "garlic bulb",
+    "label": "strawberry shortcake",
     "w": 17,
     "h": 14
   },
   {
     "id": 87,
     "file": "icon-087.png",
-    "label": "lime",
+    "label": "chocolate pie",
     "w": 16,
     "h": 13
   },
   {
     "id": 88,
     "file": "icon-088.png",
-    "label": "eggplant",
+    "label": "pie slice",
     "w": 16,
     "h": 15
   },
   {
     "id": 89,
     "file": "icon-089.png",
-    "label": "cinnamon roll",
+    "label": "chocolate chip cookie",
     "w": 17,
     "h": 15
   },
@@ -632,7 +632,7 @@
   {
     "id": 91,
     "file": "icon-091.png",
-    "label": "brownie",
+    "label": "cabbage",
     "w": 16,
     "h": 15
   },
@@ -667,7 +667,7 @@
   {
     "id": 96,
     "file": "icon-096.png",
-    "label": "bacon strip",
+    "label": "garlic",
     "w": 16,
     "h": 14
   },
@@ -688,14 +688,14 @@
   {
     "id": 99,
     "file": "icon-099.png",
-    "label": "cream swirl / soft serve",
+    "label": "cinnamon roll",
     "w": 16,
     "h": 13
   },
   {
     "id": 100,
     "file": "icon-100.png",
-    "label": "small apple",
+    "label": "pumpkin pie slice",
     "w": 17,
     "h": 13
   },
@@ -737,14 +737,14 @@
   {
     "id": 106,
     "file": "icon-106.png",
-    "label": "twisted dried meat",
+    "label": "croissant",
     "w": 15,
     "h": 14
   },
   {
     "id": 107,
     "file": "icon-107.png",
-    "label": "soft serve swirl",
+    "label": "ice cream cone",
     "w": 13,
     "h": 16
   },
@@ -765,7 +765,7 @@
   {
     "id": 110,
     "file": "icon-110.png",
-    "label": "small red apple",
+    "label": "tomato",
     "w": 15,
     "h": 15
   },
@@ -786,14 +786,14 @@
   {
     "id": 113,
     "file": "icon-113.png",
-    "label": "dried apricot / mango slice",
+    "label": "banana",
     "w": 16,
     "h": 16
   },
   {
     "id": 114,
     "file": "icon-114.png",
-    "label": "pear (tan)",
+    "label": "lemon",
     "w": 14,
     "h": 14
   },
@@ -821,21 +821,21 @@
   {
     "id": 118,
     "file": "icon-118.png",
-    "label": "waffle",
+    "label": "waffle / croffle",
     "w": 17,
     "h": 16
   },
   {
     "id": 119,
     "file": "icon-119.png",
-    "label": "berry cupcake",
+    "label": " cupcake",
     "w": 14,
     "h": 15
   },
   {
     "id": 120,
     "file": "icon-120.png",
-    "label": "berry muffin",
+    "label": "birthday cake",
     "w": 16,
     "h": 15
   },
@@ -933,7 +933,7 @@
   {
     "id": 134,
     "file": "icon-134.png",
-    "label": "cherry pair",
+    "label": "raspberry",
     "w": 14,
     "h": 14
   },
@@ -947,7 +947,7 @@
   {
     "id": 136,
     "file": "icon-136.png",
-    "label": "watermelon slice",
+    "label": "watermelon",
     "w": 17,
     "h": 16
   },
@@ -975,7 +975,7 @@
   {
     "id": 140,
     "file": "icon-140.png",
-    "label": "curled shrimp",
+    "label": "ginger root",
     "w": 16,
     "h": 14
   },
@@ -996,14 +996,14 @@
   {
     "id": 143,
     "file": "icon-143.png",
-    "label": "latte cup",
+    "label": "latte cup / tea cup",
     "w": 15,
     "h": 13
   },
   {
     "id": 144,
     "file": "icon-144.png",
-    "label": "matcha jar",
+    "label": "matcha / green tea cup",
     "w": 11,
     "h": 12
   },
@@ -1024,7 +1024,7 @@
   {
     "id": 147,
     "file": "icon-147.png",
-    "label": "soda can",
+    "label": "soda can / coke can / coca cola can",
     "w": 15,
     "h": 16
   },
@@ -1038,28 +1038,28 @@
   {
     "id": 149,
     "file": "icon-149.png",
-    "label": "martini glass",
+    "label": "martini glass / wine glass",
     "w": 15,
     "h": 17
   },
   {
     "id": 150,
     "file": "icon-150.png",
-    "label": "beer mug",
+    "label": "beer mug / honey",
     "w": 12,
     "h": 13
   },
   {
     "id": 151,
     "file": "icon-151.png",
-    "label": "small herb sprig",
+    "label": "small herb sprig / kelp ",
     "w": 13,
     "h": 14
   },
   {
     "id": 152,
     "file": "icon-152.png",
-    "label": "dark swatch / mussel",
+    "label": "seaweed",
     "w": 15,
     "h": 14
   },

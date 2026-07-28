@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FOOD_TAB_ORDER, ICON_SECTION, guessIcon } from "./data";
+import { FOOD_TAB_ORDER, ICON_SECTION, guessIcon, guessLocation, suggestShelfLifeDays } from "./data";
 import { fetchFridges, fetchRecipes } from "./api";
 import { buildNotificationSeed, findItem, findSectionIdForGroup } from "./selectors";
 import type {
@@ -101,6 +101,7 @@ export interface ThatFridgeState {
   manualSectionAuto: boolean;
   manualIcon: string;
   manualIconAuto: boolean;
+  manualLocation: StorageLocation;
   manualExpiryDate: string;
   manualNote: string;
   usageHistory: UsageHistoryEntry[];
@@ -156,6 +157,7 @@ function initialState(): ThatFridgeState {
     manualSectionAuto: true,
     manualIcon: "leftovers",
     manualIconAuto: true,
+    manualLocation: "fridge",
     manualExpiryDate: defaultExpiryDate(),
     manualNote: "",
     usageHistory: [],
@@ -535,6 +537,7 @@ export function useThatFridge() {
       manualSectionAuto: true,
       manualIcon: "leftovers",
       manualIconAuto: true,
+      manualLocation: "fridge",
       manualExpiryDate: defaultExpiryDate(),
       manualNote: "",
     }));
@@ -694,21 +697,61 @@ export function useThatFridge() {
         manualSectionAuto: true,
         manualIcon: "leftovers",
         manualIconAuto: true,
+        manualLocation: "fridge",
         manualExpiryDate: defaultExpiryDate(),
         manualNote: "",
       }));
       return;
     }
-    const detected: DetectedItem[] = [
-      { id: "nd1", name: method === "barcode" ? "Scanned item" : "Orange juice", icon: "milk", section: "dairy", checked: true },
-      { id: "nd2", name: "Bell peppers", icon: "carrot", section: "produce", checked: true },
-      { id: "nd3", name: "Sour cream", icon: "yogurt", section: "dairy", checked: true },
+    const detectedTemplates: { name: string; icon: string; group: string }[] = [
+      { name: method === "barcode" ? "Scanned item" : "Orange juice", icon: "milk", group: "dairy" },
+      { name: "Bell peppers", icon: "carrot", group: "produce" },
+      { name: "Sour cream", icon: "yogurt", group: "dairy" },
     ];
     patch({ scanMethod: method, addStep: 1 });
-    setTimeout(() => patch({ addStep: 2, detected }), 1300);
+    setTimeout(() => {
+      patch((s) => {
+        const fridge = s.fridges[s.addFridgeIndex];
+        const detected: DetectedItem[] = detectedTemplates.map((t, i) => ({
+          id: "nd" + (i + 1),
+          name: t.name,
+          icon: t.icon,
+          section: findSectionIdForGroup(fridge.sections, t.group) || fridge.sections[0]?.id || "",
+          checked: true,
+          qty: 1,
+          expiryDate: "",
+          location: "fridge" as StorageLocation,
+        }));
+        return { addStep: 2, detected };
+      });
+    }, 1300);
   };
   const toggleDetected = (id: string) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, checked: !d.checked } : d)) }));
+  const onDetectedSectionChange = (id: string, sectionId: string) =>
+    patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, section: sectionId } : d)) }));
+  const adjustDetectedQty = (id: string, delta: number) =>
+    patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, qty: Math.max(1, d.qty + delta) } : d)) }));
+  const onDetectedExpiryChange = (id: string, value: string) =>
+    patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, expiryDate: value } : d)) }));
+  const suggestDetectedExpiry = (id: string) =>
+    patch((s) => {
+      const item = s.detected.find((d) => d.id === id);
+      if (!item) return {};
+      const target = new Date();
+      target.setDate(target.getDate() + suggestShelfLifeDays(item.icon));
+      const expiryDate = toISODate(target);
+      return { detected: s.detected.map((d) => (d.id === id ? { ...d, expiryDate } : d)) };
+    });
+  const onDetectedLocationChange = (id: string, location: StorageLocation) =>
+    patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, location } : d)) }));
+  const suggestDetectedLocation = (id: string) =>
+    patch((s) => {
+      const item = s.detected.find((d) => d.id === id);
+      if (!item) return {};
+      const location = guessLocation(item.name);
+      return { detected: s.detected.map((d) => (d.id === id ? { ...d, location } : d)) };
+    });
 
   const onManualNameChange = (value: string) =>
     patch((s) => {
@@ -725,6 +768,14 @@ export function useThatFridge() {
   const onManualSectionChange = (value: string) => patch({ manualSectionId: value, manualSectionAuto: false });
   const onManualIconChange = (value: string) => patch({ manualIcon: value, manualIconAuto: false });
   const onManualExpiryDateChange = (value: string) => patch({ manualExpiryDate: value });
+  const suggestManualExpiry = () =>
+    patch((s) => {
+      const target = new Date();
+      target.setDate(target.getDate() + suggestShelfLifeDays(s.manualIcon));
+      return { manualExpiryDate: toISODate(target) };
+    });
+  const onManualLocationChange = (location: StorageLocation) => patch({ manualLocation: location });
+  const suggestManualLocation = () => patch((s) => ({ manualLocation: guessLocation(s.manualName) }));
   const onManualNoteChange = (value: string) => patch({ manualNote: value });
   const confirmManualAdd = () => {
     const name = state.manualName.trim();
@@ -741,6 +792,7 @@ export function useThatFridge() {
         days,
         note: s.manualNote.trim() || "Added manually",
         qty: 1,
+        location: s.manualLocation,
       };
       const sections = fridge.sections.some((sec) => sec.id === sectionId)
         ? fridge.sections.map((sec) => (sec.id === sectionId ? { ...sec, items: [...sec.items, newItem] } : sec))
@@ -762,7 +814,10 @@ export function useThatFridge() {
       const sections = s.fridges[s.addFridgeIndex].sections.map((sec) => {
         const added = toAdd
           .filter((d) => d.section === sec.id)
-          .map((d) => ({ id: d.id + "-" + Date.now(), name: d.name, icon: d.icon, freshness: 100, days: 14, note: "Just added", qty: 1 }));
+          .map((d) => {
+            const days = d.expiryDate ? daysUntil(d.expiryDate) : suggestShelfLifeDays(d.icon);
+            return { id: d.id + "-" + Date.now(), name: d.name, icon: d.icon, freshness: 100, days, note: "Just added", qty: d.qty, location: d.location };
+          });
         return added.length ? { ...sec, items: [...sec.items, ...added] } : sec;
       });
       return {
@@ -851,10 +906,19 @@ export function useThatFridge() {
     undoLastRemoval,
     chooseMethod,
     toggleDetected,
+    onDetectedSectionChange,
+    adjustDetectedQty,
+    onDetectedExpiryChange,
+    suggestDetectedExpiry,
+    onDetectedLocationChange,
+    suggestDetectedLocation,
     onManualNameChange,
     onManualSectionChange,
     onManualIconChange,
     onManualExpiryDateChange,
+    suggestManualExpiry,
+    onManualLocationChange,
+    suggestManualLocation,
     onManualNoteChange,
     confirmManualAdd,
     confirmAdd,
