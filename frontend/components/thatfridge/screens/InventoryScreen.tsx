@@ -1,0 +1,250 @@
+"use client";
+
+import { useState } from "react";
+import { ListFilter, Minus, PackageOpen, Plus, Refrigerator, Search } from "lucide-react";
+import { getScopeLabel, getScopedItems } from "@/lib/thatfridge/selectors";
+import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
+import { useThatFridgeCtx } from "../ThatFridgeContext";
+import FoodIcon from "../FoodIcon";
+
+const SORT_OPTIONS: { key: "category" | "expiry" | "name"; label: string }[] = [
+  { key: "category", label: "Category" },
+  { key: "expiry", label: "Expiry" },
+  { key: "name", label: "Name" },
+];
+
+function QtyStepper({ qty, onChange }: { qty: number; onChange: (delta: number) => void }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          onChange(-1);
+        }}
+        style={{ width: 20, height: 20, borderRadius: 10, background: "#eef4fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+      >
+        <Minus size={11} color="#16325c" strokeWidth={2.4} />
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "#16325c", minWidth: 14, textAlign: "center" }}>{qty}</div>
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          onChange(1);
+        }}
+        style={{ width: 20, height: 20, borderRadius: 10, background: "#eef4fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+      >
+        <Plus size={11} color="#16325c" strokeWidth={2.4} />
+      </div>
+    </div>
+  );
+}
+
+export default function InventoryScreen() {
+  const { state, actions } = useThatFridgeCtx();
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const showFridgeTags = state.kitchenScope === "all";
+
+  const allItems = getScopedItems(state);
+
+  const categories = [{ id: "all", name: "All" }];
+  const seenCategoryIds = new Set<string>();
+  for (const item of allItems) {
+    if (!seenCategoryIds.has(item.sectionId)) {
+      seenCategoryIds.add(item.sectionId);
+      categories.push({ id: item.sectionId, name: item.sectionName });
+    }
+  }
+
+  const filteredItems = categoryFilter === "all" ? allItems : allItems.filter((i) => i.sectionId === categoryFilter);
+  const groupedByCategory = categories
+    .filter((c) => c.id !== "all")
+    .map((cat) => ({ ...cat, items: filteredItems.filter((i) => i.sectionId === cat.id) }))
+    .filter((g) => g.items.length > 0);
+
+  const sortedItems =
+    state.inventorySortMode === "expiry"
+      ? filteredItems.slice().sort((a, b) => a.freshness - b.freshness)
+      : state.inventorySortMode === "name"
+        ? filteredItems.slice().sort((a, b) => a.name.localeCompare(b.name))
+        : filteredItems;
+
+  return (
+    <div style={{ position: "absolute", inset: 0, overflowY: "auto", padding: "28px 20px 150px" }}>
+      {/* header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>Inventory</div>
+        <div
+          onClick={actions.openSearch}
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            background: "rgba(255,255,255,0.75)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid rgba(22,50,92,0.1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            flex: "none",
+          }}
+        >
+          <Search size={16} color="#16325c" strokeWidth={2} />
+        </div>
+      </div>
+
+      <div
+        onClick={() => actions.goTab("home")}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+          padding: "5px 10px",
+          borderRadius: 10,
+          background: "rgba(22,50,92,0.06)",
+          fontSize: 11,
+          fontWeight: 700,
+          color: "rgba(22,50,92,0.55)",
+          cursor: "pointer",
+          marginBottom: 18,
+          width: "fit-content",
+        }}
+      >
+        <Refrigerator size={11} strokeWidth={2.2} />
+        {getScopeLabel(state)}
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>All items</div>
+        <div style={{ position: "relative" }}>
+          <div
+            onClick={() => setShowSortMenu((v) => !v)}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10, background: "#fff", boxShadow: "0 4px 10px rgba(22,50,92,0.08)", cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: "#16325c" }}
+          >
+            <ListFilter size={13} color="#16325c" strokeWidth={2.2} />
+            {SORT_OPTIONS.find((o) => o.key === state.inventorySortMode)?.label}
+          </div>
+          {showSortMenu && (
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", borderRadius: 12, boxShadow: "0 10px 24px rgba(22,50,92,0.14)", padding: 6, zIndex: 5, minWidth: 120 }}>
+              {SORT_OPTIONS.map((opt) => (
+                <div
+                  key={opt.key}
+                  onClick={() => {
+                    actions.setInventorySortMode(opt.key);
+                    setShowSortMenu(false);
+                  }}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    color: state.inventorySortMode === opt.key ? "#2f6fb0" : "#16325c",
+                    background: state.inventorySortMode === opt.key ? "#eaf6ff" : "transparent",
+                  }}
+                >
+                  {opt.label}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 14, paddingBottom: 2 }}>
+        {categories.map((cat) => {
+          const active = categoryFilter === cat.id;
+          return (
+            <div
+              key={cat.id}
+              onClick={() => setCategoryFilter(cat.id)}
+              style={{
+                flex: "none",
+                whiteSpace: "nowrap",
+                padding: "7px 14px",
+                borderRadius: 14,
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: "pointer",
+                background: active ? "#16325c" : "#fff",
+                color: active ? "#fff" : "#16325c",
+                boxShadow: "0 4px 10px rgba(22,50,92,0.08)",
+              }}
+            >
+              {cat.name}
+            </div>
+          );
+        })}
+      </div>
+
+      {state.inventorySortMode === "category" ? (
+        groupedByCategory.map((g) => (
+          <div key={g.id} style={{ marginBottom: 22 }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{g.name}</div>
+              <div style={{ fontSize: 12, color: "rgba(22,50,92,0.45)" }}>{g.items.length} items</div>
+            </div>
+            <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
+              {g.items.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => actions.selectItem(item.id)}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}
+                >
+                  <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
+                    <FoodIcon icon={item.icon} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
+                      {item.name}
+                      {showFridgeTags && <span style={{ fontWeight: 500, color: "rgba(22,50,92,0.4)" }}> · {item.fridgeName}</span>}
+                      {item.opened && <PackageOpen size={12} color="#2f6fb0" strokeWidth={2.4} />}
+                    </div>
+                    <div style={{ height: 4, borderRadius: 2, background: "rgba(22,50,92,0.08)", overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 2, width: `${item.freshness}%`, background: freshColor(item.freshness) }} />
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flex: "none" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
+                    <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginTop: 2 }}>{item.note}</div>
+                    <QtyStepper qty={item.qty} onChange={(delta) => actions.adjustItemQty(item.id, delta)} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      ) : (
+        <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden", marginBottom: 22 }}>
+          {sortedItems.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => actions.selectItem(item.id)}
+              style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}
+            >
+              <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
+                <FoodIcon icon={item.icon} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
+                  {item.name}
+                  {item.opened && <PackageOpen size={12} color="#2f6fb0" strokeWidth={2.4} />}
+                </div>
+                <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)" }}>
+                  {item.sectionName}
+                  {showFridgeTags && <span> · {item.fridgeName}</span>}
+                </div>
+              </div>
+              <div style={{ textAlign: "right", flex: "none" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
+                <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginTop: 2 }}>{item.note}</div>
+                <QtyStepper qty={item.qty} onChange={(delta) => actions.adjustItemQty(item.id, delta)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

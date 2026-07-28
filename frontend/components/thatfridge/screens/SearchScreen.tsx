@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronLeft } from "lucide-react";
-import { getAllItems } from "@/lib/thatfridge/selectors";
+import { ChevronLeft, Refrigerator } from "lucide-react";
+import { getScopeLabel, getScopedItems } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
@@ -11,8 +11,9 @@ const SUGGESTIONS = ["Dairy", "Produce", "Leftovers", "Meat"];
 export default function SearchScreen() {
   const { state, actions } = useThatFridgeCtx();
   const q = state.searchQuery.trim().toLowerCase();
+  const showFridgeTags = state.kitchenScope === "all";
   const results = q
-    ? getAllItems(state).filter((i) => i.name.toLowerCase().includes(q) || i.sectionName.toLowerCase().includes(q))
+    ? getScopedItems(state).filter((i) => i.name.toLowerCase().includes(q) || i.sectionName.toLowerCase().includes(q))
     : [];
 
   return (
@@ -28,6 +29,26 @@ export default function SearchScreen() {
           placeholder="Search your fridge…"
           style={{ flex: 1, border: "none", outline: "none", background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.08)", borderRadius: 14, padding: "11px 16px", fontSize: 14, color: "#16325c" }}
         />
+      </div>
+      <div style={{ flex: "none", padding: "0 20px 10px" }}>
+        <div
+          onClick={actions.goHome}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            padding: "5px 10px",
+            borderRadius: 10,
+            background: "rgba(22,50,92,0.06)",
+            fontSize: 11,
+            fontWeight: 700,
+            color: "rgba(22,50,92,0.55)",
+            cursor: "pointer",
+          }}
+        >
+          <Refrigerator size={11} strokeWidth={2.2} />
+          {getScopeLabel(state)}
+        </div>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "6px 20px 30px" }}>
         {q.length === 0 && (
@@ -52,7 +73,10 @@ export default function SearchScreen() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{item.name}</div>
-                  <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)" }}>{item.sectionName}</div>
+                  <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.45)" }}>
+                    {item.sectionName}
+                    {showFridgeTags && <span> · {item.fridgeName}</span>}
+                  </div>
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
               </div>

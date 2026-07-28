@@ -1,17 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FOOD_TAB_ORDER, ICON_SECTION } from "./data";
+import { FOOD_TAB_ORDER, ICON_SECTION, guessIcon } from "./data";
 import { fetchFridges, fetchRecipes } from "./api";
-import { buildNotificationSeed, findItem } from "./selectors";
+import { buildNotificationSeed, findItem, findSectionIdForGroup } from "./selectors";
 import type {
   AuthMode,
   ChatMessage,
+  ChatThread,
   CurrentUser,
   DetectedItem,
   FoodSubtab,
   Fridge,
   FridgeStyleKey,
+  Item,
   NotificationEvent,
   NotificationPrefs,
   Recipe,
@@ -24,6 +26,42 @@ import type {
 } from "./types";
 import { chatBotReply } from "./chat";
 
+const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [{ id: "m0", from: "bot", text: "Hi! Ask me anything about what's in your fridge." }];
+
+function deriveThreadTitle(messages: ChatMessage[]): string {
+  const firstUserMsg = messages.find((m) => m.from === "user")?.text.trim();
+  if (!firstUserMsg) return "Conversation";
+  return firstUserMsg.length > 40 ? firstUserMsg.slice(0, 40) + "…" : firstUserMsg;
+}
+
+function archiveCurrentThread(s: ThatFridgeState): ChatThread[] {
+  if (s.chatMessages.length <= 1) return s.chatThreads;
+  const archived: ChatThread = {
+    id: "t" + Date.now(),
+    title: deriveThreadTitle(s.chatMessages),
+    messages: s.chatMessages,
+    updatedAt: Date.now(),
+  };
+  return [archived, ...s.chatThreads];
+}
+
+function toISODate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function defaultExpiryDate(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return toISODate(d);
+}
+
+function daysUntil(dateStr: string): number {
+  const target = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.round((target.getTime() - today.getTime()) / 86400000));
+}
+
 const DEFAULT_ICON_BY_SECTION: Record<string, string> = {
   dairy: "milk",
   produce: "carrot",
@@ -33,6 +71,7 @@ const DEFAULT_ICON_BY_SECTION: Record<string, string> = {
 
 export interface ThatFridgeState {
   screen: Screen;
+  lastMainScreen: "home" | "inventory";
   isLoading: boolean;
   isAuthenticated: boolean;
   currentUser: CurrentUser | null;
@@ -55,11 +94,15 @@ export interface ThatFridgeState {
   editIcon: string;
   editFridgeIndex: number;
   addStep: number;
+  addFridgeIndex: number;
   scanMethod: ScanMethod | null;
   detected: DetectedItem[];
   manualName: string;
   manualSectionId: string;
-  manualDays: string;
+  manualSectionAuto: boolean;
+  manualIcon: string;
+  manualIconAuto: boolean;
+  manualExpiryDate: string;
   manualNote: string;
   usageHistory: UsageHistoryEntry[];
   searchQuery: string;
@@ -71,17 +114,19 @@ export interface ThatFridgeState {
   chatMessages: ChatMessage[];
   chatDraft: string;
   isTyping: boolean;
+  chatThreads: ChatThread[];
   stylingFridgeIndex: number;
   undoMessage: string | null;
   notificationPrefs: NotificationPrefs;
   notificationEvents: NotificationEvent[];
   kitchenScope: "active" | "all";
-  homeSortMode: "category" | "expiry" | "name";
+  inventorySortMode: "category" | "expiry" | "name";
 }
 
 function initialState(): ThatFridgeState {
   return {
     screen: "home",
+    lastMainScreen: "home",
     isLoading: false,
     isAuthenticated: false,
     currentUser: null,
@@ -104,11 +149,15 @@ function initialState(): ThatFridgeState {
     editIcon: "",
     editFridgeIndex: 0,
     addStep: 0,
+    addFridgeIndex: 0,
     scanMethod: null,
     detected: [],
     manualName: "",
     manualSectionId: "",
-    manualDays: "7",
+    manualSectionAuto: true,
+    manualIcon: "leftovers",
+    manualIconAuto: true,
+    manualExpiryDate: defaultExpiryDate(),
     manualNote: "",
     usageHistory: [],
     searchQuery: "",
@@ -117,15 +166,16 @@ function initialState(): ThatFridgeState {
     newShoppingText: "",
     shoppingList: [],
     shoppingSeeded: false,
-    chatMessages: [{ id: "m0", from: "bot", text: "Hi! Ask me anything about what's in your fridge." }],
+    chatMessages: DEFAULT_CHAT_MESSAGES,
     chatDraft: "",
     isTyping: false,
+    chatThreads: [],
     stylingFridgeIndex: 0,
     undoMessage: null,
     notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false },
     notificationEvents: [],
     kitchenScope: "all",
-    homeSortMode: "category",
+    inventorySortMode: "category",
   };
 }
 
@@ -186,6 +236,7 @@ export function useThatFridge() {
       currentUser: null,
       showProfilePanel: false,
       screen: "home",
+      lastMainScreen: "home",
       authMode: "login",
       authName: "",
       authEmail: "",
@@ -254,8 +305,9 @@ export function useThatFridge() {
     }));
   };
 
-  const setKitchenScope = (scope: "active" | "all") => patch({ kitchenScope: scope });
-  const setHomeSortMode = (mode: "category" | "expiry" | "name") => patch({ homeSortMode: mode });
+  const selectFridgeScope = (choice: number | "all") =>
+    patch(choice === "all" ? { kitchenScope: "all" } : { kitchenScope: "active", activeFridge: choice, heroSlide: choice });
+  const setInventorySortMode = (mode: "category" | "expiry" | "name") => patch({ inventorySortMode: mode });
 
   const selectHero = (i: number) =>
     patch((s) => ({ heroSlide: i, activeFridge: i < s.fridges.length ? i : s.activeFridge }));
@@ -408,11 +460,27 @@ export function useThatFridge() {
   const onSearchChange = (value: string) => patch({ searchQuery: value });
 
   const onDraftChange = (value: string) => patch({ chatDraft: value });
-  const clearChat = () =>
-    patch({
-      chatMessages: [{ id: "m0", from: "bot", text: "Hi! Ask me anything about what's in your fridge." }],
+  const startNewChat = () =>
+    patch((s) => ({
+      chatThreads: archiveCurrentThread(s),
+      chatMessages: DEFAULT_CHAT_MESSAGES,
       chatDraft: "",
       isTyping: false,
+    }));
+  const openChatHistory = () => patch({ screen: "chatHistory" });
+  const closeChatHistory = () => patch({ screen: "chat" });
+  const restoreChatThread = (id: string) =>
+    patch((s) => {
+      const thread = s.chatThreads.find((t) => t.id === id);
+      if (!thread) return { screen: "chat" };
+      const remaining = s.chatThreads.filter((t) => t.id !== id);
+      return {
+        chatThreads: archiveCurrentThread({ ...s, chatThreads: remaining }),
+        chatMessages: thread.messages,
+        chatDraft: "",
+        isTyping: false,
+        screen: "chat",
+      };
     });
   const sendChat = (text: string, attachmentName?: string) => {
     const trimmed = (text || "").trim();
@@ -432,8 +500,8 @@ export function useThatFridge() {
   const askQuick = (label: string) => sendChat(label);
 
   const goHome = () =>
-    patch({
-      screen: "home",
+    patch((s) => ({
+      screen: s.lastMainScreen,
       selectedItemId: null,
       isEditingItem: false,
       addStep: 0,
@@ -441,20 +509,34 @@ export function useThatFridge() {
       detected: [],
       manualName: "",
       manualSectionId: "",
-      manualDays: "7",
+      manualExpiryDate: defaultExpiryDate(),
       manualNote: "",
-    });
-  const goTab = (screen: Screen) => patch({ screen });
+    }));
+  const goTab = (screen: Screen) =>
+    patch((s) => ({
+      screen,
+      lastMainScreen: screen === "home" || screen === "inventory" ? screen : s.lastMainScreen,
+    }));
   const openAdd = () =>
     patch((s) => ({
       screen: "add",
-      addStep: 0,
+      addStep: s.fridges.length > 1 ? -1 : 0,
+      addFridgeIndex: s.activeFridge,
       scanMethod: null,
       detected: [],
       manualName: "",
       manualSectionId: s.fridges[s.activeFridge].sections[0]?.id || "",
-      manualDays: "7",
+      manualSectionAuto: true,
+      manualIcon: "leftovers",
+      manualIconAuto: true,
+      manualExpiryDate: defaultExpiryDate(),
       manualNote: "",
+    }));
+  const selectAddFridge = (index: number) =>
+    patch((s) => ({
+      addFridgeIndex: index,
+      addStep: 0,
+      manualSectionId: s.fridges[index].sections[0]?.id || "",
     }));
   const selectItem = (id: string) => patch({ screen: "itemDetail", selectedItemId: id, isEditingItem: false });
 
@@ -547,7 +629,7 @@ export function useThatFridge() {
           ? { ...f, sections: f.sections.map((sec) => (sec.id === section.id ? { ...sec, items: sec.items.filter((it) => it.id !== id) } : sec)) }
           : f
       ),
-      screen: "home",
+      screen: s.lastMainScreen,
       selectedItemId: null,
       isEditingItem: false,
     }));
@@ -568,19 +650,32 @@ export function useThatFridge() {
     }, onCommit);
   };
   const markUsed = () => {
-    if (!state.selectedItemId) return;
-    const found = findItem(state, state.selectedItemId);
-    if (!found) return;
-    const { item } = found;
-    removeItemWithUndo(state.selectedItemId, `Marked "${item.name}" as used`, () => {
-      patch((s) => ({ usageHistory: recordUsage(s, item.name, item.icon) }));
+    const id = state.selectedItemId;
+    if (!id) return;
+    patch((s) => {
+      const found = findItem(s, id);
+      if (!found || found.item.opened) return {};
+      const { item, section, fridgeIndex } = found;
+      const newDays = Math.min(item.days, 3);
+      const newFreshness = item.days > 0 ? Math.max(10, Math.round(item.freshness * (newDays / item.days))) : item.freshness;
+      const updated: Item = { ...item, opened: true, days: newDays, freshness: newFreshness };
+      return {
+        fridges: s.fridges.map((f, i) =>
+          i === fridgeIndex
+            ? { ...f, sections: f.sections.map((sec) => (sec.id === section.id ? { ...sec, items: sec.items.map((it) => (it.id === id ? updated : it)) } : sec)) }
+            : f
+        ),
+      };
     });
   };
   const discardItem = () => {
     if (!state.selectedItemId) return;
     const found = findItem(state, state.selectedItemId);
     if (!found) return;
-    removeItemWithUndo(state.selectedItemId, `Removed "${found.item.name}"`);
+    const { item } = found;
+    removeItemWithUndo(state.selectedItemId, `Removed "${item.name}"`, () => {
+      patch((s) => ({ usageHistory: recordUsage(s, item.name, item.icon) }));
+    });
   };
 
   const chooseMethod = (method: ScanMethod) => {
@@ -589,8 +684,11 @@ export function useThatFridge() {
         scanMethod: method,
         addStep: 3,
         manualName: "",
-        manualSectionId: s.fridges[s.activeFridge].sections[0]?.id || "",
-        manualDays: "7",
+        manualSectionId: s.fridges[s.addFridgeIndex].sections[0]?.id || "",
+        manualSectionAuto: true,
+        manualIcon: "leftovers",
+        manualIconAuto: true,
+        manualExpiryDate: defaultExpiryDate(),
         manualNote: "",
       }));
       return;
@@ -606,21 +704,33 @@ export function useThatFridge() {
   const toggleDetected = (id: string) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, checked: !d.checked } : d)) }));
 
-  const onManualNameChange = (value: string) => patch({ manualName: value });
-  const onManualSectionChange = (value: string) => patch({ manualSectionId: value });
-  const onManualDaysChange = (value: string) => patch({ manualDays: value });
+  const onManualNameChange = (value: string) =>
+    patch((s) => {
+      const icon = guessIcon(value);
+      const fridge = s.fridges[s.addFridgeIndex];
+      const group = icon ? ICON_SECTION[icon] : null;
+      const guessedSectionId = group && fridge ? findSectionIdForGroup(fridge.sections, group) : null;
+      return {
+        manualName: value,
+        ...(s.manualIconAuto && icon ? { manualIcon: icon } : {}),
+        ...(s.manualSectionAuto && guessedSectionId ? { manualSectionId: guessedSectionId } : {}),
+      };
+    });
+  const onManualSectionChange = (value: string) => patch({ manualSectionId: value, manualSectionAuto: false });
+  const onManualIconChange = (value: string) => patch({ manualIcon: value, manualIconAuto: false });
+  const onManualExpiryDateChange = (value: string) => patch({ manualExpiryDate: value });
   const onManualNoteChange = (value: string) => patch({ manualNote: value });
   const confirmManualAdd = () => {
     const name = state.manualName.trim();
     if (!name) return;
     patch((s) => {
-      const days = Math.max(0, parseInt(s.manualDays, 10) || 0);
-      const fridge = s.fridges[s.activeFridge];
+      const days = daysUntil(s.manualExpiryDate);
+      const fridge = s.fridges[s.addFridgeIndex];
       const sectionId = s.manualSectionId || fridge.sections[0]?.id;
       const newItem = {
         id: "man-" + Date.now(),
         name,
-        icon: (sectionId && DEFAULT_ICON_BY_SECTION[sectionId]) || "leftovers",
+        icon: s.manualIcon || (sectionId && DEFAULT_ICON_BY_SECTION[sectionId]) || "leftovers",
         freshness: 100,
         days,
         note: s.manualNote.trim() || "Added manually",
@@ -630,8 +740,8 @@ export function useThatFridge() {
         ? fridge.sections.map((sec) => (sec.id === sectionId ? { ...sec, items: [...sec.items, newItem] } : sec))
         : [...fridge.sections, { id: "general", name: "General", items: [newItem] }];
       return {
-        fridges: s.fridges.map((f, i) => (i === s.activeFridge ? { ...f, sections } : f)),
-        screen: "home",
+        fridges: s.fridges.map((f, i) => (i === s.addFridgeIndex ? { ...f, sections } : f)),
+        screen: s.lastMainScreen,
         addStep: 0,
         scanMethod: null,
         manualName: "",
@@ -643,15 +753,15 @@ export function useThatFridge() {
   const confirmAdd = () => {
     patch((s) => {
       const toAdd = s.detected.filter((d) => d.checked);
-      const sections = s.fridges[s.activeFridge].sections.map((sec) => {
+      const sections = s.fridges[s.addFridgeIndex].sections.map((sec) => {
         const added = toAdd
           .filter((d) => d.section === sec.id)
           .map((d) => ({ id: d.id + "-" + Date.now(), name: d.name, icon: d.icon, freshness: 100, days: 14, note: "Just added", qty: 1 }));
         return added.length ? { ...sec, items: [...sec.items, ...added] } : sec;
       });
       return {
-        fridges: s.fridges.map((f, i) => (i === s.activeFridge ? { ...f, sections } : f)),
-        screen: "home",
+        fridges: s.fridges.map((f, i) => (i === s.addFridgeIndex ? { ...f, sections } : f)),
+        screen: s.lastMainScreen,
         addStep: 0,
         scanMethod: null,
         detected: [],
@@ -708,12 +818,16 @@ export function useThatFridge() {
     onSearchChange,
     onDraftChange,
     onChatKeyDown,
-    clearChat,
+    startNewChat,
+    openChatHistory,
+    closeChatHistory,
+    restoreChatThread,
     sendMessage,
     askQuick,
     goHome,
     goTab,
     openAdd,
+    selectAddFridge,
     selectItem,
     adjustItemQty,
     markUsed,
@@ -729,14 +843,15 @@ export function useThatFridge() {
     toggleDetected,
     onManualNameChange,
     onManualSectionChange,
-    onManualDaysChange,
+    onManualIconChange,
+    onManualExpiryDateChange,
     onManualNoteChange,
     confirmManualAdd,
     confirmAdd,
     setSections,
     setItemLocation,
-    setKitchenScope,
-    setHomeSortMode,
+    selectFridgeScope,
+    setInventorySortMode,
   };
 
   return { state, actions, chatScrollRef };

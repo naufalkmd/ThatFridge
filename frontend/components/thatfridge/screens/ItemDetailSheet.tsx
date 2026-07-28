@@ -1,12 +1,11 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { PackageOpen, Pencil } from "lucide-react";
 import { FOOD_ICON_KEYS } from "@/lib/thatfridge/data";
 import { findItem } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
-import AgentFaceIcon from "../AgentFaceIcon";
 
 const labelStyle: React.CSSProperties = {
   fontSize: 12,
@@ -124,8 +123,11 @@ export default function ItemDetailSheet() {
     );
   }
 
-  const tip =
-    item.freshness < 30
+  const tip = item.opened
+    ? item.freshness < 30
+      ? `Opened — use ${item.name.toLowerCase()} today, it won't keep much longer.`
+      : `Opened — use within ${item.days} day${item.days === 1 ? "" : "s"} for best quality.`
+    : item.freshness < 30
       ? `Use ${item.name.toLowerCase()} today for best quality.`
       : item.freshness < 60
         ? `Plan to use ${item.name.toLowerCase()} within the next couple days.`
@@ -160,7 +162,15 @@ export default function ItemDetailSheet() {
             <Pencil size={14} color="#fff" strokeWidth={2.2} />
           </div>
         </div>
-        <div style={{ textAlign: "center", fontSize: 20, fontWeight: 700, marginBottom: 2 }}>{item.name}</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 2 }}>
+          <div style={{ textAlign: "center", fontSize: 20, fontWeight: 700 }}>{item.name}</div>
+          {item.opened && (
+            <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#2f6fb0", background: "#2f6fb01a", padding: "2px 7px", borderRadius: 6 }}>
+              <PackageOpen size={10} strokeWidth={2.4} />
+              OPENED
+            </div>
+          )}
+        </div>
         <div style={{ textAlign: "center", fontSize: 12.5, color: "rgba(22,50,92,0.45)", marginBottom: 18 }}>
           {itemFridge?.name} · {section.name}
         </div>
@@ -178,19 +188,22 @@ export default function ItemDetailSheet() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center", background: "#eef2f7", borderRadius: 14, padding: "10px 14px", marginBottom: 20 }}>
-          <div style={{ position: "relative", width: 32, height: 32, flex: "none", borderRadius: 8, overflow: "hidden" }}>
-            <AgentFaceIcon agent="guardian" />
-          </div>
+        <div style={{ background: "#eef2f7", borderRadius: 14, padding: "10px 14px", marginBottom: 20 }}>
           <div style={{ fontSize: 12.5, lineHeight: 1.45, color: "#16325c" }}>{tip}</div>
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
-          <div onClick={actions.markUsed} style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#16325c", color: "#fff", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
-            Mark as used
-          </div>
+          {item.opened ? (
+            <div style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "rgba(22,50,92,0.06)", color: "rgba(22,50,92,0.4)", fontSize: 13.5, fontWeight: 700 }}>
+              Opened
+            </div>
+          ) : (
+            <div onClick={actions.markUsed} style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#16325c", color: "#fff", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
+              Mark as used
+            </div>
+          )}
           <div onClick={actions.discardItem} style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#c1452e", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
-            Discard
+            Delete item
           </div>
         </div>
       </div>

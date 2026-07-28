@@ -2,56 +2,15 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Bell, ListFilter, Minus, Package, Palette, Plus, Search, Sparkles, TriangleAlert } from "lucide-react";
+import { Bell, ChevronDown, Package, Palette, Refrigerator, Sparkles, TriangleAlert } from "lucide-react";
 import { RECIPE_BY_ICON } from "@/lib/thatfridge/data";
-import {
-  getActiveSections,
-  getFridgeHeroViews,
-  getGuardianItem,
-  getLowStockItem,
-  getRecipesView,
-} from "@/lib/thatfridge/selectors";
-import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
+import { getFridgeHeroViews, getGuardianItem, getLowStockItem, getRecipesView, getScopeLabel, getScopedItems } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
-import FoodIcon from "../FoodIcon";
 import CrewScene from "../CrewScene";
-
-const SORT_OPTIONS: { key: "category" | "expiry" | "name"; label: string }[] = [
-  { key: "category", label: "Category" },
-  { key: "expiry", label: "Expiry" },
-  { key: "name", label: "Name" },
-];
-
-function QtyStepper({ qty, onChange }: { qty: number; onChange: (delta: number) => void }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-          onChange(-1);
-        }}
-        style={{ width: 20, height: 20, borderRadius: 10, background: "#eef4fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-      >
-        <Minus size={11} color="#16325c" strokeWidth={2.4} />
-      </div>
-      <div style={{ fontSize: 12, fontWeight: 700, color: "#16325c", minWidth: 14, textAlign: "center" }}>{qty}</div>
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-          onChange(1);
-        }}
-        style={{ width: 20, height: 20, borderRadius: 10, background: "#eef4fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-      >
-        <Plus size={11} color="#16325c" strokeWidth={2.4} />
-      </div>
-    </div>
-  );
-}
 
 export default function HomeScreen() {
   const { state, actions } = useThatFridgeCtx();
-  const [showSortMenu, setShowSortMenu] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [showScopeMenu, setShowScopeMenu] = useState(false);
   const fridgesView = getFridgeHeroViews(state);
   const heroSlide = state.heroSlide;
   const heroSlideCount = fridgesView.length + 1;
@@ -61,22 +20,11 @@ export default function HomeScreen() {
 
   const guardianItem = getGuardianItem(state);
   const lowStockItem = getLowStockItem(state);
-  const sections = getActiveSections(state);
+  const scopedItems = getScopedItems(state);
 
-  const totalItemCount = sections.reduce((sum, sec) => sum + sec.items.length, 0);
-  const expiringCount = sections.reduce((sum, sec) => sum + sec.items.filter((i) => i.freshness < 50).length, 0);
+  const totalItemCount = scopedItems.length;
+  const expiringCount = scopedItems.filter((i) => i.freshness < 50).length;
   const suggestionCount = getRecipesView(state).filter((r) => r.haveCount > 0).length;
-
-  const categories = [{ id: "all", name: "All" }, ...sections.map((sec) => ({ id: sec.id, name: sec.name }))];
-  const filteredSections = categoryFilter === "all" ? sections : sections.filter((sec) => sec.id === categoryFilter);
-
-  const flatItems = filteredSections.flatMap((sec) => sec.items.map((item) => ({ ...item, sectionName: sec.name })));
-  const sortedFlatItems =
-    state.homeSortMode === "expiry"
-      ? flatItems.slice().sort((a, b) => a.freshness - b.freshness)
-      : state.homeSortMode === "name"
-        ? flatItems.slice().sort((a, b) => a.name.localeCompare(b.name))
-        : flatItems;
 
   const chefMessage = guardianItem
     ? `Try "${RECIPE_BY_ICON[guardianItem.icon] || "a quick stir-fry"}" tonight using your ${guardianItem.name.toLowerCase()}.`
@@ -122,59 +70,92 @@ export default function HomeScreen() {
           {userInitials}
         </div>
         <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>ThatFridge</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            onClick={actions.openNotificationHistory}
-            style={{
-              position: "relative",
-              width: 34,
-              height: 34,
-              borderRadius: 17,
-              background: "rgba(255,255,255,0.75)",
-              backdropFilter: "blur(8px)",
-              border: "1px solid rgba(22,50,92,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              flex: "none",
-            }}
-          >
-            <Bell size={16} color="#16325c" strokeWidth={2} />
-            {pendingNotifications > 0 && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 3,
-                  right: 4,
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  background: "#c1452e",
-                  border: "1.5px solid #fff",
-                }}
-              />
-            )}
-          </div>
-          <div
-            onClick={actions.openSearch}
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 17,
-              background: "rgba(255,255,255,0.75)",
-              backdropFilter: "blur(8px)",
-              border: "1px solid rgba(22,50,92,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              flex: "none",
-            }}
-          >
-            <Search size={16} color="#16325c" strokeWidth={2} />
-          </div>
+        <div
+          onClick={actions.openNotificationHistory}
+          style={{
+            position: "relative",
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            background: "rgba(255,255,255,0.75)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid rgba(22,50,92,0.1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            flex: "none",
+          }}
+        >
+          <Bell size={16} color="#16325c" strokeWidth={2} />
+          {pendingNotifications > 0 && (
+            <div
+              style={{
+                position: "absolute",
+                top: 3,
+                right: 4,
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                background: "#c1452e",
+                border: "1.5px solid #fff",
+              }}
+            />
+          )}
         </div>
+      </div>
+
+      {/* fridge scope picker */}
+      <div style={{ position: "relative", marginBottom: 14, width: "fit-content" }}>
+        <div
+          onClick={() => setShowScopeMenu((v) => !v)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "7px 12px",
+            borderRadius: 12,
+            background: "#fff",
+            boxShadow: "0 4px 10px rgba(22,50,92,0.08)",
+            cursor: "pointer",
+            fontSize: 12.5,
+            fontWeight: 700,
+            color: "#16325c",
+          }}
+        >
+          <Refrigerator size={14} color="#16325c" strokeWidth={2.2} />
+          {getScopeLabel(state)}
+          <ChevronDown size={13} color="#16325c" strokeWidth={2.2} />
+        </div>
+        {showScopeMenu && (
+          <div style={{ position: "absolute", left: 0, top: "calc(100% + 6px)", background: "#fff", borderRadius: 12, boxShadow: "0 10px 24px rgba(22,50,92,0.14)", padding: 6, zIndex: 5, minWidth: 160 }}>
+            {(
+              [{ id: "all" as const, name: "All Fridges" }, ...state.fridges.map((f, i) => ({ id: i, name: f.name }))]
+            ).map((opt) => {
+              const active = opt.id === "all" ? state.kitchenScope === "all" : state.kitchenScope === "active" && state.activeFridge === opt.id;
+              return (
+                <div
+                  key={opt.id}
+                  onClick={() => {
+                    actions.selectFridgeScope(opt.id);
+                    setShowScopeMenu(false);
+                  }}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    color: active ? "#2f6fb0" : "#16325c",
+                    background: active ? "#eaf6ff" : "transparent",
+                  }}
+                >
+                  {opt.name}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* overview */}
@@ -182,11 +163,25 @@ export default function HomeScreen() {
         <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Overview</div>
         <div style={{ display: "flex", gap: 10 }}>
           {[
-            { label: "Items", value: totalItemCount, color: "#2f6fb0", bg: "#eaf1fb", Icon: Package },
-            { label: "Expiring soon", value: expiringCount, color: "#c1452e", bg: "#fbeae7", Icon: TriangleAlert },
-            { label: "Suggestions", value: suggestionCount, color: "#3f8f5c", bg: "#eaf6ef", Icon: Sparkles },
+            { label: "Items", value: totalItemCount, color: "#2f6fb0", bg: "#eaf1fb", Icon: Package, onClick: () => actions.goTab("inventory") },
+            {
+              label: "Expiring soon",
+              value: expiringCount,
+              color: "#c1452e",
+              bg: "#fbeae7",
+              Icon: TriangleAlert,
+              onClick: () => {
+                actions.setInventorySortMode("expiry");
+                actions.goTab("inventory");
+              },
+            },
+            { label: "Suggestions", value: suggestionCount, color: "#3f8f5c", bg: "#eaf6ef", Icon: Sparkles, onClick: actions.openRecipesHub },
           ].map((k) => (
-            <div key={k.label} style={{ flex: 1, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, padding: "12px 8px", textAlign: "center" }}>
+            <div
+              key={k.label}
+              onClick={k.onClick}
+              style={{ flex: 1, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, padding: "12px 8px", textAlign: "center", cursor: "pointer" }}
+            >
               <div style={{ width: 28, height: 28, borderRadius: 9, background: k.bg, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
                 <k.Icon size={14} color={k.color} strokeWidth={2.2} />
               </div>
@@ -231,17 +226,20 @@ export default function HomeScreen() {
                     style={{
                       position: "absolute",
                       inset: 0,
+                      backgroundImage: "url(/images/thatfridge/chat-wallpaper.png), linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)",
+                      backgroundRepeat: "repeat, no-repeat",
+                      backgroundSize: "400px 400px, auto",
+                      imageRendering: "pixelated",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       textAlign: "center",
                       padding: "0 24px",
-                      color: "rgba(22,50,92,0.55)",
-                      fontSize: 12.5,
-                      fontWeight: 700,
                     }}
                   >
-                    Drop your fridge photo
+                    <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(6px)", color: "#16325c", fontSize: 12.5, fontWeight: 700, padding: "9px 16px", borderRadius: 14 }}>
+                      Drop your fridge photo
+                    </div>
                   </div>
                 )}
                 <div style={{ position: "absolute", top: 22, left: "16%", width: 3, height: 3, borderRadius: "50%", background: "#eaf3fb", animation: "drip 4s ease-in infinite" }} />
@@ -364,132 +362,10 @@ export default function HomeScreen() {
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
           <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>CHEF&apos;S PICK</div>
-          <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#b5702f", background: "#b5702f1a", padding: "2px 7px", borderRadius: 6 }}>CHEF</div>
+          <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#d99a2b", background: "#d99a2b1a", padding: "2px 7px", borderRadius: 6 }}>CHEF</div>
         </div>
         <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{chefMessage}</div>
       </div>
-
-      {/* inventory */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>Inventory</div>
-        <div style={{ position: "relative" }}>
-          <div
-            onClick={() => setShowSortMenu((v) => !v)}
-            style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10, background: "#fff", boxShadow: "0 4px 10px rgba(22,50,92,0.08)", cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: "#16325c" }}
-          >
-            <ListFilter size={13} color="#16325c" strokeWidth={2.2} />
-            {SORT_OPTIONS.find((o) => o.key === state.homeSortMode)?.label}
-          </div>
-          {showSortMenu && (
-            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", borderRadius: 12, boxShadow: "0 10px 24px rgba(22,50,92,0.14)", padding: 6, zIndex: 5, minWidth: 120 }}>
-              {SORT_OPTIONS.map((opt) => (
-                <div
-                  key={opt.key}
-                  onClick={() => {
-                    actions.setHomeSortMode(opt.key);
-                    setShowSortMenu(false);
-                  }}
-                  style={{
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    color: state.homeSortMode === opt.key ? "#2f6fb0" : "#16325c",
-                    background: state.homeSortMode === opt.key ? "#eaf6ff" : "transparent",
-                  }}
-                >
-                  {opt.label}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 14, paddingBottom: 2 }}>
-        {categories.map((cat) => {
-          const active = categoryFilter === cat.id;
-          return (
-            <div
-              key={cat.id}
-              onClick={() => setCategoryFilter(cat.id)}
-              style={{
-                flex: "none",
-                whiteSpace: "nowrap",
-                padding: "7px 14px",
-                borderRadius: 14,
-                fontSize: 12.5,
-                fontWeight: 700,
-                cursor: "pointer",
-                background: active ? "#16325c" : "#fff",
-                color: active ? "#fff" : "#16325c",
-                boxShadow: "0 4px 10px rgba(22,50,92,0.08)",
-              }}
-            >
-              {cat.name}
-            </div>
-          );
-        })}
-      </div>
-
-      {state.homeSortMode === "category" ? (
-        filteredSections.map((sec) => (
-          <div key={sec.id} style={{ marginBottom: 22 }}>
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>{sec.name}</div>
-              <div style={{ fontSize: 12, color: "rgba(22,50,92,0.45)" }}>{sec.items.length} items</div>
-            </div>
-            <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
-              {sec.items.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => actions.selectItem(item.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}
-                >
-                  <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
-                    <FoodIcon icon={item.icon} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
-                    <div style={{ height: 4, borderRadius: 2, background: "rgba(22,50,92,0.08)", overflow: "hidden" }}>
-                      <div style={{ height: "100%", borderRadius: 2, width: `${item.freshness}%`, background: freshColor(item.freshness) }} />
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right", flex: "none" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
-                    <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginTop: 2 }}>{item.note}</div>
-                    <QtyStepper qty={item.qty} onChange={(delta) => actions.adjustItemQty(item.id, delta)} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))
-      ) : (
-        <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden", marginBottom: 22 }}>
-          {sortedFlatItems.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => actions.selectItem(item.id)}
-              style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}
-            >
-              <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
-                <FoodIcon icon={item.icon} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
-                <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)" }}>{item.sectionName}</div>
-              </div>
-              <div style={{ textAlign: "right", flex: "none" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
-                <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginTop: 2 }}>{item.note}</div>
-                <QtyStepper qty={item.qty} onChange={(delta) => actions.adjustItemQty(item.id, delta)} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

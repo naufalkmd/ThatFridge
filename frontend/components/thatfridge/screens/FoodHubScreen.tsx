@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { MapPin, Plus } from "lucide-react";
+import { MapPin, Plus, Refrigerator } from "lucide-react";
 import { FOOD_TAB_ORDER } from "@/lib/thatfridge/data";
 import {
   getExpiringOwnedItems,
   getRecipesView,
+  getScopeLabel,
   getScopedItems,
   getShoppingRecommendations,
   getTonightPick,
@@ -25,10 +26,10 @@ const REC_SOURCE_META: Record<ShoppingRecommendation["source"], { label: string;
 };
 
 const TAB_META: Record<FoodSubtab, { label: string; color: string; icon: string; blurb: string }> = {
-  recipes: { label: "Recipes", color: "#b5702f", icon: "/images/thatfridge/chef.gif", blurb: "Chef's picks from what you already have" },
-  shopping: { label: "Shopping", color: "#8a3320", icon: "/images/thatfridge/shopkeeper.gif", blurb: "Your list, plus what to buy again" },
-  guardian: { label: "Guardian", color: "#3f5c85", icon: "/images/thatfridge/guardian-agent.png", blurb: "Riskiest items are listed first" },
-  organizer: { label: "Organizer", color: "#2f6f47", icon: "/images/thatfridge/organizer-agent.png", blurb: "Tap a spot to move an item there" },
+  recipes: { label: "Recipes", color: "#d99a2b", icon: "/images/thatfridge/chef.gif", blurb: "Chef's picks from what you already have" },
+  shopping: { label: "Shopping", color: "#3f8f5c", icon: "/images/thatfridge/shopkeeper.gif", blurb: "Your list, plus what to buy again" },
+  guardian: { label: "Guardian", color: "#c1452e", icon: "/images/thatfridge/guardian.gif", blurb: "Riskiest items are listed first" },
+  organizer: { label: "Organizer", color: "#2f6fb0", icon: "/images/thatfridge/organizer.gif", blurb: "Tap a spot to move an item there" },
 };
 
 const RISK_BUCKETS: { key: string; label: string; test: (f: number) => boolean; hint: string }[] = [
@@ -101,24 +102,23 @@ export default function FoodHubScreen() {
       <div style={{ flex: "none", padding: "28px 20px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div style={{ fontSize: 20, fontWeight: 800 }}>Crew</div>
-          <div style={{ display: "flex", background: "rgba(255,255,255,0.6)", borderRadius: 10, padding: 3, gap: 2 }}>
-            {(["all", "active"] as const).map((scope) => (
-              <div
-                key={scope}
-                onClick={() => actions.setKitchenScope(scope)}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 8,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  background: state.kitchenScope === scope ? "#16325c" : "transparent",
-                  color: state.kitchenScope === scope ? "#fff" : "rgba(22,50,92,0.5)",
-                }}
-              >
-                {scope === "all" ? "All Fridges" : "This Fridge"}
-              </div>
-            ))}
+          <div
+            onClick={() => actions.goTab("home")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              padding: "5px 10px",
+              borderRadius: 10,
+              background: "rgba(22,50,92,0.06)",
+              fontSize: 11,
+              fontWeight: 700,
+              color: "rgba(22,50,92,0.55)",
+              cursor: "pointer",
+            }}
+          >
+            <Refrigerator size={11} strokeWidth={2.2} />
+            {getScopeLabel(state)}
           </div>
         </div>
 

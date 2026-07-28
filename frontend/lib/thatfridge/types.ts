@@ -14,6 +14,7 @@ export interface Item {
   days: number;
   note: string;
   qty: number;
+  opened?: boolean;
   location?: StorageLocation;
 }
 
@@ -74,6 +75,13 @@ export interface ChatMessage {
   attachmentName?: string;
 }
 
+export interface ChatThread {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  updatedAt: number;
+}
+
 export type ScanMethod = "receipt" | "barcode" | "photo" | "manual";
 
 export interface DetectedItem {
@@ -86,6 +94,7 @@ export interface DetectedItem {
 
 export type Screen =
   | "home"
+  | "inventory"
   | "foodHub"
   | "recipeDetail"
   | "fridgeStyle"
@@ -93,6 +102,7 @@ export type Screen =
   | "add"
   | "search"
   | "chat"
+  | "chatHistory"
   | "notifications"
   | "notificationHistory"
   | "about";

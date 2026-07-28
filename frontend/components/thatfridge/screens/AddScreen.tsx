@@ -1,7 +1,7 @@
 "use client";
 
-import { Camera, Check, ChevronRight, Keyboard, Receipt, ScanBarcode, X } from "lucide-react";
-import { getActiveSections } from "@/lib/thatfridge/selectors";
+import { Camera, Check, ChevronRight, Keyboard, Receipt, Refrigerator, ScanBarcode, X } from "lucide-react";
+import { FOOD_ICON_KEYS } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import type { ScanMethod } from "@/lib/thatfridge/types";
@@ -39,16 +39,40 @@ export default function AddScreen() {
   const scanningLabel =
     state.scanMethod === "barcode" ? "Reading barcode…" : state.scanMethod === "receipt" ? "Reading receipt…" : "Scanning fridge photo…";
   const checkedCount = state.detected.filter((d) => d.checked).length;
-  const sections = getActiveSections(state);
+  const targetFridge = state.fridges[state.addFridgeIndex];
+  const sections = targetFridge?.sections || [];
 
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb)", padding: "28px 20px 30px", display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-        <div style={{ fontSize: 20, fontWeight: 800 }}>Add to fridge</div>
+        <div style={{ fontSize: 20, fontWeight: 800 }}>{state.addStep === -1 ? "Add to fridge" : `Add to ${targetFridge?.name || "fridge"}`}</div>
         <div onClick={actions.goHome} style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
           <X size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
         </div>
       </div>
+
+      {state.addStep === -1 && (
+        <>
+          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: 16 }}>Which fridge are you adding to?</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {state.fridges.map((f, i) => {
+              const itemCount = f.sections.reduce((n, sec) => n + sec.items.length, 0);
+              return (
+                <div key={f.id} onClick={() => actions.selectAddFridge(i)} style={{ display: "flex", alignItems: "center", gap: 14, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, padding: 16, cursor: "pointer" }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: "#eaf6ff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                    <Refrigerator size={19} color="#4a6fa5" strokeWidth={2} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 2 }}>{f.name}</div>
+                    <div style={{ fontSize: 12, color: "rgba(22,50,92,0.5)" }}>{itemCount} item{itemCount === 1 ? "" : "s"}</div>
+                  </div>
+                  <ChevronRight size={17} color="rgba(22,50,92,0.3)" />
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {state.addStep === 0 && (
         <>
@@ -127,6 +151,32 @@ export default function AddScreen() {
               />
             </div>
             <div>
+              <div style={labelStyle}>PICTURE</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {FOOD_ICON_KEYS.map((key) => (
+                  <div
+                    key={key}
+                    onClick={() => actions.onManualIconChange(key)}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 14,
+                      background: "#eaf6ff",
+                      border: `2px solid ${state.manualIcon === key ? "#2f6fb0" : "transparent"}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ position: "relative", width: 26, height: 26 }}>
+                      <FoodIcon icon={key} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
               <div style={labelStyle}>STORE IN</div>
               <select
                 value={state.manualSectionId}
@@ -141,12 +191,11 @@ export default function AddScreen() {
               </select>
             </div>
             <div>
-              <div style={labelStyle}>USE WITHIN (DAYS)</div>
+              <div style={labelStyle}>BEST BEFORE</div>
               <input
-                type="number"
-                min={0}
-                value={state.manualDays}
-                onChange={(e) => actions.onManualDaysChange(e.target.value)}
+                type="date"
+                value={state.manualExpiryDate}
+                onChange={(e) => actions.onManualExpiryDateChange(e.target.value)}
                 style={fieldStyle}
               />
             </div>

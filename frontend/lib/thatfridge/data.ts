@@ -239,6 +239,28 @@ export const ICON_SECTION: Record<string, string> = {
   leftovers: "leftovers",
 };
 
+const ICON_KEYWORDS: Record<string, string[]> = {
+  milk: ["milk"],
+  yogurt: ["yogurt", "yoghurt"],
+  cheese: ["cheese", "cheddar", "mozzarella", "parmesan", "brie", "feta"],
+  eggs: ["egg"],
+  spinach: ["spinach", "kale", "lettuce", "greens", "salad"],
+  carrot: ["carrot"],
+  apple: ["apple"],
+  berries: ["berry", "berries", "strawberr", "blueberr", "raspberr"],
+  meat: ["meat", "chicken", "beef", "pork", "turkey", "steak", "bacon", "sausage", "ham"],
+  leftovers: ["leftover", "soup", "stew", "casserole", "takeout", "take-out"],
+};
+
+export function guessIcon(name: string): string | null {
+  const q = name.trim().toLowerCase();
+  if (!q) return null;
+  for (const icon of FOOD_ICON_KEYS) {
+    if (ICON_KEYWORDS[icon]?.some((kw) => q.includes(kw))) return icon;
+  }
+  return null;
+}
+
 // Alternate fridge look photos (the hero photo remains the default "Original photo" option).
 export const FRIDGE_STYLES: FridgeStyleDef[] = [
   { key: "classic", label: "Classic Blue", photo: "/images/thatfridge/fridge-classic.png", bg: "#4a89c9" },
