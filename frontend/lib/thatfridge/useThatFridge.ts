@@ -734,23 +734,17 @@ export function useThatFridge() {
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, qty: Math.max(1, d.qty + delta) } : d)) }));
   const onDetectedExpiryChange = (id: string, value: string) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, expiryDate: value } : d)) }));
-  const suggestDetectedExpiry = (id: string) =>
+  const onDetectedLocationChange = (id: string, location: StorageLocation) =>
+    patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, location } : d)) }));
+  const suggestDetectedDetails = (id: string) =>
     patch((s) => {
       const item = s.detected.find((d) => d.id === id);
       if (!item) return {};
       const target = new Date();
       target.setDate(target.getDate() + suggestShelfLifeDays(item.icon));
       const expiryDate = toISODate(target);
-      return { detected: s.detected.map((d) => (d.id === id ? { ...d, expiryDate } : d)) };
-    });
-  const onDetectedLocationChange = (id: string, location: StorageLocation) =>
-    patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, location } : d)) }));
-  const suggestDetectedLocation = (id: string) =>
-    patch((s) => {
-      const item = s.detected.find((d) => d.id === id);
-      if (!item) return {};
       const location = guessLocation(item.name);
-      return { detected: s.detected.map((d) => (d.id === id ? { ...d, location } : d)) };
+      return { detected: s.detected.map((d) => (d.id === id ? { ...d, expiryDate, location } : d)) };
     });
 
   const onManualNameChange = (value: string) =>
@@ -768,14 +762,13 @@ export function useThatFridge() {
   const onManualSectionChange = (value: string) => patch({ manualSectionId: value, manualSectionAuto: false });
   const onManualIconChange = (value: string) => patch({ manualIcon: value, manualIconAuto: false });
   const onManualExpiryDateChange = (value: string) => patch({ manualExpiryDate: value });
-  const suggestManualExpiry = () =>
+  const onManualLocationChange = (location: StorageLocation) => patch({ manualLocation: location });
+  const suggestManualDetails = () =>
     patch((s) => {
       const target = new Date();
       target.setDate(target.getDate() + suggestShelfLifeDays(s.manualIcon));
-      return { manualExpiryDate: toISODate(target) };
+      return { manualExpiryDate: toISODate(target), manualLocation: guessLocation(s.manualName) };
     });
-  const onManualLocationChange = (location: StorageLocation) => patch({ manualLocation: location });
-  const suggestManualLocation = () => patch((s) => ({ manualLocation: guessLocation(s.manualName) }));
   const onManualNoteChange = (value: string) => patch({ manualNote: value });
   const confirmManualAdd = () => {
     const name = state.manualName.trim();
@@ -909,16 +902,14 @@ export function useThatFridge() {
     onDetectedSectionChange,
     adjustDetectedQty,
     onDetectedExpiryChange,
-    suggestDetectedExpiry,
     onDetectedLocationChange,
-    suggestDetectedLocation,
+    suggestDetectedDetails,
     onManualNameChange,
     onManualSectionChange,
     onManualIconChange,
     onManualExpiryDateChange,
-    suggestManualExpiry,
     onManualLocationChange,
-    suggestManualLocation,
+    suggestManualDetails,
     onManualNoteChange,
     confirmManualAdd,
     confirmAdd,

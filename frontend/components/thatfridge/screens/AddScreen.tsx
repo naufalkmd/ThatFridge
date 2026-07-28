@@ -1,9 +1,11 @@
 "use client";
 
-import { Camera, Check, ChevronRight, Keyboard, Minus, Plus, Receipt, Refrigerator, ScanBarcode, Sparkles, X } from "lucide-react";
-import { FOOD_ICON_KEYS, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
+import { useState } from "react";
+import { Camera, Check, ChevronDown, ChevronRight, Keyboard, Minus, Plus, Receipt, Refrigerator, ScanBarcode, Sparkles, X } from "lucide-react";
+import { FOOD_ICON_KEYS, ICON_LABELS, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
+import LocationIcon from "../LocationIcon";
 import type { ScanMethod, StorageLocation } from "@/lib/thatfridge/types";
 
 const SCAN_METHODS: { key: ScanMethod; title: string; desc: string; Icon: typeof Receipt }[] = [
@@ -34,20 +36,17 @@ const labelStyle: React.CSSProperties = {
   marginBottom: 6,
 };
 
-const AGENT_SUGGEST_META = {
-  guardian: { label: "Guardian", color: "#c1452e" },
-  organizer: { label: "Organizer", color: "#2f6fb0" },
-} as const;
+const AUTO_FILL_COLOR = "#7a5cc9";
 
-function AgentSuggestButton({ agent, onClick }: { agent: keyof typeof AGENT_SUGGEST_META; onClick: () => void }) {
-  const meta = AGENT_SUGGEST_META[agent];
+function AutoFillButton({ onClick }: { onClick: () => void }) {
   return (
     <div
       onClick={onClick}
-      style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 10px", borderRadius: 10, background: `${meta.color}1a`, color: meta.color, fontSize: 11.5, fontWeight: 700, cursor: "pointer", flex: "none" }}
+      title="Auto-fill expiry date and storage location"
+      style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 10px", borderRadius: 10, background: `${AUTO_FILL_COLOR}1a`, color: AUTO_FILL_COLOR, fontSize: 11.5, fontWeight: 700, cursor: "pointer", flex: "none" }}
     >
       <Sparkles size={13} strokeWidth={2.2} />
-      {meta.label}
+      Auto-fill
     </div>
   );
 }
@@ -67,16 +66,13 @@ function LocationPicker({ value, onChange }: { value: StorageLocation; onChange:
               height: 26,
               borderRadius: 8,
               background: active ? opt.color : "#eaf6ff",
-              color: active ? "#fff" : "rgba(22,50,92,0.4)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 9.5,
-              fontWeight: 800,
               cursor: "pointer",
             }}
           >
-            {opt.short}
+            <LocationIcon location={opt.key} size={13} color={active ? "#fff" : "rgba(22,50,92,0.4)"} />
           </div>
         );
       })}
@@ -86,6 +82,7 @@ function LocationPicker({ value, onChange }: { value: StorageLocation; onChange:
 
 export default function AddScreen() {
   const { state, actions } = useThatFridgeCtx();
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const scanningLabel =
     state.scanMethod === "barcode" ? "Reading barcode…" : state.scanMethod === "receipt" ? "Reading receipt…" : "Scanning fridge photo…";
   const checkedCount = state.detected.filter((d) => d.checked).length;
@@ -156,7 +153,7 @@ export default function AddScreen() {
       {state.addStep === 2 && (
         <>
           <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: 14 }}>
-            Found {state.detected.length} items — the scan can&apos;t tell expiry dates, so set one below or let Guardian estimate it
+            Found {state.detected.length} items — the scan can&apos;t tell expiry or storage, so set them below or tap Auto-fill
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, overflowY: "auto" }}>
             {state.detected.map((d) => (
@@ -206,20 +203,15 @@ export default function AddScreen() {
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <input
                     type="date"
                     value={d.expiryDate}
                     onChange={(e) => actions.onDetectedExpiryChange(d.id, e.target.value)}
-                    style={{ flex: 1, border: "none", outline: "none", background: "#eaf6ff", borderRadius: 10, padding: "8px 10px", fontSize: 12.5, color: "#16325c" }}
+                    style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "#eaf6ff", borderRadius: 10, padding: "8px 10px", fontSize: 12.5, color: "#16325c" }}
                   />
-                  <AgentSuggestButton agent="guardian" onClick={() => actions.suggestDetectedExpiry(d.id)} />
-                </div>
-
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <LocationPicker value={d.location} onChange={(loc) => actions.onDetectedLocationChange(d.id, loc)} />
-                  <div style={{ flex: 1 }} />
-                  <AgentSuggestButton agent="organizer" onClick={() => actions.suggestDetectedLocation(d.id)} />
+                  <AutoFillButton onClick={() => actions.suggestDetectedDetails(d.id)} />
                 </div>
               </div>
             ))}
@@ -246,29 +238,56 @@ export default function AddScreen() {
             </div>
             <div>
               <div style={labelStyle}>PICTURE</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                {FOOD_ICON_KEYS.map((key) => (
-                  <div
-                    key={key}
-                    onClick={() => actions.onManualIconChange(key)}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 14,
-                      background: "#eaf6ff",
-                      border: `2px solid ${state.manualIcon === key ? "#2f6fb0" : "transparent"}`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div style={{ position: "relative", width: 26, height: 26 }}>
-                      <FoodIcon icon={key} />
-                    </div>
+              <div
+                onClick={() => setShowIconPicker((v) => !v)}
+                style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "8px 12px", cursor: "pointer" }}
+              >
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: "#eaf6ff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                  <div style={{ position: "relative", width: 20, height: 20 }}>
+                    <FoodIcon icon={state.manualIcon} />
                   </div>
-                ))}
+                </div>
+                <div style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: "#16325c" }}>
+                  {ICON_LABELS[state.manualIcon] || "Choose a picture"}
+                </div>
+                <ChevronDown
+                  size={16}
+                  color="rgba(22,50,92,0.4)"
+                  strokeWidth={2.2}
+                  style={{ transform: showIconPicker ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}
+                />
               </div>
+              {showIconPicker && (
+                <div style={{ marginTop: 8, maxHeight: 220, overflowY: "auto", background: "#fff", borderRadius: 14, padding: 10, boxShadow: "0 6px 16px rgba(22,50,92,0.06)" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                    {FOOD_ICON_KEYS.map((key) => (
+                      <div
+                        key={key}
+                        title={ICON_LABELS[key]}
+                        onClick={() => {
+                          actions.onManualIconChange(key);
+                          setShowIconPicker(false);
+                        }}
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 14,
+                          background: "#eaf6ff",
+                          border: `2px solid ${state.manualIcon === key ? "#2f6fb0" : "transparent"}`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <div style={{ position: "relative", width: 26, height: 26 }}>
+                          <FoodIcon icon={key} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <div style={labelStyle}>STORE IN</div>
@@ -286,11 +305,7 @@ export default function AddScreen() {
             </div>
             <div>
               <div style={labelStyle}>STORE WHERE</div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <LocationPicker value={state.manualLocation} onChange={actions.onManualLocationChange} />
-                <div style={{ flex: 1 }} />
-                <AgentSuggestButton agent="organizer" onClick={actions.suggestManualLocation} />
-              </div>
+              <LocationPicker value={state.manualLocation} onChange={actions.onManualLocationChange} />
             </div>
             <div>
               <div style={labelStyle}>BEST BEFORE</div>
@@ -301,7 +316,7 @@ export default function AddScreen() {
                   onChange={(e) => actions.onManualExpiryDateChange(e.target.value)}
                   style={{ ...fieldStyle, flex: 1 }}
                 />
-                <AgentSuggestButton agent="guardian" onClick={actions.suggestManualExpiry} />
+                <AutoFillButton onClick={actions.suggestManualDetails} />
               </div>
             </div>
             <div>

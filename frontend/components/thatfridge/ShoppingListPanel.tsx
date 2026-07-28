@@ -3,20 +3,12 @@
 import { Check, Plus, X } from "lucide-react";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
-const SECTION_NAMES: Record<string, string> = { dairy: "Dairy", produce: "Produce", protein: "Protein", leftovers: "Leftovers", other: "Other" };
-const SECTION_ORDER = ["dairy", "produce", "protein", "leftovers", "other"];
-
 export default function ShoppingListPanel() {
   const { state, actions } = useThatFridgeCtx();
 
   const shoppingList = state.shoppingList;
   const activeShopping = shoppingList.filter((i) => !i.checked);
   const boughtItemsView = shoppingList.filter((i) => i.checked);
-  const groupedShopping = SECTION_ORDER.map((id) => ({
-    id,
-    name: SECTION_NAMES[id],
-    items: activeShopping.filter((i) => (i.section || "other") === id),
-  })).filter((g) => g.items.length > 0);
   const hasNoShopping = activeShopping.length === 0 && boughtItemsView.length === 0;
 
   return (
@@ -40,22 +32,19 @@ export default function ShoppingListPanel() {
         </div>
       )}
 
-      {groupedShopping.map((grp) => (
-        <div key={grp.id} style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>{grp.name}</div>
-          <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
-            {grp.items.map((item) => (
-              <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
-                <div onClick={() => actions.toggleShoppingItem(item.id)} style={{ width: 22, height: 22, borderRadius: 7, border: "1.5px solid rgba(22,50,92,0.25)", flex: "none", cursor: "pointer" }} />
-                <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600 }}>{item.name}</div>
-                <div onClick={() => actions.removeShoppingItem(item.id)} style={{ display: "flex", cursor: "pointer", padding: 4 }}>
-                  <X size={14} color="rgba(22,50,92,0.3)" strokeWidth={2} />
-                </div>
+      {activeShopping.length > 0 && (
+        <div style={{ marginBottom: 18, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
+          {activeShopping.map((item) => (
+            <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
+              <div onClick={() => actions.toggleShoppingItem(item.id)} style={{ width: 22, height: 22, borderRadius: 7, border: "1.5px solid rgba(22,50,92,0.25)", flex: "none", cursor: "pointer" }} />
+              <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600 }}>{item.name}</div>
+              <div onClick={() => actions.removeShoppingItem(item.id)} style={{ display: "flex", cursor: "pointer", padding: 4 }}>
+                <X size={14} color="rgba(22,50,92,0.3)" strokeWidth={2} />
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
 
       {boughtItemsView.length > 0 && (
         <div style={{ marginBottom: 18 }}>

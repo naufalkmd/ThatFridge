@@ -17,6 +17,7 @@ import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import type { FoodSubtab } from "@/lib/thatfridge/types";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
+import LocationIcon from "../LocationIcon";
 import ShoppingListPanel from "../ShoppingListPanel";
 
 const REC_SOURCE_META: Record<ShoppingRecommendation["source"], { label: string; color: string }> = {
@@ -365,16 +366,13 @@ export default function FoodHubScreen() {
                                     height: 26,
                                     borderRadius: 8,
                                     background: active ? opt.color : "rgba(22,50,92,0.06)",
-                                    color: active ? "#fff" : "rgba(22,50,92,0.4)",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
-                                    fontSize: 9.5,
-                                    fontWeight: 800,
                                     cursor: "pointer",
                                   }}
                                 >
-                                  {opt.short}
+                                  <LocationIcon location={opt.key} size={13} color={active ? "#fff" : "rgba(22,50,92,0.4)"} />
                                 </div>
                               );
                             })}

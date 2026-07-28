@@ -1,7 +1,8 @@
 "use client";
 
-import { PackageOpen, Pencil } from "lucide-react";
-import { FOOD_ICON_KEYS } from "@/lib/thatfridge/data";
+import { useState } from "react";
+import { ChevronDown, PackageOpen, Pencil } from "lucide-react";
+import { FOOD_ICON_KEYS, ICON_LABELS } from "@/lib/thatfridge/data";
 import { findItem } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -29,6 +30,7 @@ const fieldStyle: React.CSSProperties = {
 
 export default function ItemDetailSheet() {
   const { state, actions } = useThatFridgeCtx();
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const found = state.selectedItemId ? findItem(state, state.selectedItemId) : null;
   if (!found) return null;
   const { item, section, fridgeIndex } = found;
@@ -38,7 +40,10 @@ export default function ItemDetailSheet() {
     return (
       <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)" }}>
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "#fff", borderRadius: "28px 28px 0 0", padding: "14px 22px 30px", animation: "pop .22s ease-out" }}>
-          <div onClick={actions.cancelEditItem} style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 20px", cursor: "pointer" }} />
+          <div onClick={() => {
+            setShowIconPicker(false);
+            actions.cancelEditItem();
+          }} style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 20px", cursor: "pointer" }} />
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Edit item</div>
 
           <div style={{ marginBottom: 14 }}>
@@ -69,37 +74,70 @@ export default function ItemDetailSheet() {
 
           <div style={{ marginBottom: 22 }}>
             <div style={labelStyle}>PICTURE</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              {FOOD_ICON_KEYS.map((key) => (
-                <div
-                  key={key}
-                  onClick={() => actions.onEditIconChange(key)}
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 14,
-                    background: "#eaf6ff",
-                    border: `2px solid ${state.editIcon === key ? "#2f6fb0" : "transparent"}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                  }}
-                >
-                  <div style={{ position: "relative", width: 28, height: 28 }}>
-                    <FoodIcon icon={key} />
-                  </div>
+            <div
+              onClick={() => setShowIconPicker((v) => !v)}
+              style={{ display: "flex", alignItems: "center", gap: 10, background: "#eaf6ff", borderRadius: 14, padding: "8px 12px", cursor: "pointer" }}
+            >
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                <div style={{ position: "relative", width: 22, height: 22 }}>
+                  <FoodIcon icon={state.editIcon} />
                 </div>
-              ))}
+              </div>
+              <div style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: "#16325c" }}>
+                {ICON_LABELS[state.editIcon] || "Choose a picture"}
+              </div>
+              <ChevronDown
+                size={16}
+                color="rgba(22,50,92,0.4)"
+                strokeWidth={2.2}
+                style={{ transform: showIconPicker ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}
+              />
             </div>
+            {showIconPicker && (
+              <div style={{ marginTop: 8, maxHeight: 220, overflowY: "auto", background: "#eaf6ff", borderRadius: 14, padding: 10 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  {FOOD_ICON_KEYS.map((key) => (
+                    <div
+                      key={key}
+                      title={ICON_LABELS[key]}
+                      onClick={() => {
+                        actions.onEditIconChange(key);
+                        setShowIconPicker(false);
+                      }}
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 14,
+                        background: "#fff",
+                        border: `2px solid ${state.editIcon === key ? "#2f6fb0" : "transparent"}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div style={{ position: "relative", width: 28, height: 28 }}>
+                        <FoodIcon icon={key} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-            <div onClick={actions.cancelEditItem} style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#16325c", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
+            <div onClick={() => {
+            setShowIconPicker(false);
+            actions.cancelEditItem();
+          }} style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#16325c", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
               Cancel
             </div>
             <div
-              onClick={actions.confirmEditItem}
+              onClick={() => {
+                setShowIconPicker(false);
+                actions.confirmEditItem();
+              }}
               style={{
                 flex: 1,
                 textAlign: "center",
@@ -144,7 +182,10 @@ export default function ItemDetailSheet() {
             </div>
           </div>
           <div
-            onClick={actions.startEditItem}
+            onClick={() => {
+              setShowIconPicker(false);
+              actions.startEditItem();
+            }}
             style={{
               position: "absolute",
               top: 0,
