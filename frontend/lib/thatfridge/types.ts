@@ -123,3 +123,10 @@ export interface NotificationEvent {
   createdAt: number;
   done: boolean;
 }
+
+export type AuthMode = "login" | "signup";
+
+export interface CurrentUser {
+  name: string;
+  email: string;
+}

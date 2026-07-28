@@ -13,6 +13,14 @@ export default function ProfileDrawer() {
     { label: "Notifications", onClick: actions.openNotifications },
     { label: "About ThatFridge", onClick: actions.openAbout },
   ];
+  const userName = state.currentUser?.name || "Friend";
+  const userEmail = state.currentUser?.email || "";
+  const initials = userName
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 20 }}>
@@ -49,11 +57,11 @@ export default function ProfileDrawer() {
               flex: "none",
             }}
           >
-            JD
+            {initials}
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#16325c" }}>Jordan Diaz</div>
-            <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>jordan@example.com</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#16325c" }}>{userName}</div>
+            <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>{userEmail}</div>
           </div>
         </div>
 
@@ -96,7 +104,7 @@ export default function ProfileDrawer() {
 
         <div style={{ flex: 1 }} />
         <div
-          onClick={actions.closeProfile}
+          onClick={actions.signOut}
           style={{ textAlign: "center", padding: 12, borderRadius: 14, background: "#eef2f7", color: "#16325c", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
         >
           Sign out
