@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\FridgeController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\NotificationPrefController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShoppingItemController;
 use Illuminate\Support\Facades\Route;
@@ -32,4 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/shopping-items', [ShoppingItemController::class, 'store']);
     Route::patch('/shopping-items/{shoppingItem}', [ShoppingItemController::class, 'update']);
     Route::delete('/shopping-items/{shoppingItem}', [ShoppingItemController::class, 'destroy']);
+
+    Route::get('/notification-prefs', [NotificationPrefController::class, 'show']);
+    Route::patch('/notification-prefs', [NotificationPrefController::class, 'update']);
 });
