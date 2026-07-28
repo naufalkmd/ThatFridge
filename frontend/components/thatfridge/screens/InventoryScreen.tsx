@@ -2,10 +2,33 @@
 
 import { useState } from "react";
 import { ListFilter, Minus, PackageOpen, Plus, Refrigerator, Search } from "lucide-react";
+import { STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import { getScopeLabel, getScopedItems } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
+import type { StorageLocation } from "@/lib/thatfridge/types";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
+import LocationIcon from "../LocationIcon";
+
+function LocationTag({ location }: { location: StorageLocation }) {
+  const meta = STORAGE_LOCATIONS.find((l) => l.key === location) || STORAGE_LOCATIONS[0];
+  return (
+    <span
+      title={meta.label}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "3px 5px",
+        borderRadius: 6,
+        color: meta.color,
+        background: `${meta.color}1a`,
+        flex: "none",
+      }}
+    >
+      <LocationIcon location={location} size={10.5} color={meta.color} />
+    </span>
+  );
+}
 
 const SORT_OPTIONS: { key: "category" | "expiry" | "name"; label: string }[] = [
   { key: "category", label: "Category" },
@@ -200,6 +223,7 @@ export default function InventoryScreen() {
                       {item.name}
                       {showFridgeTags && <span style={{ fontWeight: 500, color: "rgba(22,50,92,0.4)" }}> · {item.fridgeName}</span>}
                       {item.opened && <PackageOpen size={12} color="#2f6fb0" strokeWidth={2.4} />}
+                      <LocationTag location={item.location || "fridge"} />
                     </div>
                     <div style={{ height: 4, borderRadius: 2, background: "rgba(22,50,92,0.08)", overflow: "hidden" }}>
                       <div style={{ height: "100%", borderRadius: 2, width: `${item.freshness}%`, background: freshColor(item.freshness) }} />
@@ -230,10 +254,14 @@ export default function InventoryScreen() {
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
                   {item.name}
                   {item.opened && <PackageOpen size={12} color="#2f6fb0" strokeWidth={2.4} />}
+                  <LocationTag location={item.location || "fridge"} />
                 </div>
-                <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)" }}>
+                <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginBottom: 4 }}>
                   {item.sectionName}
                   {showFridgeTags && <span> · {item.fridgeName}</span>}
+                </div>
+                <div style={{ height: 4, borderRadius: 2, background: "rgba(22,50,92,0.08)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: 2, width: `${item.freshness}%`, background: freshColor(item.freshness) }} />
                 </div>
               </div>
               <div style={{ textAlign: "right", flex: "none" }}>

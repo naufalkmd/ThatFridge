@@ -29,7 +29,11 @@
       "Bash(node verify_labels.mjs)",
       "Bash(xargs kill -9)",
       "Bash(git show *)",
-      "Bash(awk '{print $1}')"
+      "Bash(awk '{print $1}')",
+      "Bash(node verify_dropdown.mjs)",
+      "Bash(curl -s http://localhost:3000/images/thatfridge/food-icons/icon-015.png -o /tmp/icon-015-check.png)",
+      "Bash(node verify_item_edit_dropdown.mjs)",
+      "Bash(node verify_autofill.mjs)"
     ],
     "additionalDirectories": [
       "/private/tmp",
