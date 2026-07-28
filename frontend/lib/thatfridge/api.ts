@@ -21,14 +21,14 @@ function seedFridges(): Fridge[] {
           id: "drinks",
           name: "Drinks shelf",
           items: [
-            { id: "g1", name: "Soda cans", icon: "milk", freshness: 92, days: 60, note: "Full case" },
-            { id: "g2", name: "Craft beer", icon: "yogurt", freshness: 85, days: 90, note: "6 left" },
+            { id: "g1", name: "Soda cans", icon: "milk", freshness: 92, days: 60, note: "Full case", qty: 12 },
+            { id: "g2", name: "Craft beer", icon: "yogurt", freshness: 85, days: 90, note: "6 left", qty: 6 },
           ],
         },
         {
           id: "overflow",
           name: "Overflow",
-          items: [{ id: "g3", name: "Frozen peas", icon: "spinach", freshness: 70, days: 120, note: "Backup bag" }],
+          items: [{ id: "g3", name: "Frozen peas", icon: "spinach", freshness: 70, days: 120, note: "Backup bag", qty: 1 }],
         },
       ],
     },
@@ -41,8 +41,8 @@ function seedFridges(): Fridge[] {
           id: "lunches",
           name: "Lunches",
           items: [
-            { id: "o1", name: "Turkey sandwich", icon: "leftovers", freshness: 38, days: 1, note: "Bring home tonight" },
-            { id: "o2", name: "Yogurt cup", icon: "yogurt", freshness: 75, days: 5, note: "2 cups" },
+            { id: "o1", name: "Turkey sandwich", icon: "leftovers", freshness: 38, days: 1, note: "Bring home tonight", qty: 1 },
+            { id: "o2", name: "Yogurt cup", icon: "yogurt", freshness: 75, days: 5, note: "2 cups", qty: 2 },
           ],
         },
       ],
