@@ -278,9 +278,12 @@ export default function HomeScreen() {
           onClick={() => actions.selectItem(guardianItem.id)}
           style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", marginBottom: 14, cursor: "pointer" }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-            <TriangleAlert size={15} color="#d99a2b" strokeWidth={2.2} />
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>EXPIRING SOON</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <TriangleAlert size={15} color="#d99a2b" strokeWidth={2.2} />
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>EXPIRING SOON</div>
+            </div>
+            <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#c1452e", background: "#c1452e1a", padding: "2px 7px", borderRadius: 6 }}>GUARDIAN</div>
           </div>
           <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{guardianMessage}</div>
         </div>
@@ -289,7 +292,10 @@ export default function HomeScreen() {
       {/* low stock */}
       {lowStockItem && (
         <div onClick={actions.openShoppingHub} style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", marginBottom: 18, cursor: "pointer" }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c", marginBottom: 6 }}>LOW STOCK</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>LOW STOCK</div>
+            <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#3f8f5c", background: "#3f8f5c1a", padding: "2px 7px", borderRadius: 6 }}>SHOPKEEPER</div>
+          </div>
           <div style={{ fontSize: 13.5, color: "#16325c" }}>
             {lowStockItem.name} — {lowStockItem.note.toLowerCase()}
           </div>
@@ -301,7 +307,10 @@ export default function HomeScreen() {
         onClick={actions.openRecipesHub}
         style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", marginBottom: 22, cursor: "pointer" }}
       >
-        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c", marginBottom: 6 }}>CHEF&apos;S PICK</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>CHEF&apos;S PICK</div>
+          <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#b5702f", background: "#b5702f1a", padding: "2px 7px", borderRadius: 6 }}>CHEF</div>
+        </div>
         <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{chefMessage}</div>
       </div>
 
