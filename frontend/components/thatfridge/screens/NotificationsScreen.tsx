@@ -55,7 +55,7 @@ const GROUPS: {
         key: "lowStock",
         label: "Low stock reminders",
         desc: "Shopkeeper flags essentials you're running low on",
-        icon: "/images/thatfridge/shopkeeper-agent.png",
+        icon: "/images/thatfridge/shopkeeper.gif",
         accent: "#8a3320",
       },
     ],
@@ -67,7 +67,7 @@ const GROUPS: {
         key: "recipeTips",
         label: "Recipe suggestions",
         desc: "Chef's picks based on what's fresh right now",
-        icon: "/images/thatfridge/chef-agent.png",
+        icon: "/images/thatfridge/chef.gif",
         accent: "#b5702f",
       },
       {
@@ -127,7 +127,7 @@ export default function NotificationsScreen() {
                       background: `${row.accent}1a`,
                     }}
                   >
-                    <Image src={row.icon} alt="" width={34} height={34} style={{ objectFit: "contain" }} />
+                    <Image src={row.icon} alt="" width={34} height={34} unoptimized style={{ objectFit: "contain" }} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2 }}>{row.label}</div>

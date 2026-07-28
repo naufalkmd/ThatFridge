@@ -12,6 +12,11 @@ const AGENT_ACCENT: Record<string, string> = {
   shopkeeper: "#8a3320",
 };
 
+const AGENT_ICON_OVERRIDE: Record<string, string> = {
+  chef: "/images/thatfridge/chef.gif",
+  shopkeeper: "/images/thatfridge/shopkeeper.gif",
+};
+
 const APP_VERSION = "0.1.0";
 
 export default function AboutScreen() {
@@ -79,7 +84,14 @@ export default function AboutScreen() {
                   background: `${AGENT_ACCENT[agent.id]}1a`,
                 }}
               >
-                <Image src={`/images/thatfridge/${agent.id}-agent.png`} alt="" width={34} height={34} style={{ objectFit: "contain" }} />
+                <Image
+                  src={AGENT_ICON_OVERRIDE[agent.id] || `/images/thatfridge/${agent.id}-agent.png`}
+                  alt=""
+                  width={34}
+                  height={34}
+                  unoptimized={agent.id in AGENT_ICON_OVERRIDE}
+                  style={{ objectFit: "contain" }}
+                />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2, color: AGENT_ACCENT[agent.id] }}>{agent.name}</div>
