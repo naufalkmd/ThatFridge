@@ -414,17 +414,18 @@ export function useThatFridge() {
       chatDraft: "",
       isTyping: false,
     });
-  const sendChat = (text: string) => {
+  const sendChat = (text: string, attachmentName?: string) => {
     const trimmed = (text || "").trim();
-    if (!trimmed) return;
-    const userMsg: ChatMessage = { id: "u" + Date.now(), from: "user", text: trimmed };
+    if (!trimmed && !attachmentName) return;
+    const userMsg: ChatMessage = { id: "u" + Date.now(), from: "user", text: trimmed, attachmentName };
     patch((s) => ({ chatMessages: [...s.chatMessages, userMsg], chatDraft: "", isTyping: true }));
     setTimeout(() => {
-      const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: chatBotReply(trimmed) };
+      const replyText = trimmed ? chatBotReply(trimmed) : `Thanks for sharing "${attachmentName}" — I'll take a look!`;
+      const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: replyText };
       patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false }));
     }, 900);
   };
-  const sendMessage = () => sendChat(state.chatDraft);
+  const sendMessage = (attachmentName?: string) => sendChat(state.chatDraft, attachmentName);
   const onChatKeyDown = (key: string) => {
     if (key === "Enter") sendMessage();
   };
@@ -500,6 +501,26 @@ export function useThatFridge() {
       return {
         fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections } : f)),
         isEditingItem: false,
+      };
+    });
+  };
+
+  const adjustItemQty = (id: string, delta: number) => {
+    patch((s) => {
+      const found = findItem(s, id);
+      if (!found) return {};
+      const { section, fridgeIndex } = found;
+      return {
+        fridges: s.fridges.map((f, i) =>
+          i === fridgeIndex
+            ? {
+                ...f,
+                sections: f.sections.map((sec) =>
+                  sec.id === section.id ? { ...sec, items: sec.items.map((it) => (it.id === id ? { ...it, qty: Math.max(0, it.qty + delta) } : it)) } : sec
+                ),
+              }
+            : f
+        ),
       };
     });
   };
@@ -603,6 +624,7 @@ export function useThatFridge() {
         freshness: 100,
         days,
         note: s.manualNote.trim() || "Added manually",
+        qty: 1,
       };
       const sections = fridge.sections.some((sec) => sec.id === sectionId)
         ? fridge.sections.map((sec) => (sec.id === sectionId ? { ...sec, items: [...sec.items, newItem] } : sec))
@@ -624,7 +646,7 @@ export function useThatFridge() {
       const sections = s.fridges[s.activeFridge].sections.map((sec) => {
         const added = toAdd
           .filter((d) => d.section === sec.id)
-          .map((d) => ({ id: d.id + "-" + Date.now(), name: d.name, icon: d.icon, freshness: 100, days: 14, note: "Just added" }));
+          .map((d) => ({ id: d.id + "-" + Date.now(), name: d.name, icon: d.icon, freshness: 100, days: 14, note: "Just added", qty: 1 }));
         return added.length ? { ...sec, items: [...sec.items, ...added] } : sec;
       });
       return {
@@ -693,6 +715,7 @@ export function useThatFridge() {
     goTab,
     openAdd,
     selectItem,
+    adjustItemQty,
     markUsed,
     discardItem,
     startEditItem,

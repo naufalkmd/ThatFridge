@@ -60,3 +60,7 @@ body {
   50%, 99% { transform: scaleX(-1); }
   100% { transform: scaleX(1); }
 }
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(193,69,46,0.45); }
+  50% { box-shadow: 0 0 0 8px rgba(193,69,46,0); }
+}

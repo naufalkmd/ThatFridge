@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Bell, ListFilter, Palette, Search, TriangleAlert } from "lucide-react";
+import { Bell, ListFilter, Minus, Package, Palette, Plus, Search, Sparkles, TriangleAlert } from "lucide-react";
 import { RECIPE_BY_ICON } from "@/lib/thatfridge/data";
 import {
   getActiveSections,
   getFridgeHeroViews,
   getGuardianItem,
   getLowStockItem,
+  getRecipesView,
 } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -21,9 +22,36 @@ const SORT_OPTIONS: { key: "category" | "expiry" | "name"; label: string }[] = [
   { key: "name", label: "Name" },
 ];
 
+function QtyStepper({ qty, onChange }: { qty: number; onChange: (delta: number) => void }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          onChange(-1);
+        }}
+        style={{ width: 20, height: 20, borderRadius: 10, background: "#eef4fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+      >
+        <Minus size={11} color="#16325c" strokeWidth={2.4} />
+      </div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "#16325c", minWidth: 14, textAlign: "center" }}>{qty}</div>
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          onChange(1);
+        }}
+        style={{ width: 20, height: 20, borderRadius: 10, background: "#eef4fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+      >
+        <Plus size={11} color="#16325c" strokeWidth={2.4} />
+      </div>
+    </div>
+  );
+}
+
 export default function HomeScreen() {
   const { state, actions } = useThatFridgeCtx();
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const fridgesView = getFridgeHeroViews(state);
   const heroSlide = state.heroSlide;
   const heroSlideCount = fridgesView.length + 1;
@@ -35,7 +63,14 @@ export default function HomeScreen() {
   const lowStockItem = getLowStockItem(state);
   const sections = getActiveSections(state);
 
-  const flatItems = sections.flatMap((sec) => sec.items.map((item) => ({ ...item, sectionName: sec.name })));
+  const totalItemCount = sections.reduce((sum, sec) => sum + sec.items.length, 0);
+  const expiringCount = sections.reduce((sum, sec) => sum + sec.items.filter((i) => i.freshness < 50).length, 0);
+  const suggestionCount = getRecipesView(state).filter((r) => r.haveCount > 0).length;
+
+  const categories = [{ id: "all", name: "All" }, ...sections.map((sec) => ({ id: sec.id, name: sec.name }))];
+  const filteredSections = categoryFilter === "all" ? sections : sections.filter((sec) => sec.id === categoryFilter);
+
+  const flatItems = filteredSections.flatMap((sec) => sec.items.map((item) => ({ ...item, sectionName: sec.name })));
   const sortedFlatItems =
     state.homeSortMode === "expiry"
       ? flatItems.slice().sort((a, b) => a.freshness - b.freshness)
@@ -139,6 +174,26 @@ export default function HomeScreen() {
           >
             <Search size={16} color="#16325c" strokeWidth={2} />
           </div>
+        </div>
+      </div>
+
+      {/* overview */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Overview</div>
+        <div style={{ display: "flex", gap: 10 }}>
+          {[
+            { label: "Items", value: totalItemCount, color: "#2f6fb0", bg: "#eaf1fb", Icon: Package },
+            { label: "Expiring soon", value: expiringCount, color: "#c1452e", bg: "#fbeae7", Icon: TriangleAlert },
+            { label: "Suggestions", value: suggestionCount, color: "#3f8f5c", bg: "#eaf6ef", Icon: Sparkles },
+          ].map((k) => (
+            <div key={k.label} style={{ flex: 1, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, padding: "12px 8px", textAlign: "center" }}>
+              <div style={{ width: 28, height: 28, borderRadius: 9, background: k.bg, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
+                <k.Icon size={14} color={k.color} strokeWidth={2.2} />
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#16325c" }}>{k.value}</div>
+              <div style={{ fontSize: 10, color: "rgba(22,50,92,0.5)", marginTop: 2 }}>{k.label}</div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -352,8 +407,34 @@ export default function HomeScreen() {
         </div>
       </div>
 
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 14, paddingBottom: 2 }}>
+        {categories.map((cat) => {
+          const active = categoryFilter === cat.id;
+          return (
+            <div
+              key={cat.id}
+              onClick={() => setCategoryFilter(cat.id)}
+              style={{
+                flex: "none",
+                whiteSpace: "nowrap",
+                padding: "7px 14px",
+                borderRadius: 14,
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: "pointer",
+                background: active ? "#16325c" : "#fff",
+                color: active ? "#fff" : "#16325c",
+                boxShadow: "0 4px 10px rgba(22,50,92,0.08)",
+              }}
+            >
+              {cat.name}
+            </div>
+          );
+        })}
+      </div>
+
       {state.homeSortMode === "category" ? (
-        sections.map((sec) => (
+        filteredSections.map((sec) => (
           <div key={sec.id} style={{ marginBottom: 22 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
               <div style={{ fontSize: 15, fontWeight: 700 }}>{sec.name}</div>
@@ -378,6 +459,7 @@ export default function HomeScreen() {
                   <div style={{ textAlign: "right", flex: "none" }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
                     <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginTop: 2 }}>{item.note}</div>
+                    <QtyStepper qty={item.qty} onChange={(delta) => actions.adjustItemQty(item.id, delta)} />
                   </div>
                 </div>
               ))}
@@ -402,6 +484,7 @@ export default function HomeScreen() {
               <div style={{ textAlign: "right", flex: "none" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
                 <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginTop: 2 }}>{item.note}</div>
+                <QtyStepper qty={item.qty} onChange={(delta) => actions.adjustItemQty(item.id, delta)} />
               </div>
             </div>
           ))}

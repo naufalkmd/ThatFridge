@@ -13,6 +13,7 @@ export interface Item {
   freshness: number;
   days: number;
   note: string;
+  qty: number;
   location?: StorageLocation;
 }
 
@@ -70,6 +71,7 @@ export interface ChatMessage {
   id: string;
   from: "bot" | "user";
   text: string;
+  attachmentName?: string;
 }
 
 export type ScanMethod = "receipt" | "barcode" | "photo" | "manual";

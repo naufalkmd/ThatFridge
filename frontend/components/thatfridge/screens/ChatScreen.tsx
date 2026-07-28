@@ -1,22 +1,117 @@
 "use client";
 
-import { useEffect } from "react";
-import { ArrowUp, ChevronLeft } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUp, ChevronLeft, Mic, Paperclip, Square, X } from "lucide-react";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
 const QUICK_ASKS = ["What's expiring soon?", "What can I cook tonight?", "What do I need to buy?", "How's my fridge doing?"];
 
+interface SpeechRecognitionResultLike {
+  transcript: string;
+}
+interface SpeechRecognitionEventLike {
+  results: { [index: number]: { [index: number]: SpeechRecognitionResultLike } };
+}
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+}
+interface SpeechWindow extends Window {
+  SpeechRecognition?: new () => SpeechRecognitionLike;
+  webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+}
+
+function getSpeechRecognitionCtor() {
+  if (typeof window === "undefined") return undefined;
+  const w = window as SpeechWindow;
+  return w.SpeechRecognition || w.webkitSpeechRecognition;
+}
+
 export default function ChatScreen() {
   const { state, actions, chatScrollRef } = useThatFridgeCtx();
+  const [attachmentName, setAttachmentName] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceSupported] = useState(() => !!getSpeechRecognitionCtor());
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const draftRef = useRef(state.chatDraft);
+
+  useEffect(() => {
+    draftRef.current = state.chatDraft;
+  }, [state.chatDraft]);
 
   useEffect(() => {
     if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
   }, [state.chatMessages, state.isTyping, chatScrollRef]);
 
+  useEffect(() => {
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor) return;
+    const recognition = new Ctor();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript ?? "";
+      if (transcript) {
+        actions.onDraftChange(draftRef.current ? `${draftRef.current} ${transcript}` : transcript);
+      }
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    return () => {
+      recognition.onresult = null;
+      recognition.onend = null;
+      recognition.onerror = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const showQuickAsks = state.chatMessages.length <= 3;
 
+  const toggleVoice = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+    if (isListening) {
+      recognition.stop();
+    } else {
+      setIsListening(true);
+      recognition.start();
+    }
+  };
+
+  const handleFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setAttachmentName(file.name);
+    e.target.value = "";
+  };
+
+  const handleSend = () => {
+    actions.sendMessage(attachmentName ?? undefined);
+    setAttachmentName(null);
+  };
+
   return (
-    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        backgroundImage: "url(/images/thatfridge/chat-wallpaper.png), linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)",
+        backgroundRepeat: "repeat, no-repeat",
+        backgroundSize: "400px 400px, auto",
+        imageRendering: "pixelated",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <div style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.55)", backdropFilter: "blur(10px)", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
         <div onClick={actions.goHome} style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
           <ChevronLeft size={20} color="#16325c" strokeWidth={2.2} />
@@ -38,7 +133,15 @@ export default function ChatScreen() {
                 {m.text}
               </div>
             ) : (
-              <div style={{ maxWidth: "78%", background: "#16325c", color: "#fff", borderRadius: "16px 4px 16px 16px", padding: "11px 14px", fontSize: 13.5, lineHeight: 1.5 }}>{m.text}</div>
+              <div style={{ maxWidth: "78%", background: "#16325c", color: "#fff", borderRadius: "16px 4px 16px 16px", padding: "11px 14px", fontSize: 13.5, lineHeight: 1.5 }}>
+                {m.attachmentName && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: m.text ? 6 : 0, fontSize: 12, fontWeight: 700, opacity: 0.85 }}>
+                    <Paperclip size={13} />
+                    {m.attachmentName}
+                  </div>
+                )}
+                {m.text}
+              </div>
             )}
           </div>
         ))}
@@ -66,16 +169,51 @@ export default function ChatScreen() {
         </div>
       )}
 
-      <div style={{ flex: "none", padding: "8px 14px 24px", background: "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(22,50,92,0.08)", display: "flex", alignItems: "center", gap: 10 }}>
-        <input
-          value={state.chatDraft}
-          onChange={(e) => actions.onDraftChange(e.target.value)}
-          onKeyDown={(e) => actions.onChatKeyDown(e.key)}
-          placeholder="Ask about your fridge…"
-          style={{ flex: 1, border: "none", outline: "none", background: "#eef4fa", borderRadius: 20, padding: "11px 16px", fontSize: 13.5, color: "#16325c" }}
-        />
-        <div onClick={actions.sendMessage} style={{ width: 38, height: 38, borderRadius: 19, background: "#16325c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
-          <ArrowUp size={17} color="#fff" strokeWidth={2.3} />
+      <div style={{ flex: "none", padding: "8px 14px 80px", background: "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(22,50,92,0.08)" }}>
+        {attachmentName && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#eef4fa", borderRadius: 14, padding: "6px 10px", marginBottom: 8, fontSize: 12, fontWeight: 600, color: "#16325c", width: "fit-content" }}>
+            <Paperclip size={13} />
+            <span style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{attachmentName}</span>
+            <X size={13} style={{ cursor: "pointer" }} onClick={() => setAttachmentName(null)} />
+          </div>
+        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <input ref={fileInputRef} type="file" onChange={handleFileChosen} style={{ display: "none" }} />
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            style={{ width: 38, height: 38, borderRadius: 19, background: "#eef4fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+          >
+            <Paperclip size={16} color="#16325c" strokeWidth={2.2} />
+          </div>
+          <input
+            value={state.chatDraft}
+            onChange={(e) => actions.onDraftChange(e.target.value)}
+            onKeyDown={(e) => actions.onChatKeyDown(e.key)}
+            placeholder={isListening ? "Listening…" : "Ask about your fridge…"}
+            style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "#eef4fa", borderRadius: 20, padding: "11px 16px", fontSize: 13.5, color: "#16325c" }}
+          />
+          {voiceSupported && (
+            <div
+              onClick={toggleVoice}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                background: isListening ? "#c1452e" : "#eef4fa",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                flex: "none",
+                animation: isListening ? "micPulse 1.4s ease-in-out infinite" : "none",
+              }}
+            >
+              {isListening ? <Square size={13} color="#fff" fill="#fff" /> : <Mic size={16} color="#16325c" strokeWidth={2.2} />}
+            </div>
+          )}
+          <div onClick={handleSend} style={{ width: 38, height: 38, borderRadius: 19, background: "#16325c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
+            <ArrowUp size={17} color="#fff" strokeWidth={2.3} />
+          </div>
         </div>
       </div>
     </div>
