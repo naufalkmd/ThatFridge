@@ -36,7 +36,7 @@ export default function ShoppingListPanel() {
 
       {hasNoShopping && (
         <div style={{ textAlign: "center", color: "rgba(22,50,92,0.45)", fontSize: 13, marginTop: 20 }}>
-          Your list is empty — add items or check the Kitchen for low-stock picks.
+          Your list is empty — add items or check the Crew for low-stock picks.
         </div>
       )}
 
