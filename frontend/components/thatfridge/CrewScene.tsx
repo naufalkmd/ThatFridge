@@ -18,11 +18,13 @@ const ZONES: {
   notifKind?: NotificationKind;
   onClick: (a: ThatFridgeActions) => void;
 }[] = [
-  { id: "chef", label: "Kitchen", color: "#b5702f", leftPct: 21, topPct: 27, roamPx: 78, durationS: 7, notifKind: "recipe", onClick: (a) => a.openRecipesHub() },
-  { id: "organizer", label: "Organizer", color: "#2f6fb0", leftPct: 56, topPct: 27, roamPx: 78, durationS: 8, onClick: (a) => a.openOrganizerTab() },
-  { id: "guardian", label: "Guardian", color: "#c1452e", leftPct: 15, topPct: 57, roamPx: 46, durationS: 6.5, notifKind: "expiring", onClick: (a) => a.openGuardianTab() },
-  { id: "shopkeeper", label: "Shop", color: "#3f8f5c", leftPct: 43, topPct: 53, roamPx: 118, durationS: 9, notifKind: "lowStock", onClick: (a) => a.openShoppingHub() },
+  { id: "chef", label: "Kitchen", color: "#b5702f", leftPct: 13, topPct: 25, roamPx: 95, durationS: 7, notifKind: "recipe", onClick: (a) => a.openRecipesHub() },
+  { id: "organizer", label: "Organizer", color: "#2f6fb0", leftPct: 58, topPct: 25, roamPx: 95, durationS: 8, onClick: (a) => a.openOrganizerTab() },
+  { id: "guardian", label: "Guardian", color: "#c1452e", leftPct: 5, topPct: 62, roamPx: 55, durationS: 6.5, notifKind: "expiring", onClick: (a) => a.openGuardianTab() },
+  { id: "shopkeeper", label: "Shop", color: "#3f8f5c", leftPct: 41, topPct: 53, roamPx: 140, durationS: 9, notifKind: "lowStock", onClick: (a) => a.openShoppingHub() },
 ];
+
+const SPRITE_SIZE = 48;
 
 export default function CrewScene() {
   const { state, actions } = useThatFridgeCtx();
@@ -37,11 +39,7 @@ export default function CrewScene() {
       style={{
         position: "relative",
         width: "100%",
-        aspectRatio: "1536 / 1024",
-        borderRadius: 22,
-        overflow: "hidden",
-        boxShadow: "0 10px 24px rgba(22,50,92,0.1)",
-        background: "#eaf3fb",
+        aspectRatio: "1186 / 849",
       }}
     >
       <Image src="/images/thatfridge/pixel-art-source.png" alt="Your crew's spaces" fill sizes="480px" style={{ objectFit: "contain", imageRendering: "pixelated" }} />
@@ -78,8 +76,8 @@ export default function CrewScene() {
               style={
                 {
                   position: "relative",
-                  width: 34,
-                  height: 34,
+                  width: SPRITE_SIZE,
+                  height: SPRITE_SIZE,
                   cursor: "pointer",
                   animation: `crewWalk ${zone.durationS}s ease-in-out infinite`,
                   "--roam": `${zone.roamPx}px`,
@@ -94,7 +92,7 @@ export default function CrewScene() {
                   }}
                   style={{
                     position: "absolute",
-                    top: -16,
+                    top: -38,
                     left: "50%",
                     transform: "translateX(-50%)",
                     background: "#fff",
