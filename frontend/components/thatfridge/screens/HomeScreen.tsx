@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ListFilter, Palette, Search, TriangleAlert } from "lucide-react";
+import { Bell, ListFilter, Palette, Search, TriangleAlert } from "lucide-react";
 import { RECIPE_BY_ICON } from "@/lib/thatfridge/data";
 import {
   getActiveSections,
@@ -13,7 +13,6 @@ import {
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
-import ChefMascot from "../ChefMascot";
 import CrewScene from "../CrewScene";
 
 const SORT_OPTIONS: { key: "category" | "expiry" | "name"; label: string }[] = [
@@ -21,14 +20,6 @@ const SORT_OPTIONS: { key: "category" | "expiry" | "name"; label: string }[] = [
   { key: "expiry", label: "Expiry" },
   { key: "name", label: "Name" },
 ];
-
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  boxShadow: "0 10px 24px rgba(22,50,92,0.1)",
-  borderRadius: 18,
-  padding: "14px 78px 14px 16px",
-  cursor: "pointer",
-};
 
 export default function HomeScreen() {
   const { state, actions } = useThatFridgeCtx();
@@ -63,6 +54,7 @@ export default function HomeScreen() {
     : "";
 
   const dotCount = heroSlideCount;
+  const pendingNotifications = state.notificationEvents.filter((n) => !n.done).length;
 
   const userInitials = (state.currentUser?.name || "Friend")
     .split(/\s+/)
@@ -96,6 +88,39 @@ export default function HomeScreen() {
         </div>
         <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>ThatFridge</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div
+            onClick={actions.openNotificationHistory}
+            style={{
+              position: "relative",
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              background: "rgba(255,255,255,0.75)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(22,50,92,0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flex: "none",
+            }}
+          >
+            <Bell size={16} color="#16325c" strokeWidth={2} />
+            {pendingNotifications > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 3,
+                  right: 4,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  background: "#c1452e",
+                  border: "1.5px solid #fff",
+                }}
+              />
+            )}
+          </div>
           <div
             onClick={actions.openSearch}
             style={{
@@ -249,21 +274,15 @@ export default function HomeScreen() {
 
       {/* guardian tip */}
       {guardianItem && (
-        <div style={{ position: "relative", marginBottom: 14 }}>
-          <div onClick={() => actions.selectItem(guardianItem.id)} style={cardStyle}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-              <TriangleAlert size={15} color="#d99a2b" strokeWidth={2.2} />
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>EXPIRING SOON</div>
-            </div>
-            <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{guardianMessage}</div>
+        <div
+          onClick={() => actions.selectItem(guardianItem.id)}
+          style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", marginBottom: 14, cursor: "pointer" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+            <TriangleAlert size={15} color="#d99a2b" strokeWidth={2.2} />
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>EXPIRING SOON</div>
           </div>
-          <Image
-            src="/images/thatfridge/guardian-agent.png"
-            alt="Guardian"
-            width={64}
-            height={64}
-            style={{ position: "absolute", right: 2, bottom: -6, objectFit: "contain", imageRendering: "pixelated" }}
-          />
+          <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{guardianMessage}</div>
         </div>
       )}
 
@@ -278,14 +297,12 @@ export default function HomeScreen() {
       )}
 
       {/* chef's pick */}
-      <div style={{ position: "relative", marginBottom: 22 }}>
-        <div onClick={actions.openRecipesHub} style={cardStyle}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c", marginBottom: 6 }}>CHEF&apos;S PICK</div>
-          <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{chefMessage}</div>
-        </div>
-        <div style={{ position: "absolute", right: 2, bottom: -8 }}>
-          <ChefMascot size={66} />
-        </div>
+      <div
+        onClick={actions.openRecipesHub}
+        style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", marginBottom: 22, cursor: "pointer" }}
+      >
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c", marginBottom: 6 }}>CHEF&apos;S PICK</div>
+        <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{chefMessage}</div>
       </div>
 
       {/* inventory */}
