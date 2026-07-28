@@ -65,7 +65,6 @@ function CrewCharacter({
   const [typing, setTyping] = useState(false);
 
   useEffect(() => {
-    const lines = IDLE_LINES[zone.id];
     let typingTimer: ReturnType<typeof setTimeout>;
     let waitTimer: ReturnType<typeof setTimeout>;
 
@@ -73,7 +72,7 @@ function CrewCharacter({
       waitTimer = setTimeout(() => {
         setTyping(true);
         typingTimer = setTimeout(() => {
-          setLineIndex((i) => (i + 1) % lines.length);
+          setLineIndex((i) => i + 1);
           setTyping(false);
           scheduleNext();
         }, 900);
@@ -88,6 +87,9 @@ function CrewCharacter({
   }, [zone.id]);
 
   const alert = alertMessage(zone.id, count);
+  const messages = alert ? [alert, ...IDLE_LINES[zone.id]] : IDLE_LINES[zone.id];
+  const currentMessage = messages[lineIndex % messages.length];
+  const isShowingAlert = !!alert && currentMessage === alert;
 
   return (
     <div
@@ -104,7 +106,7 @@ function CrewCharacter({
     >
       <div
         onClick={(e) => {
-          if (alert) {
+          if (isShowingAlert) {
             e.stopPropagation();
             onOpenNotifications();
           }
@@ -120,18 +122,18 @@ function CrewCharacter({
           borderRadius: 10,
           padding: "4px 8px",
           fontSize: 9,
-          fontWeight: alert ? 800 : 600,
-          color: alert ? zone.color : "#16325c",
+          fontWeight: isShowingAlert ? 800 : 600,
+          color: isShowingAlert ? zone.color : "#16325c",
           whiteSpace: "normal",
           textAlign: "center",
           width: 100,
           lineHeight: 1.25,
           zIndex: 2,
-          cursor: alert ? "pointer" : "default",
+          cursor: isShowingAlert ? "pointer" : "default",
           boxShadow: "0 4px 10px rgba(22,50,92,0.1)",
         }}
       >
-        {alert ? alert : typing ? <TypingDots /> : IDLE_LINES[zone.id][lineIndex]}
+        {typing ? <TypingDots /> : currentMessage}
         <div
           style={{
             position: "absolute",
