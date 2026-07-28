@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Bell, ListFilter, Palette, Search, TriangleAlert } from "lucide-react";
+import { ListFilter, Palette, Search, TriangleAlert } from "lucide-react";
 import { RECIPE_BY_ICON } from "@/lib/thatfridge/data";
 import {
   getActiveSections,
@@ -11,10 +11,10 @@ import {
   getLowStockItem,
 } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
-import type { ThatFridgeActions } from "@/lib/thatfridge/useThatFridge";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import ChefMascot from "../ChefMascot";
+import CrewScene from "../CrewScene";
 
 const SORT_OPTIONS: { key: "category" | "expiry" | "name"; label: string }[] = [
   { key: "category", label: "Category" },
@@ -30,13 +30,6 @@ const cardStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const CREW: { id: string; name: string; color: string; icon: string; onClick: (actions: ThatFridgeActions) => void }[] = [
-  { id: "chef", name: "Chef", color: "#b5702f", icon: "/images/thatfridge/chef-agent.png", onClick: (a) => a.openRecipesHub() },
-  { id: "guardian", name: "Guardian", color: "#3f5c85", icon: "/images/thatfridge/guardian-agent.png", onClick: (a) => a.openGuardianTab() },
-  { id: "organizer", name: "Organizer", color: "#2f6f47", icon: "/images/thatfridge/organizer-agent.png", onClick: (a) => a.openOrganizerTab() },
-  { id: "shopkeeper", name: "Shopkeeper", color: "#8a3320", icon: "/images/thatfridge/shopkeeper.gif", onClick: (a) => a.openShoppingHub() },
-];
-
 export default function HomeScreen() {
   const { state, actions } = useThatFridgeCtx();
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -50,7 +43,6 @@ export default function HomeScreen() {
   const guardianItem = getGuardianItem(state);
   const lowStockItem = getLowStockItem(state);
   const sections = getActiveSections(state);
-  const pendingNotifications = state.notificationEvents.filter((n) => !n.done).length;
 
   const flatItems = sections.flatMap((sec) => sec.items.map((item) => ({ ...item, sectionName: sec.name })));
   const sortedFlatItems =
@@ -104,39 +96,6 @@ export default function HomeScreen() {
         </div>
         <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>ThatFridge</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            onClick={actions.openNotificationHistory}
-            style={{
-              position: "relative",
-              width: 34,
-              height: 34,
-              borderRadius: 17,
-              background: "rgba(255,255,255,0.75)",
-              backdropFilter: "blur(8px)",
-              border: "1px solid rgba(22,50,92,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              flex: "none",
-            }}
-          >
-            <Bell size={16} color="#16325c" strokeWidth={2} />
-            {pendingNotifications > 0 && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 3,
-                  right: 4,
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  background: "#c1452e",
-                  border: "1.5px solid #fff",
-                }}
-              />
-            )}
-          </div>
           <div
             onClick={actions.openSearch}
             style={{
@@ -285,35 +244,7 @@ export default function HomeScreen() {
       {/* meet your crew */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Your crew</div>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-          {CREW.map((c) => (
-            <div
-              key={c.id}
-              onMouseEnter={() => actions.hoverAgent(c.id)}
-              onMouseLeave={actions.clearHoverAgent}
-              onClick={() => c.onClick(actions)}
-              style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}
-            >
-              <div
-                style={{
-                  position: "relative",
-                  width: 48,
-                  height: 48,
-                  borderRadius: 16,
-                  background: state.hoveredAgent === c.id ? `${c.color}33` : `${c.color}1a`,
-                  transition: "background .15s ease",
-                }}
-              >
-                {c.id === "chef" ? (
-                  <ChefMascot size={48} />
-                ) : (
-                  <Image src={c.icon} alt={c.name} width={48} height={48} unoptimized={c.id === "shopkeeper"} style={{ objectFit: "contain" }} />
-                )}
-              </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: c.color }}>{c.name}</div>
-            </div>
-          ))}
-        </div>
+        <CrewScene />
       </div>
 
       {/* guardian tip */}

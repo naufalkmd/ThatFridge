@@ -1,12 +1,11 @@
 "use client";
 
-import { House, MessageCircle, Users } from "lucide-react";
+import { House, MessageCircle } from "lucide-react";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
 const TAB_DEFS = [
   { key: "home" as const, label: "Home", Icon: House },
   { key: "chat" as const, label: "Chat", Icon: MessageCircle },
-  { key: "activity" as const, label: "Crew", Icon: Users },
 ];
 
 export default function TabBar() {
@@ -33,13 +32,13 @@ export default function TabBar() {
       }}
     >
       {TAB_DEFS.map((tab) => {
-        const active = tab.key === "activity" ? state.screen === "foodHub" : state.screen === tab.key;
+        const active = state.screen === tab.key;
         const color = active ? "#16325c" : "rgba(22,50,92,0.4)";
         const pillBg = active ? "#eaf6ff" : "transparent";
         return (
           <div
             key={tab.key}
-            onClick={() => (tab.key === "activity" ? actions.openRecipesHub() : actions.goTab(tab.key))}
+            onClick={() => actions.goTab(tab.key)}
             style={{
               display: "flex",
               alignItems: "center",

@@ -72,7 +72,6 @@ export interface ThatFridgeState {
   chatDraft: string;
   isTyping: boolean;
   stylingFridgeIndex: number;
-  hoveredAgent: string | null;
   undoMessage: string | null;
   notificationPrefs: NotificationPrefs;
   notificationEvents: NotificationEvent[];
@@ -122,7 +121,6 @@ function initialState(): ThatFridgeState {
     chatDraft: "",
     isTyping: false,
     stylingFridgeIndex: 0,
-    hoveredAgent: null,
     undoMessage: null,
     notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false },
     notificationEvents: [],
@@ -331,9 +329,6 @@ export function useThatFridge() {
       activeFridge = Math.min(activeFridge, fridges.length - 1);
       return { fridges, activeFridge, heroSlide: activeFridge, screen: "home" };
     });
-
-  const hoverAgent = (id: string) => patch({ hoveredAgent: id });
-  const clearHoverAgent = () => patch({ hoveredAgent: null });
 
   const openChat = () => patch({ screen: "chat" });
   const openSearch = () => patch({ screen: "search", searchQuery: "" });
@@ -670,8 +665,6 @@ export function useThatFridge() {
     renameFridge,
     renameFridgeBlur,
     deleteFridge,
-    hoverAgent,
-    clearHoverAgent,
     openChat,
     openSearch,
     openRecipesHub,
