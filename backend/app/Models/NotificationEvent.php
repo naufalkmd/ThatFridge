@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['fridge_id', 'kind', 'message', 'done'])]
+#[Fillable(['fridge_id', 'item_id', 'kind', 'message', 'done'])]
 class NotificationEvent extends Model
 {
     protected function casts(): array
@@ -19,5 +19,10 @@ class NotificationEvent extends Model
     public function fridge(): BelongsTo
     {
         return $this->belongsTo(Fridge::class);
+    }
+
+    public function item(): BelongsTo
+    {
+        return $this->belongsTo(Item::class);
     }
 }
