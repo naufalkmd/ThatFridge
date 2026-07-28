@@ -110,3 +110,10 @@ export interface UsageHistoryEntry {
   count: number;
   lastAt: number;
 }
+
+export type AuthMode = "login" | "signup";
+
+export interface CurrentUser {
+  name: string;
+  email: string;
+}
