@@ -42,6 +42,16 @@ function alertMessage(id: CrewId, count: number): string | null {
   return null;
 }
 
+function TypingDots() {
+  return (
+    <div style={{ display: "flex", gap: 3, justifyContent: "center", padding: "3px 0" }}>
+      <div style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite" }} />
+      <div style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite .15s" }} />
+      <div style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(22,50,92,0.35)", animation: "bounce 1.1s ease-in-out infinite .3s" }} />
+    </div>
+  );
+}
+
 function CrewCharacter({
   zone,
   count,
@@ -52,18 +62,32 @@ function CrewCharacter({
   onOpenNotifications: () => void;
 }) {
   const [lineIndex, setLineIndex] = useState(0);
+  const [typing, setTyping] = useState(false);
 
   useEffect(() => {
     const lines = IDLE_LINES[zone.id];
-    const tick = () => {
-      setLineIndex((i) => (i + 1) % lines.length);
+    let typingTimer: ReturnType<typeof setTimeout>;
+    let waitTimer: ReturnType<typeof setTimeout>;
+
+    const scheduleNext = () => {
+      waitTimer = setTimeout(() => {
+        setTyping(true);
+        typingTimer = setTimeout(() => {
+          setLineIndex((i) => (i + 1) % lines.length);
+          setTyping(false);
+          scheduleNext();
+        }, 900);
+      }, 5500 + Math.random() * 3000);
     };
-    const timer = setInterval(tick, 5500 + Math.random() * 3000);
-    return () => clearInterval(timer);
+    scheduleNext();
+
+    return () => {
+      clearTimeout(waitTimer);
+      clearTimeout(typingTimer);
+    };
   }, [zone.id]);
 
   const alert = alertMessage(zone.id, count);
-  const message = alert || IDLE_LINES[zone.id][lineIndex];
 
   return (
     <div
@@ -107,7 +131,7 @@ function CrewCharacter({
           boxShadow: "0 4px 10px rgba(22,50,92,0.1)",
         }}
       >
-        {message}
+        {alert ? alert : typing ? <TypingDots /> : IDLE_LINES[zone.id][lineIndex]}
         <div
           style={{
             position: "absolute",
@@ -122,7 +146,9 @@ function CrewCharacter({
           }}
         />
       </div>
-      <Image src={`/images/thatfridge/${zone.id}.gif`} alt={zone.label} fill unoptimized style={{ objectFit: "contain", imageRendering: "pixelated" }} />
+      <div style={{ position: "absolute", inset: 0, animation: `crewFace ${zone.durationS}s ease-in-out infinite` }}>
+        <Image src={`/images/thatfridge/${zone.id}.gif`} alt={zone.label} fill unoptimized style={{ objectFit: "contain", imageRendering: "pixelated" }} />
+      </div>
     </div>
   );
 }
