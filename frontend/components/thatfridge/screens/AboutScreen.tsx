@@ -6,14 +6,16 @@ import { AGENTS } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
 const AGENT_ACCENT: Record<string, string> = {
-  chef: "#b5702f",
-  guardian: "#3f5c85",
-  organizer: "#2f6f47",
-  shopkeeper: "#8a3320",
+  chef: "#d99a2b",
+  guardian: "#c1452e",
+  organizer: "#2f6fb0",
+  shopkeeper: "#3f8f5c",
 };
 
-const AGENT_ICON_OVERRIDE: Record<string, string> = {
+const AGENT_ICON: Record<string, string> = {
   chef: "/images/thatfridge/chef.gif",
+  guardian: "/images/thatfridge/guardian.gif",
+  organizer: "/images/thatfridge/organizer.gif",
   shopkeeper: "/images/thatfridge/shopkeeper.gif",
 };
 
@@ -85,11 +87,11 @@ export default function AboutScreen() {
                 }}
               >
                 <Image
-                  src={AGENT_ICON_OVERRIDE[agent.id] || `/images/thatfridge/${agent.id}-agent.png`}
+                  src={AGENT_ICON[agent.id]}
                   alt=""
                   width={34}
                   height={34}
-                  unoptimized={agent.id in AGENT_ICON_OVERRIDE}
+                  unoptimized
                   style={{ objectFit: "contain" }}
                 />
               </div>

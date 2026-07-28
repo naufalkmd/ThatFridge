@@ -10,8 +10,8 @@ const CLEAR_THRESHOLD = -80;
 
 const KIND_META: Record<NotificationKind, { Icon: typeof Hourglass; color: string }> = {
   expiring: { Icon: Hourglass, color: "#c1452e" },
-  lowStock: { Icon: ShoppingCart, color: "#8a3320" },
-  recipe: { Icon: ChefHat, color: "#b5702f" },
+  lowStock: { Icon: ShoppingCart, color: "#3f8f5c" },
+  recipe: { Icon: ChefHat, color: "#d99a2b" },
 };
 
 function NotificationRow({ event, onDismiss }: { event: NotificationEvent; onDismiss: (id: string) => void }) {

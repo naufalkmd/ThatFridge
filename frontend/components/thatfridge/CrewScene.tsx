@@ -19,7 +19,7 @@ const ZONES: {
   notifKind?: NotificationKind;
   onClick: (a: ThatFridgeActions) => void;
 }[] = [
-  { id: "chef", label: "Kitchen", color: "#b5702f", leftPct: 13, topPct: 25, roamPx: 95, durationS: 7, notifKind: "recipe", onClick: (a) => a.openRecipesHub() },
+  { id: "chef", label: "Kitchen", color: "#d99a2b", leftPct: 13, topPct: 25, roamPx: 95, durationS: 7, notifKind: "recipe", onClick: (a) => a.openRecipesHub() },
   { id: "organizer", label: "Organizer", color: "#2f6fb0", leftPct: 58, topPct: 25, roamPx: 95, durationS: 8, onClick: (a) => a.openOrganizerTab() },
   { id: "guardian", label: "Guardian", color: "#c1452e", leftPct: 5, topPct: 62, roamPx: 55, durationS: 6.5, notifKind: "expiring", onClick: (a) => a.openGuardianTab() },
   { id: "shopkeeper", label: "Shop", color: "#3f8f5c", leftPct: 41, topPct: 53, roamPx: 140, durationS: 9, notifKind: "lowStock", onClick: (a) => a.openShoppingHub() },

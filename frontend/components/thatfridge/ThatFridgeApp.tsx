@@ -2,10 +2,10 @@
 
 import { ThatFridgeProvider, useThatFridgeCtx } from "./ThatFridgeContext";
 import TabBar from "./TabBar";
-import Fab from "./Fab";
 import ProfileDrawer from "./ProfileDrawer";
 import UndoToast from "./UndoToast";
 import HomeScreen from "./screens/HomeScreen";
+import InventoryScreen from "./screens/InventoryScreen";
 import FoodHubScreen from "./screens/FoodHubScreen";
 import RecipeDetailSheet from "./screens/RecipeDetailSheet";
 import FridgeStyleSheet from "./screens/FridgeStyleSheet";
@@ -13,6 +13,7 @@ import ItemDetailSheet from "./screens/ItemDetailSheet";
 import AddScreen from "./screens/AddScreen";
 import SearchScreen from "./screens/SearchScreen";
 import ChatScreen from "./screens/ChatScreen";
+import ChatHistoryScreen from "./screens/ChatHistoryScreen";
 import NotificationsScreen from "./screens/NotificationsScreen";
 import NotificationHistoryScreen from "./screens/NotificationHistoryScreen";
 import AboutScreen from "./screens/AboutScreen";
@@ -23,6 +24,8 @@ function Screens() {
   switch (state.screen) {
     case "home":
       return <HomeScreen />;
+    case "inventory":
+      return <InventoryScreen />;
     case "foodHub":
       return <FoodHubScreen />;
     case "recipeDetail":
@@ -37,6 +40,8 @@ function Screens() {
       return <SearchScreen />;
     case "chat":
       return <ChatScreen />;
+    case "chatHistory":
+      return <ChatHistoryScreen />;
     case "notifications":
       return <NotificationsScreen />;
     case "notificationHistory":
@@ -84,7 +89,6 @@ function AppShell() {
   return (
     <div className="thatfridge-shell" style={shellStyle}>
       <Screens />
-      <Fab />
       <UndoToast />
       <TabBar />
       <ProfileDrawer />

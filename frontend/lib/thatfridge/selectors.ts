@@ -7,6 +7,13 @@ export function getActiveSections(state: ThatFridgeState): Section[] {
   return state.fridges[state.activeFridge].sections;
 }
 
+export function findSectionIdForGroup(sections: Section[], group: string): string | null {
+  const byId = sections.find((sec) => sec.id === group);
+  if (byId) return byId.id;
+  const byName = sections.find((sec) => sec.name.toLowerCase().includes(group));
+  return byName ? byName.id : null;
+}
+
 export interface ItemWithSection extends Item {
   sectionName: string;
   sectionId: string;
@@ -14,7 +21,7 @@ export interface ItemWithSection extends Item {
   fridgeName: string;
 }
 
-export function getAllItems(state: ThatFridgeState): ItemWithSection[] {
+export function getActiveFridgeItems(state: ThatFridgeState): ItemWithSection[] {
   const fridge = state.fridges[state.activeFridge];
   return fridge.sections.flatMap((sec) =>
     sec.items.map((item) => ({ ...item, sectionName: sec.name, sectionId: sec.id, fridgeId: fridge.id, fridgeName: fridge.name }))
@@ -30,7 +37,11 @@ export function getAllItemsAllFridges(state: ThatFridgeState): ItemWithSection[]
 }
 
 export function getScopedItems(state: ThatFridgeState): ItemWithSection[] {
-  return state.kitchenScope === "all" ? getAllItemsAllFridges(state) : getAllItems(state);
+  return state.kitchenScope === "all" ? getAllItemsAllFridges(state) : getActiveFridgeItems(state);
+}
+
+export function getScopeLabel(state: ThatFridgeState): string {
+  return state.kitchenScope === "all" ? "All Fridges" : state.fridges[state.activeFridge]?.name || "This Fridge";
 }
 
 export function findItem(state: ThatFridgeState, id: string): { item: Item; section: Section; fridgeIndex: number } | null {
@@ -43,19 +54,14 @@ export function findItem(state: ThatFridgeState, id: string): { item: Item; sect
   return null;
 }
 
-export function getOverallFreshness(state: ThatFridgeState): number {
-  const items = getAllItems(state);
-  return items.length ? Math.round(items.reduce((a, i) => a + i.freshness, 0) / items.length) : 0;
-}
-
 export function getGuardianItem(state: ThatFridgeState): ItemWithSection | null {
-  const items = getAllItems(state);
+  const items = getScopedItems(state);
   return items.length ? items.reduce((a, b) => (a.freshness < b.freshness ? a : b)) : null;
 }
 
 export function getLowStockItem(state: ThatFridgeState): ItemWithSection | null {
   const guardian = getGuardianItem(state);
-  return getAllItems(state).find((i) => /left|remaining/i.test(i.note) && i.id !== guardian?.id) || null;
+  return getScopedItems(state).find((i) => /left|remaining/i.test(i.note) && i.qty <= 2 && i.id !== guardian?.id) || null;
 }
 
 export interface BuyAgainSuggestion {

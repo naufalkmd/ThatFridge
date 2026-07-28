@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, ChevronLeft, Mic, Paperclip, Square, X } from "lucide-react";
+import { ArrowUp, ChevronLeft, History, Mic, Paperclip, Square, SquarePen, X } from "lucide-react";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
 const QUICK_ASKS = ["What's expiring soon?", "What can I cook tonight?", "What do I need to buy?", "How's my fridge doing?"];
@@ -120,8 +120,41 @@ export default function ChatScreen() {
           <div style={{ fontSize: 15.5, fontWeight: 800 }}>Quick Chat</div>
           <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>Quick answers about your fridge</div>
         </div>
-        <div onClick={actions.clearChat} style={{ fontSize: 11.5, fontWeight: 700, color: "#2f6fb0", cursor: "pointer", padding: "6px 4px" }}>
-          Clear
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div
+            onClick={actions.openChatHistory}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              background: "rgba(255,255,255,0.75)",
+              border: "1px solid rgba(22,50,92,0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flex: "none",
+            }}
+          >
+            <History size={15} color="#16325c" strokeWidth={2} />
+          </div>
+          <div
+            onClick={actions.startNewChat}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              background: "rgba(255,255,255,0.75)",
+              border: "1px solid rgba(22,50,92,0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flex: "none",
+            }}
+          >
+            <SquarePen size={15} color="#16325c" strokeWidth={2} />
+          </div>
         </div>
       </div>
 
