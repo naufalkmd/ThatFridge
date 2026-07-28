@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
+import { Bell, ListFilter, Palette, Search, TriangleAlert } from "lucide-react";
 import { RECIPE_BY_ICON } from "@/lib/thatfridge/data";
 import {
   getActiveSections,
@@ -15,6 +17,12 @@ import FoodIcon from "../FoodIcon";
 import ChefMascot from "../ChefMascot";
 
 const HERO_CARD_WIDTH = 362;
+
+const SORT_OPTIONS: { key: "category" | "expiry" | "name"; label: string }[] = [
+  { key: "category", label: "Category" },
+  { key: "expiry", label: "Expiry" },
+  { key: "name", label: "Name" },
+];
 
 const cardStyle: React.CSSProperties = {
   background: "#fff",
@@ -33,6 +41,7 @@ const CREW: { id: string; name: string; color: string; icon: string; onClick: (a
 
 export default function HomeScreen() {
   const { state, actions } = useThatFridgeCtx();
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const fridgesView = getFridgeHeroViews(state);
   const heroSlide = state.heroSlide;
   const heroTrackWidth = (fridgesView.length + 1) * HERO_CARD_WIDTH;
@@ -41,6 +50,15 @@ export default function HomeScreen() {
   const guardianItem = getGuardianItem(state);
   const lowStockItem = getLowStockItem(state);
   const sections = getActiveSections(state);
+  const pendingNotifications = state.notificationEvents.filter((n) => !n.done).length;
+
+  const flatItems = sections.flatMap((sec) => sec.items.map((item) => ({ ...item, sectionName: sec.name })));
+  const sortedFlatItems =
+    state.homeSortMode === "expiry"
+      ? flatItems.slice().sort((a, b) => a.freshness - b.freshness)
+      : state.homeSortMode === "name"
+        ? flatItems.slice().sort((a, b) => a.name.localeCompare(b.name))
+        : flatItems;
 
   const chefMessage = guardianItem
     ? `Try "${RECIPE_BY_ICON[guardianItem.icon] || "a quick stir-fry"}" tonight using your ${guardianItem.name.toLowerCase()}.`
@@ -80,6 +98,39 @@ export default function HomeScreen() {
         <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>ThatFridge</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div
+            onClick={actions.openNotificationHistory}
+            style={{
+              position: "relative",
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              background: "rgba(255,255,255,0.75)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(22,50,92,0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flex: "none",
+            }}
+          >
+            <Bell size={16} color="#16325c" strokeWidth={2} />
+            {pendingNotifications > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 3,
+                  right: 4,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  background: "#c1452e",
+                  border: "1.5px solid #fff",
+                }}
+              />
+            )}
+          </div>
+          <div
             onClick={actions.openSearch}
             style={{
               width: 34,
@@ -95,9 +146,7 @@ export default function HomeScreen() {
               flex: "none",
             }}
           >
-            <div style={{ width: 13, height: 13, border: "1.6px solid #16325c", borderRadius: "50%", position: "relative" }}>
-              <div style={{ position: "absolute", width: 1.6, height: 7, background: "#16325c", bottom: -6, right: -1, transform: "rotate(45deg)" }} />
-            </div>
+            <Search size={16} color="#16325c" strokeWidth={2} />
           </div>
         </div>
       </div>
@@ -178,12 +227,7 @@ export default function HomeScreen() {
                     zIndex: 2,
                   }}
                 >
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2,5px)", gridTemplateRows: "repeat(2,5px)", gap: 2 }}>
-                    <div style={{ background: "#16325c", borderRadius: 1 }} />
-                    <div style={{ background: "#16325c", borderRadius: 1 }} />
-                    <div style={{ background: "#16325c", borderRadius: 1 }} />
-                    <div style={{ background: "#16325c", borderRadius: 1 }} />
-                  </div>
+                  <Palette size={16} color="#16325c" strokeWidth={2} />
                 </div>
               </div>
             </div>
@@ -270,9 +314,7 @@ export default function HomeScreen() {
         <div style={{ position: "relative", marginBottom: 14 }}>
           <div onClick={() => actions.selectItem(guardianItem.id)} style={cardStyle}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-              <div style={{ width: 15, height: 14, background: "#d99a2b", clipPath: "polygon(50% 0,100% 100%,0 100%)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-                <span style={{ color: "#fff", fontSize: 9, fontWeight: 800, lineHeight: 1 }}>!</span>
-              </div>
+              <TriangleAlert size={15} color="#d99a2b" strokeWidth={2.2} />
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>EXPIRING SOON</div>
             </div>
             <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{guardianMessage}</div>
@@ -308,38 +350,99 @@ export default function HomeScreen() {
         </div>
       </div>
 
-      {/* inventory sections */}
-      {sections.map((sec) => (
-        <div key={sec.id} style={{ marginBottom: 22 }}>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>{sec.name}</div>
-            <div style={{ fontSize: 12, color: "rgba(22,50,92,0.45)" }}>{sec.items.length} items</div>
+      {/* inventory */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>Inventory</div>
+        <div style={{ position: "relative" }}>
+          <div
+            onClick={() => setShowSortMenu((v) => !v)}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10, background: "#fff", boxShadow: "0 4px 10px rgba(22,50,92,0.08)", cursor: "pointer", fontSize: 11.5, fontWeight: 700, color: "#16325c" }}
+          >
+            <ListFilter size={13} color="#16325c" strokeWidth={2.2} />
+            {SORT_OPTIONS.find((o) => o.key === state.homeSortMode)?.label}
           </div>
-          <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
-            {sec.items.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => actions.selectItem(item.id)}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}
-              >
-                <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
-                  <FoodIcon icon={item.icon} />
+          {showSortMenu && (
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", borderRadius: 12, boxShadow: "0 10px 24px rgba(22,50,92,0.14)", padding: 6, zIndex: 5, minWidth: 120 }}>
+              {SORT_OPTIONS.map((opt) => (
+                <div
+                  key={opt.key}
+                  onClick={() => {
+                    actions.setHomeSortMode(opt.key);
+                    setShowSortMenu(false);
+                  }}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    color: state.homeSortMode === opt.key ? "#2f6fb0" : "#16325c",
+                    background: state.homeSortMode === opt.key ? "#eaf6ff" : "transparent",
+                  }}
+                >
+                  {opt.label}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
-                  <div style={{ height: 4, borderRadius: 2, background: "rgba(22,50,92,0.08)", overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 2, width: `${item.freshness}%`, background: freshColor(item.freshness) }} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {state.homeSortMode === "category" ? (
+        sections.map((sec) => (
+          <div key={sec.id} style={{ marginBottom: 22 }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{sec.name}</div>
+              <div style={{ fontSize: 12, color: "rgba(22,50,92,0.45)" }}>{sec.items.length} items</div>
+            </div>
+            <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden" }}>
+              {sec.items.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => actions.selectItem(item.id)}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}
+                >
+                  <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
+                    <FoodIcon icon={item.icon} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
+                    <div style={{ height: 4, borderRadius: 2, background: "rgba(22,50,92,0.08)", overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 2, width: `${item.freshness}%`, background: freshColor(item.freshness) }} />
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flex: "none" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
+                    <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginTop: 2 }}>{item.note}</div>
                   </div>
                 </div>
-                <div style={{ textAlign: "right", flex: "none" }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
-                  <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginTop: 2 }}>{item.note}</div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+        ))
+      ) : (
+        <div style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, overflow: "hidden", marginBottom: 22 }}>
+          {sortedFlatItems.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => actions.selectItem(item.id)}
+              style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)", cursor: "pointer" }}
+            >
+              <div style={{ position: "relative", width: 38, height: 38, flex: "none", borderRadius: 11, background: "#f6f1e4", padding: 6, boxSizing: "border-box" }}>
+                <FoodIcon icon={item.icon} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
+                <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)" }}>{item.sectionName}</div>
+              </div>
+              <div style={{ textAlign: "right", flex: "none" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: freshColor(item.freshness) }}>{daysLabel(item.days)}</div>
+                <div style={{ fontSize: 10.5, color: "rgba(22,50,92,0.4)", marginTop: 2 }}>{item.note}</div>
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }

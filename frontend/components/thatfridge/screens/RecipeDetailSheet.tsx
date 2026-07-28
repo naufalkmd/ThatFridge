@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Plus } from "lucide-react";
 import { getRecipesView } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
@@ -37,8 +38,8 @@ export default function RecipeDetailSheet() {
           <div style={{ background: "#eaf6ff", borderRadius: 16, overflow: "hidden", marginBottom: 20 }}>
             {selectedRecipe.ingredientsView.map((ing, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
-                <div style={{ width: 20, height: 20, borderRadius: 6, background: ing.badgeBg, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", color: "#fff", fontSize: 11 }}>
-                  {ing.badgeMark}
+                <div style={{ width: 20, height: 20, borderRadius: 6, background: ing.badgeBg, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                  {ing.have ? <Check size={12} color="#fff" strokeWidth={2.5} /> : <Plus size={12} color="#fff" strokeWidth={2.5} />}
                 </div>
                 <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>{ing.name}</div>
                 <div style={{ fontSize: 11.5, color: ing.badgeBg, fontWeight: 700 }}>{ing.statusLabel}</div>
@@ -56,15 +57,6 @@ export default function RecipeDetailSheet() {
                 <div style={{ fontSize: 13.5, lineHeight: 1.5, color: "#16325c" }}>{step.text}</div>
               </div>
             ))}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, paddingTop: 12, flex: "none" }}>
-          <div onClick={actions.addMissingToShopping} style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#16325c", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-            Add missing to list
-          </div>
-          <div onClick={actions.cookRecipe} style={{ flex: 1, textAlign: "center", padding: 13, borderRadius: 14, background: "#16325c", color: "#fff", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
-            Cook this
           </div>
         </div>
       </div>

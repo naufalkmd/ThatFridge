@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft } from "lucide-react";
 import { getAllItems } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -17,8 +18,8 @@ export default function SearchScreen() {
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
       <div style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-        <div onClick={actions.goHome} style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", color: "#16325c", fontSize: 20, fontWeight: 600, cursor: "pointer", flex: "none" }}>
-          ‹
+        <div onClick={actions.goHome} style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
+          <ChevronLeft size={20} color="#16325c" strokeWidth={2.2} />
         </div>
         <input
           autoFocus

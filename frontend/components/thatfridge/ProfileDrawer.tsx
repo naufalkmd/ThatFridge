@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
 import { getFridgeSummaries } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
@@ -88,7 +89,7 @@ export default function ProfileDrawer() {
               }}
             >
               <div style={{ fontSize: 13.5, fontWeight: 600, color: "#16325c" }}>{row.label}</div>
-              <div style={{ color: "rgba(22,50,92,0.3)", fontSize: 14 }}>›</div>
+              <ChevronRight size={16} color="rgba(22,50,92,0.3)" />
             </div>
           ))}
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useThatFridgeCtx } from "./ThatFridgeContext";
 
 export default function Fab() {
@@ -25,10 +26,7 @@ export default function Fab() {
         zIndex: 5,
       }}
     >
-      <div style={{ position: "relative", width: 20, height: 20 }}>
-        <div style={{ position: "absolute", top: 9, left: 0, width: 20, height: 2.4, background: "#fff", borderRadius: 2 }} />
-        <div style={{ position: "absolute", left: 9, top: 0, width: 2.4, height: 20, background: "#fff", borderRadius: 2 }} />
-      </div>
+      <Plus size={22} color="#fff" strokeWidth={2.4} />
     </div>
   );
 }

@@ -14,6 +14,7 @@ import AddScreen from "./screens/AddScreen";
 import SearchScreen from "./screens/SearchScreen";
 import ChatScreen from "./screens/ChatScreen";
 import NotificationsScreen from "./screens/NotificationsScreen";
+import NotificationHistoryScreen from "./screens/NotificationHistoryScreen";
 import AboutScreen from "./screens/AboutScreen";
 
 function Screens() {
@@ -37,6 +38,8 @@ function Screens() {
       return <ChatScreen />;
     case "notifications":
       return <NotificationsScreen />;
+    case "notificationHistory":
+      return <NotificationHistoryScreen />;
     case "about":
       return <AboutScreen />;
     default:

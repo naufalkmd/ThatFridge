@@ -1,15 +1,16 @@
 "use client";
 
+import { Camera, Check, ChevronRight, Keyboard, Receipt, ScanBarcode, X } from "lucide-react";
 import { getActiveSections } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import type { ScanMethod } from "@/lib/thatfridge/types";
 
-const SCAN_METHODS: { key: ScanMethod; title: string; desc: string }[] = [
-  { key: "receipt", title: "Scan receipt", desc: "Snap your grocery receipt" },
-  { key: "barcode", title: "Scan barcode", desc: "Point at a product barcode" },
-  { key: "photo", title: "Photo of fridge", desc: "Let AI spot what changed" },
-  { key: "manual", title: "Add manually", desc: "Type in the item yourself" },
+const SCAN_METHODS: { key: ScanMethod; title: string; desc: string; Icon: typeof Receipt }[] = [
+  { key: "receipt", title: "Scan receipt", desc: "Snap your grocery receipt", Icon: Receipt },
+  { key: "barcode", title: "Scan barcode", desc: "Point at a product barcode", Icon: ScanBarcode },
+  { key: "photo", title: "Photo of fridge", desc: "Let AI spot what changed", Icon: Camera },
+  { key: "manual", title: "Add manually", desc: "Type in the item yourself", Icon: Keyboard },
 ];
 
 const fieldStyle: React.CSSProperties = {
@@ -44,8 +45,8 @@ export default function AddScreen() {
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb)", padding: "28px 20px 30px", display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
         <div style={{ fontSize: 20, fontWeight: 800 }}>Add to fridge</div>
-        <div onClick={actions.goHome} style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15, color: "rgba(22,50,92,0.5)" }}>
-          ✕
+        <div onClick={actions.goHome} style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <X size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
         </div>
       </div>
 
@@ -56,13 +57,13 @@ export default function AddScreen() {
             {SCAN_METHODS.map((m) => (
               <div key={m.key} onClick={() => actions.chooseMethod(m.key)} style={{ display: "flex", alignItems: "center", gap: 14, background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 16, padding: 16, cursor: "pointer" }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: "#eaf6ff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-                  <div style={{ width: 18, height: 18, borderRadius: 5, background: "#4a6fa5" }} />
+                  <m.Icon size={19} color="#4a6fa5" strokeWidth={2} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 2 }}>{m.title}</div>
                   <div style={{ fontSize: 12, color: "rgba(22,50,92,0.5)" }}>{m.desc}</div>
                 </div>
-                <div style={{ color: "rgba(22,50,92,0.3)", fontSize: 16 }}>›</div>
+                <ChevronRight size={17} color="rgba(22,50,92,0.3)" />
               </div>
             ))}
           </div>
@@ -98,11 +99,9 @@ export default function AddScreen() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 12,
-                    color: "#fff",
                   }}
                 >
-                  {d.checked ? "✓" : ""}
+                  {d.checked && <Check size={13} color="#fff" strokeWidth={2.5} />}
                 </div>
               </div>
             ))}

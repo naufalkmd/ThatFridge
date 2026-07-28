@@ -193,6 +193,39 @@ export const RECIPES: Recipe[] = [
   },
 ];
 
+export const FOOD_ICON_KEYS: string[] = [
+  "milk",
+  "yogurt",
+  "cheese",
+  "eggs",
+  "spinach",
+  "carrot",
+  "apple",
+  "berries",
+  "meat",
+  "leftovers",
+];
+
+export const ICON_LABELS: Record<string, string> = {
+  milk: "Milk",
+  yogurt: "Yogurt",
+  cheese: "Cheese",
+  eggs: "Eggs",
+  spinach: "Spinach",
+  carrot: "Carrots",
+  apple: "Apples",
+  berries: "Berries",
+  meat: "Meat",
+  leftovers: "Leftovers",
+};
+
+export const FOOD_GROUP_LABELS: Record<string, string> = {
+  dairy: "dairy",
+  produce: "produce",
+  protein: "protein",
+  leftovers: "meal-prep",
+};
+
 export const ICON_SECTION: Record<string, string> = {
   milk: "dairy",
   yogurt: "dairy",

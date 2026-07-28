@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { ArrowUp, ChevronLeft } from "lucide-react";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
 const QUICK_ASKS = ["What's expiring soon?", "What can I cook tonight?", "What do I need to buy?", "How's my fridge doing?"];
@@ -17,8 +18,8 @@ export default function ChatScreen() {
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
       <div style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.55)", backdropFilter: "blur(10px)", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
-        <div onClick={actions.goHome} style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", color: "#16325c", fontSize: 20, fontWeight: 600, cursor: "pointer", flex: "none" }}>
-          ‹
+        <div onClick={actions.goHome} style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
+          <ChevronLeft size={20} color="#16325c" strokeWidth={2.2} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15.5, fontWeight: 800 }}>Quick Chat</div>
@@ -73,8 +74,8 @@ export default function ChatScreen() {
           placeholder="Ask about your fridge…"
           style={{ flex: 1, border: "none", outline: "none", background: "#eef4fa", borderRadius: 20, padding: "11px 16px", fontSize: 13.5, color: "#16325c" }}
         />
-        <div onClick={actions.sendMessage} style={{ width: 38, height: 38, borderRadius: 19, background: "#16325c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none", color: "#fff", fontSize: 15 }}>
-          ↑
+        <div onClick={actions.sendMessage} style={{ width: 38, height: 38, borderRadius: 19, background: "#16325c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
+          <ArrowUp size={17} color="#fff" strokeWidth={2.3} />
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { Refrigerator, X } from "lucide-react";
 import { AGENTS } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
@@ -21,9 +22,9 @@ export default function AboutScreen() {
       <div style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 12 }}>
         <div
           onClick={actions.goHome}
-          style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15, color: "rgba(22,50,92,0.5)", flex: "none" }}
+          style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
         >
-          ✕
+          <X size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
         </div>
         <div style={{ fontSize: 18, fontWeight: 800 }}>About ThatFridge</div>
       </div>
@@ -39,14 +40,11 @@ export default function AboutScreen() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#fff",
-              fontSize: 26,
-              fontWeight: 800,
               marginBottom: 14,
               boxShadow: "0 10px 24px rgba(22,50,92,0.18)",
             }}
           >
-            🧊
+            <Refrigerator size={30} color="#fff" strokeWidth={1.8} />
           </div>
           <div style={{ fontSize: 19, fontWeight: 800, marginBottom: 4 }}>ThatFridge</div>
           <div style={{ fontSize: 12, color: "rgba(22,50,92,0.45)", fontWeight: 600, marginBottom: 10 }}>Version {APP_VERSION}</div>

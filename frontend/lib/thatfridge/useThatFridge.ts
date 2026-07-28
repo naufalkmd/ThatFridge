@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FOOD_TAB_ORDER, ICON_SECTION } from "./data";
 import { fetchFridges, fetchRecipes } from "./api";
-import { findItem } from "./selectors";
+import { buildNotificationSeed, findItem } from "./selectors";
 import type {
   ChatMessage,
   DetectedItem,
   FoodSubtab,
   Fridge,
   FridgeStyleKey,
+  NotificationEvent,
   NotificationPrefs,
   Recipe,
   Screen,
@@ -38,6 +39,11 @@ export interface ThatFridgeState {
   newFridgeName: string;
   showProfilePanel: boolean;
   selectedItemId: string | null;
+  isEditingItem: boolean;
+  editName: string;
+  editSectionId: string;
+  editIcon: string;
+  editFridgeIndex: number;
   addStep: number;
   scanMethod: ScanMethod | null;
   detected: DetectedItem[];
@@ -59,6 +65,9 @@ export interface ThatFridgeState {
   hoveredAgent: string | null;
   undoMessage: string | null;
   notificationPrefs: NotificationPrefs;
+  notificationEvents: NotificationEvent[];
+  kitchenScope: "active" | "all";
+  homeSortMode: "category" | "expiry" | "name";
 }
 
 function initialState(): ThatFridgeState {
@@ -72,6 +81,11 @@ function initialState(): ThatFridgeState {
     newFridgeName: "",
     showProfilePanel: false,
     selectedItemId: null,
+    isEditingItem: false,
+    editName: "",
+    editSectionId: "",
+    editIcon: "",
+    editFridgeIndex: 0,
     addStep: 0,
     scanMethod: null,
     detected: [],
@@ -93,6 +107,9 @@ function initialState(): ThatFridgeState {
     hoveredAgent: null,
     undoMessage: null,
     notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false },
+    notificationEvents: [],
+    kitchenScope: "all",
+    homeSortMode: "category",
   };
 }
 
@@ -114,7 +131,7 @@ export function useThatFridge() {
     let cancelled = false;
     Promise.all([fetchFridges(), fetchRecipes()]).then(([fridges, recipes]) => {
       if (cancelled) return;
-      patch({ fridges, recipes, isLoading: false });
+      patch({ fridges, recipes, isLoading: false, notificationEvents: buildNotificationSeed(fridges) });
     });
     return () => {
       cancelled = true;
@@ -160,13 +177,15 @@ export function useThatFridge() {
 
   const setItemLocation = (id: string, location: StorageLocation) => {
     patch((s) => ({
-      fridges: s.fridges.map((f, i) =>
-        i === s.activeFridge
-          ? { ...f, sections: f.sections.map((sec) => ({ ...sec, items: sec.items.map((it) => (it.id === id ? { ...it, location } : it)) })) }
-          : f
-      ),
+      fridges: s.fridges.map((f) => ({
+        ...f,
+        sections: f.sections.map((sec) => ({ ...sec, items: sec.items.map((it) => (it.id === id ? { ...it, location } : it)) })),
+      })),
     }));
   };
+
+  const setKitchenScope = (scope: "active" | "all") => patch({ kitchenScope: scope });
+  const setHomeSortMode = (mode: "category" | "expiry" | "name") => patch({ homeSortMode: mode });
 
   const selectHero = (i: number) =>
     patch((s) => ({ heroSlide: i, activeFridge: i < s.fridges.length ? i : s.activeFridge }));
@@ -203,6 +222,15 @@ export function useThatFridge() {
     patch({ activeFridge: i, heroSlide: i, showProfilePanel: false, screen: "home" });
 
   const openNotifications = () => patch({ screen: "notifications", showProfilePanel: false });
+  const openNotificationHistory = () => patch({ screen: "notificationHistory" });
+  const dismissNotificationWithUndo = (id: string) => {
+    const event = state.notificationEvents.find((n) => n.id === id);
+    if (!event || event.done) return;
+    patch((s) => ({ notificationEvents: s.notificationEvents.map((n) => (n.id === id ? { ...n, done: true } : n)) }));
+    scheduleUndo(`Cleared "${event.message}"`, () => {
+      patch((s) => ({ notificationEvents: s.notificationEvents.map((n) => (n.id === id ? { ...n, done: false } : n)) }));
+    });
+  };
   const openAbout = () => patch({ screen: "about", showProfilePanel: false });
   const toggleNotificationPref = (key: keyof NotificationPrefs) =>
     patch((s) => ({ notificationPrefs: { ...s.notificationPrefs, [key]: !s.notificationPrefs[key] } }));
@@ -279,26 +307,6 @@ export function useThatFridge() {
     patch((s) => ({ shoppingList: s.shoppingList.filter((i) => i.id !== id) }));
   const clearBought = () => patch((s) => ({ shoppingList: s.shoppingList.filter((i) => !i.checked) }));
 
-  const addMissingToShopping = () => {
-    patch((s) => {
-      const recipe = s.recipes.find((r) => r.id === s.selectedRecipeId);
-      if (!recipe) return {};
-      const allItems = s.fridges[s.activeFridge].sections.flatMap((sec) => sec.items);
-      const missing = recipe.ingredients.filter((ing) => !allItems.some((i) => i.icon === ing.icon));
-      const existingIcons = new Set(s.shoppingList.map((i) => i.icon));
-      const additions: ShoppingItem[] = missing
-        .filter((ing) => !existingIcons.has(ing.icon))
-        .map((ing) => ({
-          id: "rc-" + ing.icon + "-" + Date.now(),
-          name: ing.name,
-          icon: ing.icon,
-          section: ICON_SECTION[ing.icon] || "other",
-          checked: false,
-        }));
-      return { shoppingList: [...s.shoppingList, ...additions] };
-    });
-  };
-
   const addPredictedToShopping = (name: string, icon: string) => {
     patch((s) => {
       if (s.shoppingList.some((i) => !i.checked && i.name.toLowerCase() === name.toLowerCase())) return {};
@@ -310,29 +318,6 @@ export function useThatFridge() {
         checked: false,
       };
       return { shoppingList: [...s.shoppingList, entry] };
-    });
-  };
-
-  const cookRecipe = () => {
-    patch((s) => {
-      const recipe = s.recipes.find((r) => r.id === s.selectedRecipeId);
-      if (!recipe) return {};
-      let sections = s.fridges[s.activeFridge].sections;
-      recipe.ingredients.forEach((ing) => {
-        for (const sec of sections) {
-          const match = sec.items.find((i) => i.icon === ing.icon);
-          if (match) {
-            sections = sections.map((sc) =>
-              sc.id === sec.id ? { ...sc, items: sc.items.filter((i) => i.id !== match.id) } : sc
-            );
-            break;
-          }
-        }
-      });
-      return {
-        fridges: s.fridges.map((f, i) => (i === s.activeFridge ? { ...f, sections } : f)),
-        screen: "foodHub",
-      };
     });
   };
 
@@ -365,6 +350,7 @@ export function useThatFridge() {
     patch({
       screen: "home",
       selectedItemId: null,
+      isEditingItem: false,
       addStep: 0,
       scanMethod: null,
       detected: [],
@@ -385,7 +371,54 @@ export function useThatFridge() {
       manualDays: "7",
       manualNote: "",
     }));
-  const selectItem = (id: string) => patch({ screen: "itemDetail", selectedItemId: id });
+  const selectItem = (id: string) => patch({ screen: "itemDetail", selectedItemId: id, isEditingItem: false });
+
+  const startEditItem = () => {
+    if (!state.selectedItemId) return;
+    const found = findItem(state, state.selectedItemId);
+    if (!found) return;
+    patch({
+      isEditingItem: true,
+      editName: found.item.name,
+      editSectionId: found.section.id,
+      editIcon: found.item.icon,
+      editFridgeIndex: found.fridgeIndex,
+    });
+  };
+  const cancelEditItem = () => patch({ isEditingItem: false });
+  const onEditNameChange = (value: string) => patch({ editName: value });
+  const onEditSectionChange = (value: string) => patch({ editSectionId: value });
+  const onEditIconChange = (value: string) => patch({ editIcon: value });
+  const confirmEditItem = () => {
+    const id = state.selectedItemId;
+    if (!id) return;
+    const name = state.editName.trim();
+    if (!name) return;
+    patch((s) => {
+      const found = findItem(s, id);
+      if (!found) return {};
+      const { item, section: fromSection, fridgeIndex } = found;
+      const fridge = s.fridges[fridgeIndex];
+      const toSectionId = s.editSectionId || fromSection.id;
+      const updatedItem = { ...item, name, icon: s.editIcon || item.icon };
+
+      const sections =
+        toSectionId === fromSection.id
+          ? fridge.sections.map((sec) =>
+              sec.id === fromSection.id ? { ...sec, items: sec.items.map((it) => (it.id === id ? updatedItem : it)) } : sec
+            )
+          : fridge.sections.map((sec) => {
+              if (sec.id === fromSection.id) return { ...sec, items: sec.items.filter((it) => it.id !== id) };
+              if (sec.id === toSectionId) return { ...sec, items: [...sec.items, updatedItem] };
+              return sec;
+            });
+
+      return {
+        fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections } : f)),
+        isEditingItem: false,
+      };
+    });
+  };
 
   const recordUsage = (s: ThatFridgeState, name: string, icon: string): UsageHistoryEntry[] => {
     const key = name.trim().toLowerCase();
@@ -400,8 +433,7 @@ export function useThatFridge() {
   const removeItemWithUndo = (id: string, message: string, onCommit?: () => void) => {
     const found = findItem(state, id);
     if (!found) return;
-    const { item, section } = found;
-    const fridgeIndex = state.activeFridge;
+    const { item, section, fridgeIndex } = found;
     const itemIndex = section.items.findIndex((it) => it.id === id);
 
     patch((s) => ({
@@ -412,6 +444,7 @@ export function useThatFridge() {
       ),
       screen: "home",
       selectedItemId: null,
+      isEditingItem: false,
     }));
 
     scheduleUndo(message, () => {
@@ -531,6 +564,8 @@ export function useThatFridge() {
     closeProfile,
     selectFridgeFromProfile,
     openNotifications,
+    openNotificationHistory,
+    dismissNotificationWithUndo,
     openAbout,
     toggleNotificationPref,
     openStylePicker,
@@ -555,9 +590,7 @@ export function useThatFridge() {
     toggleShoppingItem,
     removeShoppingItem,
     clearBought,
-    addMissingToShopping,
     addPredictedToShopping,
-    cookRecipe,
     onSearchChange,
     onDraftChange,
     onChatKeyDown,
@@ -570,6 +603,12 @@ export function useThatFridge() {
     selectItem,
     markUsed,
     discardItem,
+    startEditItem,
+    cancelEditItem,
+    onEditNameChange,
+    onEditSectionChange,
+    onEditIconChange,
+    confirmEditItem,
     undoLastRemoval,
     chooseMethod,
     toggleDetected,
@@ -581,6 +620,8 @@ export function useThatFridge() {
     confirmAdd,
     setSections,
     setItemLocation,
+    setKitchenScope,
+    setHomeSortMode,
   };
 
   return { state, actions, chatScrollRef };

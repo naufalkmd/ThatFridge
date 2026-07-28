@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { X } from "lucide-react";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import type { NotificationPrefs } from "@/lib/thatfridge/types";
 
@@ -88,9 +89,9 @@ export default function NotificationsScreen() {
       <div style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 12 }}>
         <div
           onClick={actions.goHome}
-          style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 15, color: "rgba(22,50,92,0.5)", flex: "none" }}
+          style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
         >
-          ✕
+          <X size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
         </div>
         <div>
           <div style={{ fontSize: 18, fontWeight: 800 }}>Notifications</div>
