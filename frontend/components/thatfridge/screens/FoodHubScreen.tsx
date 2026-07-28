@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { MapPin, Plus, Refrigerator } from "lucide-react";
-import { FOOD_TAB_ORDER } from "@/lib/thatfridge/data";
+import { FOOD_TAB_ORDER, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import {
   getExpiringOwnedItems,
   getRecipesView,
@@ -14,7 +14,7 @@ import {
   type ShoppingRecommendation,
 } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
-import type { FoodSubtab, StorageLocation } from "@/lib/thatfridge/types";
+import type { FoodSubtab } from "@/lib/thatfridge/types";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import ShoppingListPanel from "../ShoppingListPanel";
@@ -36,12 +36,6 @@ const RISK_BUCKETS: { key: string; label: string; test: (f: number) => boolean; 
   { key: "risk", label: "Act now", test: (f) => f < 30, hint: "Going bad soon — use or lose it" },
   { key: "watch", label: "Use soon", test: (f) => f >= 30 && f < 60, hint: "Plan to use within a few days" },
   { key: "fresh", label: "Fresh", test: (f) => f >= 60, hint: "Holding up well" },
-];
-
-const STORAGE_LOCATIONS: { key: StorageLocation; label: string; short: string; blurb: string; color: string }[] = [
-  { key: "fridge", label: "Fridge", short: "Fr", blurb: "Everyday chilled items", color: "#2f6fb0" },
-  { key: "freezer", label: "Freezer", short: "Fz", blurb: "Long-term frozen items", color: "#3f5c85" },
-  { key: "pantry", label: "Pantry", short: "Pa", blurb: "Shelf-stable, room temp", color: "#b5702f" },
 ];
 
 function RingTimer({ freshness }: { freshness: number }) {

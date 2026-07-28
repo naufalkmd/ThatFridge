@@ -1,4 +1,5 @@
-import type { Agent, FoodSubtab, FridgeStyleDef, IconData, Recipe, Section } from "./types";
+import type { Agent, FoodSubtab, FridgeStyleDef, IconData, Recipe, Section, StorageLocation } from "./types";
+import foodIconManifest from "@/public/images/thatfridge/food-icons/manifest.json";
 
 export const FOOD_TAB_ORDER: FoodSubtab[] = ["recipes", "shopping", "guardian", "organizer"];
 
@@ -193,18 +194,107 @@ export const RECIPES: Recipe[] = [
   },
 ];
 
-export const FOOD_ICON_KEYS: string[] = [
-  "milk",
-  "yogurt",
-  "cheese",
-  "eggs",
-  "spinach",
-  "carrot",
-  "apple",
-  "berries",
-  "meat",
-  "leftovers",
+const CURATED_ICON_KEYS = ["milk", "yogurt", "cheese", "eggs", "spinach", "carrot", "apple", "berries", "meat", "leftovers"] as const;
+
+// The 10 curated keys above are used throughout seed data, recipes, and the icon-guessing
+// heuristics, so they keep their existing names. Every other numbered icon in the food-icons
+// asset pack gets a generated key/label straight from its manifest entry.
+const CURATED_ICON_FILES: Record<string, string> = {
+  milk: "icon-163.png",
+  yogurt: "icon-164.png",
+  cheese: "icon-017.png",
+  eggs: "icon-026.png",
+  spinach: "icon-139.png",
+  carrot: "icon-066.png",
+  apple: "icon-110.png",
+  berries: "icon-132.png",
+  meat: "icon-015.png",
+  leftovers: "icon-007.png",
+};
+const CURATED_MANIFEST_IDS = new Set([163, 164, 17, 26, 139, 66, 110, 132, 15, 7]);
+
+interface FoodIconManifestEntry {
+  id: number;
+  file: string;
+  label: string;
+  w: number;
+  h: number;
+}
+
+// Descriptive words in the manifest labels that describe form/color rather than the food
+// itself (e.g. "bacon strip" -> the food is "bacon", "strip" just describes its shape).
+const ICON_LABEL_STOPWORDS = new Set([
+  "strip", "slice", "slices", "bowl", "jar", "cup", "piece", "pieces", "cluster", "plate", "roll",
+  "loaf", "chunk", "pile", "wedge", "dish", "drink", "mug", "glass", "can", "bar", "square", "twist",
+  "twisted", "swirl", "sprig", "bunch", "pair", "half", "small", "large", "tall", "dark", "light",
+  "white", "red", "brown", "pink", "green", "yellow", "tan", "purple", "dried", "fried", "roasted",
+  "folded", "spotted", "curled", "soft", "hot", "iced", "with", "and", "of", "the", "cap", "capped",
+]);
+
+function deriveKeywordsFromLabel(label: string): string[] {
+  const words = label
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, " ")
+    .split(/[/\s]+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length > 2 && !ICON_LABEL_STOPWORDS.has(w));
+  return Array.from(new Set(words));
+}
+
+const DAIRY_GROUP_KEYWORDS = ["cheese", "cream", "milk", "yogurt", "butter", "egg"];
+const PROTEIN_GROUP_KEYWORDS = ["bacon", "ham", "beef", "chicken", "drumstick", "sausage", "steak", "shrimp", "meat", "mussel", "oyster", "dumpling", "pork"];
+const PRODUCE_GROUP_KEYWORDS = [
+  "onion", "mushroom", "tomato", "carrot", "corn", "potato", "pea", "pumpkin", "bean", "parsnip", "chili",
+  "cauliflower", "cucumber", "cabbage", "broccoli", "parsley", "beet", "grape", "garlic", "lime", "eggplant",
+  "apple", "cherry", "pear", "peach", "pineapple", "dragonfruit", "pomegranate", "berry", "berries",
+  "watermelon", "asparagus", "herb", "lavender", "clover", "truffle", "flower",
 ];
+
+function guessGroupForLabel(label: string): string {
+  const q = label.toLowerCase();
+  if (DAIRY_GROUP_KEYWORDS.some((k) => q.includes(k))) return "dairy";
+  if (PROTEIN_GROUP_KEYWORDS.some((k) => q.includes(k))) return "protein";
+  if (PRODUCE_GROUP_KEYWORDS.some((k) => q.includes(k))) return "produce";
+  return "leftovers";
+}
+
+// The asset pack's manifest.json labels were visually spot-checked against their actual
+// pixel art (see contact-sheet review of all 164 icons) and turned out to be scrambled
+// across a big chunk of the set. Corrections have since been folded directly into
+// manifest.json for every id that got a hand-verified re-label there; this map only
+// covers the remaining confirmed mismatches that manifest.json doesn't fix yet, so it
+// never overrides a label someone has deliberately edited at the source.
+const LABEL_OVERRIDES: Record<number, string> = {
+  52: "rolled wrap",
+  62: "cream soup bowl",
+  63: "cream dip bowl",
+  65: "herb sprig",
+  72: "mixed salad plate",
+  79: "cabbage",
+  84: "sliced deli meat",
+  90: "cucumber slice",
+  92: "lettuce",
+  93: "broccoli",
+  94: "radish",
+  95: "grapes",
+  97: "lime",
+  98: "eggplant",
+};
+
+const extraIconEntries = (foodIconManifest as FoodIconManifestEntry[])
+  .filter((m) => !CURATED_MANIFEST_IDS.has(m.id))
+  .map((m) => {
+    const label = LABEL_OVERRIDES[m.id] ?? m.label;
+    return {
+      key: `icon${m.id}`,
+      label: label.charAt(0).toUpperCase() + label.slice(1),
+      file: m.file,
+      keywords: deriveKeywordsFromLabel(label),
+      group: guessGroupForLabel(label),
+    };
+  });
+
+export const FOOD_ICON_KEYS: string[] = [...CURATED_ICON_KEYS, ...extraIconEntries.map((e) => e.key)];
 
 export const ICON_LABELS: Record<string, string> = {
   milk: "Milk",
@@ -217,6 +307,12 @@ export const ICON_LABELS: Record<string, string> = {
   berries: "Berries",
   meat: "Meat",
   leftovers: "Leftovers",
+  ...Object.fromEntries(extraIconEntries.map((e) => [e.key, e.label])),
+};
+
+export const FOOD_ICON_IMAGES: Record<string, string> = {
+  ...Object.fromEntries(Object.entries(CURATED_ICON_FILES).map(([key, file]) => [key, `/images/thatfridge/food-icons/${file}`])),
+  ...Object.fromEntries(extraIconEntries.map((e) => [e.key, `/images/thatfridge/food-icons/${e.file}`])),
 };
 
 export const FOOD_GROUP_LABELS: Record<string, string> = {
@@ -237,6 +333,7 @@ export const ICON_SECTION: Record<string, string> = {
   berries: "produce",
   meat: "protein",
   leftovers: "leftovers",
+  ...Object.fromEntries(extraIconEntries.map((e) => [e.key, e.group])),
 };
 
 const ICON_KEYWORDS: Record<string, string[]> = {
@@ -248,17 +345,62 @@ const ICON_KEYWORDS: Record<string, string[]> = {
   carrot: ["carrot"],
   apple: ["apple"],
   berries: ["berry", "berries", "strawberr", "blueberr", "raspberr"],
-  meat: ["meat", "chicken", "beef", "pork", "turkey", "steak", "bacon", "sausage", "ham"],
+  // Specific proteins (bacon, chicken, steak, etc.) are deliberately left out here — they now
+  // resolve to their own specific icon via the food-icons manifest below, instead of this
+  // generic fallback. "meat"/"pork" stay since there's no more specific icon for either.
+  meat: ["meat", "pork"],
   leftovers: ["leftover", "soup", "stew", "casserole", "takeout", "take-out"],
 };
 
 export function guessIcon(name: string): string | null {
   const q = name.trim().toLowerCase();
   if (!q) return null;
-  for (const icon of FOOD_ICON_KEYS) {
-    if (ICON_KEYWORDS[icon]?.some((kw) => q.includes(kw))) return icon;
+  // Match against every keyword across curated + extra icons, and prefer the longest/most
+  // specific keyword match (e.g. "eggplant" should resolve to the eggplant icon, not "eggs",
+  // even though "egg" is technically a substring of "eggplant").
+  let best: { key: string; len: number } | null = null;
+  for (const icon of CURATED_ICON_KEYS) {
+    const kw = ICON_KEYWORDS[icon]?.find((k) => q.includes(k));
+    if (kw && (!best || kw.length > best.len)) best = { key: icon, len: kw.length };
   }
-  return null;
+  for (const entry of extraIconEntries) {
+    const kw = entry.keywords.find((k) => q.includes(k));
+    if (kw && (!best || kw.length > best.len)) best = { key: entry.key, len: kw.length };
+  }
+  return best?.key ?? null;
+}
+
+const DEFAULT_SHELF_LIFE_DAYS: Record<string, number> = {
+  milk: 7,
+  yogurt: 14,
+  cheese: 21,
+  eggs: 21,
+  spinach: 5,
+  carrot: 14,
+  apple: 14,
+  berries: 5,
+  meat: 3,
+  leftovers: 4,
+};
+
+export function suggestShelfLifeDays(icon: string): number {
+  return DEFAULT_SHELF_LIFE_DAYS[icon] ?? 7;
+}
+
+export const STORAGE_LOCATIONS: { key: StorageLocation; label: string; short: string; blurb: string; color: string }[] = [
+  { key: "fridge", label: "Fridge", short: "Fr", blurb: "Everyday chilled items", color: "#2f6fb0" },
+  { key: "freezer", label: "Freezer", short: "Fz", blurb: "Long-term frozen items", color: "#3f5c85" },
+  { key: "pantry", label: "Pantry", short: "Pa", blurb: "Shelf-stable, room temp", color: "#b5702f" },
+];
+
+const FREEZER_KEYWORDS = ["frozen", "ice cream", "popsicle", "gelato", "freezer"];
+const PANTRY_KEYWORDS = ["can of", "canned", "pasta", "rice", "cereal", "cracker", "chips", "flour", "sugar", "bread", "jar", "sauce", "oil", "vinegar", "beans", "noodle", "granola", "nuts"];
+
+export function guessLocation(name: string): StorageLocation {
+  const q = name.trim().toLowerCase();
+  if (FREEZER_KEYWORDS.some((k) => q.includes(k))) return "freezer";
+  if (PANTRY_KEYWORDS.some((k) => q.includes(k))) return "pantry";
+  return "fridge";
 }
 
 // Alternate fridge look photos (the hero photo remains the default "Original photo" option).

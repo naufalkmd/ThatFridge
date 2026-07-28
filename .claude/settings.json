@@ -3,10 +3,37 @@
     "allow": [
       "mcp__claude_ai_Replicate__get_models",
       "Bash(python3 -c ' *)",
-      "Bash(cp /tmp/style-ref.b64 /tmp/style-ref-b64.txt *)"
+      "Bash(cp /tmp/style-ref.b64 /tmp/style-ref-b64.txt *)",
+      "Bash(node -e ' *)",
+      "Bash(timeout 40 node -e ' *)",
+      "Bash(git commit -m ' *)",
+      "Bash(node /private/tmp/claude-501/-Users-naufalkmd-Github-ThatFridge/7c05cd91-e546-46c4-b1ec-4710d49f38f6/scratchpad/pw/shot_chat_msgs.js)",
+      "Bash(cp /tmp/chat-wallpaper-msgs.png /tmp/chat-wallpaper-v2.png)",
+      "Bash(python3 /private/tmp/claude-501/-Users-naufalkmd-Github-ThatFridge/7c05cd91-e546-46c4-b1ec-4710d49f38f6/scratchpad/wallpaper/make_wallpaper4.py)",
+      "Bash(awk '/export const RECIPES/,/^\\\\];/' /Users/naufalkmd/Github/ThatFridge/frontend/lib/thatfridge/data.ts)",
+      "Bash(node -e \"const icons = require\\('/Users/naufalkmd/Github/ThatFridge/frontend/node_modules/lucide-react'\\); console.log\\('PackageOpen' in icons, 'PackageCheck' in icons\\);\")",
+      "Bash(grep -n \"addStep: number;\\\\|addStep: 0,\\\\|addStep,$\" /Users/naufalkmd/Github/ThatFridge/frontend/lib/thatfridge/useThatFridge.ts)",
+      "Bash(node -e \"const icons = require\\('lucide-react'\\); console.log\\('Brain' in icons, 'Trash2' in icons\\);\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/images/thatfridge/food-icons/icon-163.png)",
+      "Bash(sed -i '' \"s/await page.getByText\\(\\\\\"Drinks shelf\\\\\", { exact: true }\\).click\\(\\);/await page.getByText\\(\\\\\"Drinks shelf\\\\\", { exact: true }\\).first\\(\\).click\\(\\);/\" /private/tmp/claude-501/-Users-naufalkmd-Github-ThatFridge/7c05cd91-e546-46c4-b1ec-4710d49f38f6/scratchpad/pw/final_visual_check.js)",
+      "Bash(node /private/tmp/claude-501/-Users-naufalkmd-Github-ThatFridge/7c05cd91-e546-46c4-b1ec-4710d49f38f6/scratchpad/pw/final_visual_check.js)",
+      "Bash(xargs -r kix -9)",
+      "Bash(mv design/archive/food-icons-unused/*.png public/images/thatfridge/food-icons/)",
+      "Bash(mv design/archive/food-icons-unused/manifest.json public/images/thatfridge/food-icons/manifest.json)",
+      "Bash(rmdir design/archive/food-icons-unused)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000 --max-time 2)",
+      "Bash(node /private/tmp/claude-501/-Users-naufalkmd-Github-ThatFridge/7c05cd91-e546-46c4-b1ec-4710d49f38f6/scratchpad/verify_labels.mjs)",
+      "Bash(node -e \"console.log\\(require.resolve\\('playwright'\\)\\)\")",
+      "Bash(npm ls *)",
+      "Bash(npx --yes --package=playwright node /private/tmp/claude-501/-Users-naufalkmd-Github-ThatFridge/7c05cd91-e546-46c4-b1ec-4710d49f38f6/scratchpad/verify_labels.mjs)",
+      "Bash(node verify_labels.mjs)",
+      "Bash(xargs kill -9)",
+      "Bash(git show *)",
+      "Bash(awk '{print $1}')"
     ],
     "additionalDirectories": [
-      "/private/tmp"
+      "/private/tmp",
+      "/tmp"
     ]
   }
 }
