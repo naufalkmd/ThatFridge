@@ -56,22 +56,6 @@ export default function CrewScene() {
             }}
           >
             <div
-              style={{
-                fontSize: 9,
-                fontWeight: 800,
-                letterSpacing: 0.2,
-                color: "#fff",
-                background: zone.color,
-                padding: "2px 6px",
-                borderRadius: 6,
-                whiteSpace: "nowrap",
-                marginBottom: 2,
-                textAlign: "center",
-              }}
-            >
-              {zone.label}
-            </div>
-            <div
               onClick={() => zone.onClick(actions)}
               style={
                 {
@@ -92,7 +76,7 @@ export default function CrewScene() {
                   }}
                   style={{
                     position: "absolute",
-                    top: -38,
+                    top: -18,
                     left: "50%",
                     transform: "translateX(-50%)",
                     background: "#fff",
