@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import type { NotificationKind } from "@/lib/thatfridge/types";
 import type { ThatFridgeActions } from "@/lib/thatfridge/useThatFridge";
@@ -25,6 +26,106 @@ const ZONES: {
 ];
 
 const SPRITE_SIZE = 48;
+
+const IDLE_LINES: Record<CrewId, string[]> = {
+  chef: ["Hi, I'm your Chef!", "I cook delicious meals!", "Let's whip something up!", "Hungry for an idea?"],
+  guardian: ["Hi, I'm your Guardian!", "I keep your food safe.", "All clear for now!", "On watch, always."],
+  organizer: ["Hi, I'm your Organizer!", "Let's keep things tidy.", "Everything in its place.", "Need a hand sorting?"],
+  shopkeeper: ["Hi, I'm your Shopkeeper!", "I track what you need.", "Never run out again!", "Ready to restock?"],
+};
+
+function alertMessage(id: CrewId, count: number): string | null {
+  if (count <= 0) return null;
+  if (id === "guardian") return `You have ${count} thing${count === 1 ? "" : "s"} to watch out for!`;
+  if (id === "shopkeeper") return `${count} item${count === 1 ? "" : "s"} running low!`;
+  if (id === "chef") return `${count} recipe idea${count === 1 ? "" : "s"} ready!`;
+  return null;
+}
+
+function CrewCharacter({
+  zone,
+  count,
+  onOpenNotifications,
+}: {
+  zone: (typeof ZONES)[number];
+  count: number;
+  onOpenNotifications: () => void;
+}) {
+  const [lineIndex, setLineIndex] = useState(0);
+
+  useEffect(() => {
+    const lines = IDLE_LINES[zone.id];
+    const tick = () => {
+      setLineIndex((i) => (i + 1) % lines.length);
+    };
+    const timer = setInterval(tick, 5500 + Math.random() * 3000);
+    return () => clearInterval(timer);
+  }, [zone.id]);
+
+  const alert = alertMessage(zone.id, count);
+  const message = alert || IDLE_LINES[zone.id][lineIndex];
+
+  return (
+    <div
+      style={
+        {
+          position: "relative",
+          width: SPRITE_SIZE,
+          height: SPRITE_SIZE,
+          cursor: "pointer",
+          animation: `crewWalk ${zone.durationS}s ease-in-out infinite`,
+          "--roam": `${zone.roamPx}px`,
+        } as React.CSSProperties
+      }
+    >
+      <div
+        onClick={(e) => {
+          if (alert) {
+            e.stopPropagation();
+            onOpenNotifications();
+          }
+        }}
+        style={{
+          position: "absolute",
+          bottom: "100%",
+          marginBottom: 8,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "#fff",
+          border: `1.5px solid ${zone.color}`,
+          borderRadius: 10,
+          padding: "4px 8px",
+          fontSize: 9,
+          fontWeight: alert ? 800 : 600,
+          color: alert ? zone.color : "#16325c",
+          whiteSpace: "normal",
+          textAlign: "center",
+          width: 100,
+          lineHeight: 1.25,
+          zIndex: 2,
+          cursor: alert ? "pointer" : "default",
+          boxShadow: "0 4px 10px rgba(22,50,92,0.1)",
+        }}
+      >
+        {message}
+        <div
+          style={{
+            position: "absolute",
+            bottom: -4,
+            left: "50%",
+            transform: "translateX(-50%) rotate(45deg)",
+            width: 6,
+            height: 6,
+            background: "#fff",
+            borderRight: `1.5px solid ${zone.color}`,
+            borderBottom: `1.5px solid ${zone.color}`,
+          }}
+        />
+      </div>
+      <Image src={`/images/thatfridge/${zone.id}.gif`} alt={zone.label} fill unoptimized style={{ objectFit: "contain", imageRendering: "pixelated" }} />
+    </div>
+  );
+}
 
 export default function CrewScene() {
   const { state, actions } = useThatFridgeCtx();
@@ -55,59 +156,8 @@ export default function CrewScene() {
               top: `${zone.topPct}%`,
             }}
           >
-            <div
-              onClick={() => zone.onClick(actions)}
-              style={
-                {
-                  position: "relative",
-                  width: SPRITE_SIZE,
-                  height: SPRITE_SIZE,
-                  cursor: "pointer",
-                  animation: `crewWalk ${zone.durationS}s ease-in-out infinite`,
-                  "--roam": `${zone.roamPx}px`,
-                } as React.CSSProperties
-              }
-            >
-              {count > 0 && (
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    actions.openNotificationHistory();
-                  }}
-                  style={{
-                    position: "absolute",
-                    top: -18,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    background: "#fff",
-                    border: `1.5px solid ${zone.color}`,
-                    borderRadius: 8,
-                    padding: "1px 5px",
-                    fontSize: 9,
-                    fontWeight: 800,
-                    color: zone.color,
-                    whiteSpace: "nowrap",
-                    zIndex: 2,
-                    cursor: "pointer",
-                  }}
-                >
-                  {count}
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: -4,
-                      left: "50%",
-                      transform: "translateX(-50%) rotate(45deg)",
-                      width: 6,
-                      height: 6,
-                      background: "#fff",
-                      borderRight: `1.5px solid ${zone.color}`,
-                      borderBottom: `1.5px solid ${zone.color}`,
-                    }}
-                  />
-                </div>
-              )}
-              <Image src={`/images/thatfridge/${zone.id}.gif`} alt={zone.label} fill unoptimized style={{ objectFit: "contain", imageRendering: "pixelated" }} />
+            <div onClick={() => zone.onClick(actions)}>
+              <CrewCharacter zone={zone} count={count} onOpenNotifications={actions.openNotificationHistory} />
             </div>
           </div>
         );
