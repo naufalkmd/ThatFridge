@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { ChevronRight, ImagePlus } from "lucide-react";
 import { FRIDGE_STYLES } from "@/lib/thatfridge/data";
@@ -7,8 +8,11 @@ import { useThatFridgeCtx } from "../ThatFridgeContext";
 
 export default function FridgeStyleSheet() {
   const { state, actions } = useThatFridgeCtx();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const stylingFridge = state.fridges[state.stylingFridgeIndex];
   const currentStyle = stylingFridge?.style || "photo";
+  const itemCount = stylingFridge?.sections.reduce((n, sec) => n + sec.items.length, 0) || 0;
+  const canDelete = state.fridges.length > 1;
 
   const options: { key: string; label: string; photo: string }[] = [
     { key: "photo", label: "Original photo", photo: "/images/thatfridge/fridge-hero.png" },
@@ -19,8 +23,18 @@ export default function FridgeStyleSheet() {
     <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)" }}>
       <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, top: 120, background: "#fff", borderRadius: "28px 28px 0 0", padding: "14px 22px 26px", animation: "pop .22s ease-out", display: "flex", flexDirection: "column" }}>
         <div onClick={actions.closeStylePicker} style={{ width: 36, height: 5, borderRadius: 3, background: "rgba(22,50,92,0.18)", margin: "0 auto 16px", cursor: "pointer", flex: "none" }} />
-        <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 2 }}>Choose a look</div>
-        <div style={{ fontSize: 12.5, color: "rgba(22,50,92,0.5)", marginBottom: 16 }}>{stylingFridge?.name}</div>
+        <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>Manage fridge</div>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>FRIDGE NAME</div>
+          <input
+            value={stylingFridge?.name || ""}
+            onChange={(e) => actions.renameFridge(e.target.value)}
+            onBlur={actions.renameFridgeBlur}
+            placeholder="e.g. Garage, Office…"
+            style={{ width: "100%", border: "none", outline: "none", background: "#f6f8fa", borderRadius: 12, padding: "11px 14px", fontSize: 14, fontWeight: 600, color: "#16325c", boxSizing: "border-box" }}
+          />
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>CHOOSE A LOOK</div>
         <div style={{ flex: 1, overflowY: "auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
             {options.map((opt) => (
@@ -47,6 +61,51 @@ export default function FridgeStyleSheet() {
             </div>
             <ChevronRight size={17} color="rgba(22,50,92,0.3)" />
           </div>
+
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(193,69,46,0.7)", margin: "24px 0 8px" }}>DANGER ZONE</div>
+          {!confirmingDelete ? (
+            <div
+              onClick={() => canDelete && setConfirmingDelete(true)}
+              style={{
+                cursor: canDelete ? "pointer" : "not-allowed",
+                borderRadius: 16,
+                padding: 14,
+                background: "#fdf1ee",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                opacity: canDelete ? 1 : 0.5,
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2, color: "#c1452e" }}>Delete this fridge</div>
+                <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>
+                  {canDelete ? "Removes it and everything inside it" : "You need at least one fridge"}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ borderRadius: 16, padding: 16, background: "#fdf1ee", border: "1px solid rgba(193,69,46,0.25)" }}>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "#c1452e", marginBottom: 6 }}>Delete &quot;{stylingFridge?.name}&quot;?</div>
+              <div style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.6)", marginBottom: 14 }}>
+                {`This permanently deletes this fridge and all ${itemCount} item${itemCount === 1 ? "" : "s"} inside it. This can't be undone.`}
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <div
+                  onClick={() => setConfirmingDelete(false)}
+                  style={{ flex: 1, textAlign: "center", padding: 11, borderRadius: 12, background: "#fff", border: "1px solid rgba(22,50,92,0.14)", color: "#16325c", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                >
+                  Cancel
+                </div>
+                <div
+                  onClick={() => actions.deleteFridge(state.stylingFridgeIndex)}
+                  style={{ flex: 1, textAlign: "center", padding: 11, borderRadius: 12, background: "#c1452e", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                >
+                  Yes, delete
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

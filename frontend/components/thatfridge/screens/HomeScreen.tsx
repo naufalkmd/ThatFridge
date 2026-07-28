@@ -16,8 +16,6 @@ import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import ChefMascot from "../ChefMascot";
 
-const HERO_CARD_WIDTH = 362;
-
 const SORT_OPTIONS: { key: "category" | "expiry" | "name"; label: string }[] = [
   { key: "category", label: "Category" },
   { key: "expiry", label: "Expiry" },
@@ -44,8 +42,10 @@ export default function HomeScreen() {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const fridgesView = getFridgeHeroViews(state);
   const heroSlide = state.heroSlide;
-  const heroTrackWidth = (fridgesView.length + 1) * HERO_CARD_WIDTH;
-  const heroTranslate = `translateX(-${heroSlide * HERO_CARD_WIDTH}px)`;
+  const heroSlideCount = fridgesView.length + 1;
+  const heroSlideWidthPct = 100 / heroSlideCount;
+  const heroTrackWidth = `${heroSlideCount * 100}%`;
+  const heroTranslate = `translateX(-${heroSlide * heroSlideWidthPct}%)`;
 
   const guardianItem = getGuardianItem(state);
   const lowStockItem = getLowStockItem(state);
@@ -70,7 +70,14 @@ export default function HomeScreen() {
       : `Use ${guardianItem.name.toLowerCase()} within ${guardianItem.days} day${guardianItem.days === 1 ? "" : "s"} for best quality.`
     : "";
 
-  const dotCount = fridgesView.length + 1;
+  const dotCount = heroSlideCount;
+
+  const userInitials = (state.currentUser?.name || "Friend")
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <div style={{ position: "absolute", inset: 0, overflowY: "auto", padding: "28px 20px 150px" }}>
@@ -93,7 +100,7 @@ export default function HomeScreen() {
             flex: "none",
           }}
         >
-          JD
+          {userInitials}
         </div>
         <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>ThatFridge</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -159,7 +166,7 @@ export default function HomeScreen() {
           onTouchEnd={actions.onHeroSwipeEnd}
         >
           {fridgesView.map((fr, i) => (
-            <div key={fr.id} style={{ width: HERO_CARD_WIDTH, flex: "none" }}>
+            <div key={fr.id} style={{ width: `${heroSlideWidthPct}%`, flex: "none" }}>
               <div
                 style={{
                   position: "relative",
@@ -176,7 +183,7 @@ export default function HomeScreen() {
                     src={fr.photoSrc}
                     alt="Illustration of a stocked fridge"
                     fill
-                    sizes="362px"
+                    sizes="420px"
                     style={{ objectFit: "cover", objectPosition: "center 15%" }}
                   />
                 )}
@@ -232,7 +239,7 @@ export default function HomeScreen() {
               </div>
             </div>
           ))}
-          <div style={{ width: HERO_CARD_WIDTH, flex: "none" }}>
+          <div style={{ width: `${heroSlideWidthPct}%`, flex: "none" }}>
             <div
               style={{
                 width: "100%",
