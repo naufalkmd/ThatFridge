@@ -100,7 +100,7 @@ export default function FoodHubScreen() {
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
       <div style={{ flex: "none", padding: "28px 20px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={{ fontSize: 20, fontWeight: 800 }}>Kitchen</div>
+          <div style={{ fontSize: 20, fontWeight: 800 }}>Crew</div>
           <div style={{ display: "flex", background: "rgba(255,255,255,0.6)", borderRadius: 10, padding: 3, gap: 2 }}>
             {(["all", "active"] as const).map((scope) => (
               <div
