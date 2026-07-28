@@ -5,7 +5,9 @@ import { FOOD_TAB_ORDER, ICON_SECTION } from "./data";
 import { fetchFridges, fetchRecipes } from "./api";
 import { findItem } from "./selectors";
 import type {
+  AuthMode,
   ChatMessage,
+  CurrentUser,
   DetectedItem,
   FoodSubtab,
   Fridge,
@@ -31,6 +33,14 @@ const DEFAULT_ICON_BY_SECTION: Record<string, string> = {
 export interface ThatFridgeState {
   screen: Screen;
   isLoading: boolean;
+  isAuthenticated: boolean;
+  currentUser: CurrentUser | null;
+  authMode: AuthMode;
+  authName: string;
+  authEmail: string;
+  authPassword: string;
+  authConfirmPassword: string;
+  authError: string | null;
   fridges: Fridge[];
   recipes: Recipe[];
   activeFridge: number;
@@ -64,7 +74,15 @@ export interface ThatFridgeState {
 function initialState(): ThatFridgeState {
   return {
     screen: "home",
-    isLoading: true,
+    isLoading: false,
+    isAuthenticated: false,
+    currentUser: null,
+    authMode: "login",
+    authName: "",
+    authEmail: "",
+    authPassword: "",
+    authConfirmPassword: "",
+    authError: null,
     fridges: [],
     recipes: [],
     activeFridge: 0,
@@ -110,7 +128,61 @@ export function useThatFridge() {
     setState((prev) => ({ ...prev, ...(typeof updater === "function" ? updater(prev) : updater) }));
   }, []);
 
+  const setAuthMode = (mode: AuthMode) => patch({ authMode: mode, authError: null });
+  const onAuthNameChange = (value: string) => patch({ authName: value });
+  const onAuthEmailChange = (value: string) => patch({ authEmail: value });
+  const onAuthPasswordChange = (value: string) => patch({ authPassword: value });
+  const onAuthConfirmPasswordChange = (value: string) => patch({ authConfirmPassword: value });
+  const submitAuth = () => {
+    patch((s) => {
+      const email = s.authEmail.trim();
+      const password = s.authPassword;
+      if (!email || !password) return { authError: "Enter your email and password." };
+      if (s.authMode === "signup") {
+        const name = s.authName.trim();
+        if (!name) return { authError: "Enter your name." };
+        if (password !== s.authConfirmPassword) return { authError: "Passwords don't match." };
+        return {
+          isAuthenticated: true,
+          isLoading: true,
+          currentUser: { name, email },
+          authError: null,
+          authPassword: "",
+          authConfirmPassword: "",
+        };
+      }
+      const derivedName = email
+        .split("@")[0]
+        .replace(/[._-]+/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+        .trim();
+      return {
+        isAuthenticated: true,
+        isLoading: true,
+        currentUser: { name: derivedName || "Friend", email },
+        authError: null,
+        authPassword: "",
+      };
+    });
+  };
+  const signOut = () =>
+    patch({
+      isAuthenticated: false,
+      currentUser: null,
+      showProfilePanel: false,
+      screen: "home",
+      authMode: "login",
+      authName: "",
+      authEmail: "",
+      authPassword: "",
+      authConfirmPassword: "",
+      authError: null,
+      fridges: [],
+      recipes: [],
+    });
+
   useEffect(() => {
+    if (!state.isAuthenticated) return;
     let cancelled = false;
     Promise.all([fetchFridges(), fetchRecipes()]).then(([fridges, recipes]) => {
       if (cancelled) return;
@@ -119,7 +191,7 @@ export function useThatFridge() {
     return () => {
       cancelled = true;
     };
-  }, [patch]);
+  }, [state.isAuthenticated, patch]);
 
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoActions = useRef<{ onCommit: () => void; onRestore: () => void } | null>(null);
@@ -214,6 +286,23 @@ export function useThatFridge() {
       fridges: s.fridges.map((f, i) => (i === s.stylingFridgeIndex ? { ...f, style: key } : f)),
       screen: "home",
     }));
+
+  const renameFridge = (name: string) =>
+    patch((s) => ({ fridges: s.fridges.map((f, i) => (i === s.stylingFridgeIndex ? { ...f, name } : f)) }));
+  const renameFridgeBlur = () =>
+    patch((s) => ({
+      fridges: s.fridges.map((f, i) => (i === s.stylingFridgeIndex && !f.name.trim() ? { ...f, name: "My Fridge" } : f)),
+    }));
+  const deleteFridge = (index: number) =>
+    patch((s) => {
+      if (s.fridges.length <= 1) return {};
+      const fridges = s.fridges.filter((_, i) => i !== index);
+      let activeFridge = s.activeFridge;
+      if (index < s.activeFridge) activeFridge -= 1;
+      else if (index === s.activeFridge) activeFridge = Math.max(0, index - 1);
+      activeFridge = Math.min(activeFridge, fridges.length - 1);
+      return { fridges, activeFridge, heroSlide: activeFridge, screen: "home" };
+    });
 
   const hoverAgent = (id: string) => patch({ hoveredAgent: id });
   const clearHoverAgent = () => patch({ hoveredAgent: null });
@@ -521,6 +610,13 @@ export function useThatFridge() {
   };
 
   const actions = {
+    setAuthMode,
+    onAuthNameChange,
+    onAuthEmailChange,
+    onAuthPasswordChange,
+    onAuthConfirmPasswordChange,
+    submitAuth,
+    signOut,
     selectHero,
     onHeroSwipeStart,
     onHeroSwipeEnd,
@@ -536,6 +632,9 @@ export function useThatFridge() {
     openStylePicker,
     closeStylePicker,
     selectFridgeStyle,
+    renameFridge,
+    renameFridgeBlur,
+    deleteFridge,
     hoverAgent,
     clearHoverAgent,
     openChat,
