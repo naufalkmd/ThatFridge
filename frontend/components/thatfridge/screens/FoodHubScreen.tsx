@@ -25,8 +25,8 @@ const REC_SOURCE_META: Record<ShoppingRecommendation["source"], { label: string;
 };
 
 const TAB_META: Record<FoodSubtab, { label: string; color: string; icon: string; blurb: string }> = {
-  recipes: { label: "Recipes", color: "#b5702f", icon: "/images/thatfridge/chef-agent.png", blurb: "Chef's picks from what you already have" },
-  shopping: { label: "Shopping", color: "#8a3320", icon: "/images/thatfridge/shopkeeper-agent.png", blurb: "Your list, plus what to buy again" },
+  recipes: { label: "Recipes", color: "#b5702f", icon: "/images/thatfridge/chef.gif", blurb: "Chef's picks from what you already have" },
+  shopping: { label: "Shopping", color: "#8a3320", icon: "/images/thatfridge/shopkeeper.gif", blurb: "Your list, plus what to buy again" },
   guardian: { label: "Guardian", color: "#3f5c85", icon: "/images/thatfridge/guardian-agent.png", blurb: "Riskiest items are listed first" },
   organizer: { label: "Organizer", color: "#2f6f47", icon: "/images/thatfridge/organizer-agent.png", blurb: "Tap a spot to move an item there" },
 };
@@ -160,7 +160,7 @@ export default function FoodHubScreen() {
           }}
         >
           <div style={{ position: "relative", width: 26, height: 26, flex: "none" }}>
-            <Image src={activeMeta.icon} alt="" width={26} height={26} style={{ objectFit: "contain" }} />
+            <Image src={activeMeta.icon} alt="" width={26} height={26} unoptimized style={{ objectFit: "contain" }} />
           </div>
           <div style={{ fontSize: 11.5, fontWeight: 600, color: activeMeta.color }}>{activeMeta.blurb}</div>
         </div>

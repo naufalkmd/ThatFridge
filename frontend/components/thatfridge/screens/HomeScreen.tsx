@@ -34,7 +34,7 @@ const CREW: { id: string; name: string; color: string; icon: string; onClick: (a
   { id: "chef", name: "Chef", color: "#b5702f", icon: "/images/thatfridge/chef-agent.png", onClick: (a) => a.openRecipesHub() },
   { id: "guardian", name: "Guardian", color: "#3f5c85", icon: "/images/thatfridge/guardian-agent.png", onClick: (a) => a.openGuardianTab() },
   { id: "organizer", name: "Organizer", color: "#2f6f47", icon: "/images/thatfridge/organizer-agent.png", onClick: (a) => a.openOrganizerTab() },
-  { id: "shopkeeper", name: "Shopkeeper", color: "#8a3320", icon: "/images/thatfridge/shopkeeper-agent.png", onClick: (a) => a.openShoppingHub() },
+  { id: "shopkeeper", name: "Shopkeeper", color: "#8a3320", icon: "/images/thatfridge/shopkeeper.gif", onClick: (a) => a.openShoppingHub() },
 ];
 
 export default function HomeScreen() {
@@ -307,7 +307,7 @@ export default function HomeScreen() {
                 {c.id === "chef" ? (
                   <ChefMascot size={48} />
                 ) : (
-                  <Image src={c.icon} alt={c.name} width={48} height={48} style={{ objectFit: "contain" }} />
+                  <Image src={c.icon} alt={c.name} width={48} height={48} unoptimized={c.id === "shopkeeper"} style={{ objectFit: "contain" }} />
                 )}
               </div>
               <div style={{ fontSize: 11, fontWeight: 700, color: c.color }}>{c.name}</div>
