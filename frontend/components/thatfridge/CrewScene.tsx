@@ -158,9 +158,12 @@ function CrewCharacter({
 export default function CrewScene() {
   const { state, actions } = useThatFridgeCtx();
 
+  const activeFridgeId = state.fridges[state.activeFridge]?.id;
   const pendingByKind: Record<NotificationKind, number> = { expiring: 0, lowStock: 0, recipe: 0 };
   for (const event of state.notificationEvents) {
-    if (!event.done) pendingByKind[event.kind] += 1;
+    if (event.done) continue;
+    if (state.kitchenScope === "active" && event.fridgeId !== activeFridgeId) continue;
+    pendingByKind[event.kind] += 1;
   }
 
   return (

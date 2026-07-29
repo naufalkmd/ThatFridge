@@ -36,15 +36,33 @@ export default function RecipeDetailSheet() {
 
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>INGREDIENTS</div>
           <div style={{ background: "#eaf6ff", borderRadius: 16, overflow: "hidden", marginBottom: 20 }}>
-            {selectedRecipe.ingredientsView.map((ing, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
-                <div style={{ width: 20, height: 20, borderRadius: 6, background: ing.badgeBg, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-                  {ing.have ? <Check size={12} color="#fff" strokeWidth={2.5} /> : <Plus size={12} color="#fff" strokeWidth={2.5} />}
+            {selectedRecipe.ingredientsView.map((ing, i) => {
+              const onShoppingList = state.shoppingList.some((si) => !si.checked && si.name.toLowerCase() === ing.name.toLowerCase());
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
+                  <div
+                    onClick={ing.have || onShoppingList ? undefined : () => actions.addPredictedToShopping(ing.name, ing.icon)}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 6,
+                      background: onShoppingList ? "#2f6fb0" : ing.badgeBg,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flex: "none",
+                      cursor: ing.have || onShoppingList ? "default" : "pointer",
+                    }}
+                  >
+                    {ing.have || onShoppingList ? <Check size={12} color="#fff" strokeWidth={2.5} /> : <Plus size={12} color="#fff" strokeWidth={2.5} />}
+                  </div>
+                  <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>{ing.name}</div>
+                  <div style={{ fontSize: 11.5, color: onShoppingList ? "#2f6fb0" : ing.badgeBg, fontWeight: 700 }}>
+                    {onShoppingList ? "On list" : ing.statusLabel}
+                  </div>
                 </div>
-                <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>{ing.name}</div>
-                <div style={{ fontSize: 11.5, color: ing.badgeBg, fontWeight: 700 }}>{ing.statusLabel}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>STEPS</div>
