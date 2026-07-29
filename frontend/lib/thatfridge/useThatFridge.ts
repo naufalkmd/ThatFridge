@@ -338,7 +338,7 @@ export function useThatFridge() {
   const openProfile = () => patch({ showProfilePanel: true });
   const closeProfile = () => patch({ showProfilePanel: false });
   const selectFridgeFromProfile = (i: number) =>
-    patch({ activeFridge: i, heroSlide: i, showProfilePanel: false, screen: "home" });
+    patch({ kitchenScope: "active", activeFridge: i, heroSlide: i, showProfilePanel: false, screen: "home" });
 
   const openNotifications = () => patch({ screen: "notifications", showProfilePanel: false });
   const openNotificationHistory = () => patch({ screen: "notificationHistory" });

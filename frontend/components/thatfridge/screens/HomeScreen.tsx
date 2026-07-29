@@ -1,16 +1,95 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
-import { Bell, ChevronDown, Package, Palette, Refrigerator, Sparkles, TriangleAlert } from "lucide-react";
+import { Bell, ChevronDown, Package, Palette, Refrigerator, Sparkles, TriangleAlert, X } from "lucide-react";
 import { RECIPE_BY_ICON } from "@/lib/thatfridge/data";
 import { getFridgeHeroViews, getGuardianItem, getLowStockItem, getRecipesView, getScopeLabel, getScopedItems } from "@/lib/thatfridge/selectors";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import CrewScene from "../CrewScene";
 
+const CLEAR_THRESHOLD = -80;
+const OFFSCREEN_X = -420;
+
+function SwipeToClear({ marginBottom, onClear, children }: { marginBottom: number; onClear: () => void; children: React.ReactNode }) {
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const draggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const movedRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
+  const pendingDeltaRef = useRef(0);
+
+  const flushDrag = () => {
+    rafRef.current = null;
+    setDragX(pendingDeltaRef.current);
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    draggingRef.current = true;
+    movedRef.current = false;
+    startXRef.current = e.clientX;
+    setDragging(true);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
+    const delta = e.clientX - startXRef.current;
+    if (Math.abs(delta) > 4 && !movedRef.current) {
+      movedRef.current = true;
+      // Capture only once a real drag starts, so a plain tap's click event is never suppressed.
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    pendingDeltaRef.current = Math.min(0, delta);
+    if (rafRef.current == null) rafRef.current = requestAnimationFrame(flushDrag);
+  };
+  const onPointerUp = () => {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    setDragging(false);
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (pendingDeltaRef.current < CLEAR_THRESHOLD) {
+      setDragX(OFFSCREEN_X);
+      setTimeout(onClear, 200);
+    } else {
+      setDragX(0);
+    }
+  };
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (movedRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
+      movedRef.current = false;
+    }
+  };
+
+  return (
+    <div style={{ position: "relative", marginBottom, borderRadius: 18, overflow: "hidden" }}>
+      <div style={{ position: "absolute", inset: 0, background: "#c1452e", display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 22px" }}>
+        <X size={17} color="#fff" strokeWidth={2.4} />
+      </div>
+      <div
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onClickCapture={onClickCapture}
+        style={{ transform: `translateX(${dragX}px)`, transition: dragging ? "none" : "transform 0.2s ease", touchAction: "pan-y", willChange: "transform" }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function HomeScreen() {
   const { state, actions } = useThatFridgeCtx();
   const [showScopeMenu, setShowScopeMenu] = useState(false);
+  const [dismissedGuardianFor, setDismissedGuardianFor] = useState<string | null>(null);
+  const [dismissedLowStockFor, setDismissedLowStockFor] = useState<string | null>(null);
+  const [dismissedChefFor, setDismissedChefFor] = useState<string | null>(null);
   const fridgesView = getFridgeHeroViews(state);
   const heroSlide = state.heroSlide;
   const heroSlideCount = fridgesView.length + 1;
@@ -35,6 +114,19 @@ export default function HomeScreen() {
       ? `${guardianItem.name} needs attention today — down to ${guardianItem.freshness}% freshness.`
       : `Use ${guardianItem.name.toLowerCase()} within ${guardianItem.days} day${guardianItem.days === 1 ? "" : "s"} for best quality.`
     : "";
+
+  // These ids mirror buildNotificationSeed()'s per-fridge event ids, so clearing a Home
+  // card also marks the matching entry in the Notifications page as done, and clearing it
+  // there (event.done becomes true) also hides the Home card — kept in sync both ways.
+  const guardianEventId = guardianItem ? `ev-expiring-${guardianItem.fridgeId}` : null;
+  const lowStockEventId = lowStockItem ? `ev-lowstock-${lowStockItem.fridgeId}` : null;
+  const chefEventId = guardianItem ? `ev-recipe-${guardianItem.fridgeId}` : null;
+  const isEventDone = (id: string | null) => !!id && state.notificationEvents.find((n) => n.id === id)?.done;
+
+  const chefKey = guardianItem?.id ?? "none";
+  const guardianVisible = !!guardianItem && dismissedGuardianFor !== guardianItem.id && !isEventDone(guardianEventId);
+  const lowStockVisible = !!lowStockItem && dismissedLowStockFor !== lowStockItem.id && !isEventDone(lowStockEventId);
+  const chefVisible = dismissedChefFor !== chefKey && !isEventDone(chefEventId);
 
   const dotCount = heroSlideCount;
   const pendingNotifications = state.notificationEvents.filter((n) => !n.done).length;
@@ -326,46 +418,72 @@ export default function HomeScreen() {
       </div>
 
       {/* guardian tip */}
-      {guardianItem && (
-        <div
-          onClick={() => actions.selectItem(guardianItem.id)}
-          style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", marginBottom: 14, cursor: "pointer" }}
+      {guardianVisible && guardianItem && (
+        <SwipeToClear
+          marginBottom={14}
+          onClear={() => {
+            setDismissedGuardianFor(guardianItem.id);
+            if (guardianEventId) actions.dismissNotificationWithUndo(guardianEventId);
+          }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <TriangleAlert size={15} color="#d99a2b" strokeWidth={2.2} />
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>EXPIRING SOON</div>
+          <div
+            onClick={() => actions.selectItem(guardianItem.id)}
+            style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", cursor: "pointer" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <TriangleAlert size={15} color="#d99a2b" strokeWidth={2.2} />
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>EXPIRING SOON</div>
+              </div>
+              <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#c1452e", background: "#c1452e1a", padding: "2px 7px", borderRadius: 6 }}>GUARDIAN</div>
             </div>
-            <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#c1452e", background: "#c1452e1a", padding: "2px 7px", borderRadius: 6 }}>GUARDIAN</div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{guardianMessage}</div>
           </div>
-          <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{guardianMessage}</div>
-        </div>
+        </SwipeToClear>
       )}
 
       {/* low stock */}
-      {lowStockItem && (
-        <div onClick={actions.openShoppingHub} style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", marginBottom: 18, cursor: "pointer" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>LOW STOCK</div>
-            <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#3f8f5c", background: "#3f8f5c1a", padding: "2px 7px", borderRadius: 6 }}>SHOPKEEPER</div>
+      {lowStockVisible && lowStockItem && (
+        <SwipeToClear
+          marginBottom={18}
+          onClear={() => {
+            setDismissedLowStockFor(lowStockItem.id);
+            if (lowStockEventId) actions.dismissNotificationWithUndo(lowStockEventId);
+          }}
+        >
+          <div onClick={actions.openShoppingHub} style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>LOW STOCK</div>
+              <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#3f8f5c", background: "#3f8f5c1a", padding: "2px 7px", borderRadius: 6 }}>SHOPKEEPER</div>
+            </div>
+            <div style={{ fontSize: 13.5, color: "#16325c" }}>
+              {lowStockItem.name} — {lowStockItem.note.toLowerCase()}
+            </div>
           </div>
-          <div style={{ fontSize: 13.5, color: "#16325c" }}>
-            {lowStockItem.name} — {lowStockItem.note.toLowerCase()}
-          </div>
-        </div>
+        </SwipeToClear>
       )}
 
       {/* chef's pick */}
-      <div
-        onClick={actions.openRecipesHub}
-        style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", marginBottom: 22, cursor: "pointer" }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>CHEF&apos;S PICK</div>
-          <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#d99a2b", background: "#d99a2b1a", padding: "2px 7px", borderRadius: 6 }}>CHEF</div>
-        </div>
-        <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{chefMessage}</div>
-      </div>
+      {chefVisible && (
+        <SwipeToClear
+          marginBottom={22}
+          onClear={() => {
+            setDismissedChefFor(chefKey);
+            if (chefEventId) actions.dismissNotificationWithUndo(chefEventId);
+          }}
+        >
+          <div
+            onClick={actions.openRecipesHub}
+            style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", cursor: "pointer" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>CHEF&apos;S PICK</div>
+              <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#d99a2b", background: "#d99a2b1a", padding: "2px 7px", borderRadius: 6 }}>CHEF</div>
+            </div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{chefMessage}</div>
+          </div>
+        </SwipeToClear>
+      )}
     </div>
   );
 }
