@@ -52,6 +52,7 @@
    npm install
    npm run dev
    ```
+   The frontend talks to the backend via `NEXT_PUBLIC_API_URL`, set in `frontend/.env.local` (defaults to `http://127.0.0.1:8000/api` if unset).
 
 ## Trying login against the API directly
 

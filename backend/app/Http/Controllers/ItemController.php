@@ -6,6 +6,7 @@ use App\Http\Resources\ItemResource;
 use App\Models\Item;
 use App\Models\Section;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ItemController extends Controller
 {
@@ -36,6 +37,9 @@ class ItemController extends Controller
 
         $data = $request->validate([
             'product_id' => ['sometimes', 'nullable', 'exists:products,id'],
+            'section_id' => ['sometimes', Rule::exists('sections', 'id')->where(
+                fn ($q) => $q->whereIn('fridge_id', $request->user()->fridges()->pluck('id'))
+            )],
             'name' => ['sometimes', 'string', 'max:255'],
             'icon' => ['sometimes', 'string', 'max:255'],
             'location' => ['sometimes', 'nullable', 'string', 'in:fridge,freezer,pantry'],

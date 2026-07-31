@@ -32,6 +32,7 @@ class ItemResource extends JsonResource
             'days' => $days,
             'note' => $this->note,
             'location' => $this->location,
+            'quantity' => $this->quantity,
         ];
     }
 }
