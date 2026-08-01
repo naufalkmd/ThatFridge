@@ -32,9 +32,19 @@
 
    Then:
    ```bash
-   php artisan migrate
+   php artisan migrate --seed
    php artisan serve
    ```
+   `--seed` creates 4 test accounts (all password `password123`) so you can log in without registering your own:
+
+   | Email | Password |
+   |---|---|
+   | keira@thatfridge.test | password123 |
+   | hazim@thatfridge.test | password123 |
+   | joey@thatfridge.test | password123 |
+   | kemed@thatfridge.test | password123 |
+
+   Already migrated without `--seed`? Run `php artisan db:seed` on its own — safe to run anytime, it only adds these 4 users.
 
 3. Frontend:
    ```bash
@@ -42,6 +52,24 @@
    npm install
    npm run dev
    ```
+   The frontend talks to the backend via `NEXT_PUBLIC_API_URL`, set in `frontend/.env.local` (defaults to `http://127.0.0.1:8000/api` if unset).
+
+## Trying login against the API directly
+
+Before wiring up the frontend, you can confirm the backend works with `curl` (backend must be running via `php artisan serve`, defaults to `http://127.0.0.1:8000`):
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/login \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{"email":"keira@thatfridge.test","password":"password123"}'
+```
+
+Should return a `user` object and a `token`. Use that token on any authenticated endpoint (`/api/me`, `/api/fridges`, etc.):
+
+```bash
+curl http://127.0.0.1:8000/api/me \
+  -H "Accept: application/json" -H "Authorization: Bearer <token from above>"
+```
 
 ## Requirements
 - PHP 8.2+, Composer

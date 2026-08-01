@@ -2,7 +2,28 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FOOD_TAB_ORDER, ICON_SECTION, guessIcon, guessLocation, suggestShelfLifeDays } from "./data";
-import { fetchFridges, fetchRecipes } from "./api";
+import {
+  createFridge,
+  createItem,
+  createSection,
+  createShoppingItem,
+  deleteFridge as apiDeleteFridge,
+  deleteItem,
+  deleteShoppingItem,
+  fetchFridges,
+  fetchMe,
+  fetchNotificationPrefs,
+  fetchRecipes,
+  fetchShoppingItems,
+  login,
+  logout,
+  register,
+  updateFridge,
+  updateItem,
+  updateNotificationPrefs,
+  updateShoppingItem,
+} from "./api";
+import { ApiError, clearToken, getToken } from "./apiClient";
 import { buildNotificationSeed, findItem, findSectionIdForGroup } from "./selectors";
 import type {
   AuthMode,
@@ -61,6 +82,10 @@ function daysUntil(dateStr: string): number {
   return Math.max(0, Math.round((target.getTime() - today.getTime()) / 86400000));
 }
 
+function describeError(err: unknown, fallback: string): string {
+  return err instanceof ApiError ? err.message : fallback;
+}
+
 const DEFAULT_ICON_BY_SECTION: Record<string, string> = {
   dairy: "milk",
   produce: "carrot",
@@ -117,6 +142,7 @@ export interface ThatFridgeState {
   chatThreads: ChatThread[];
   stylingFridgeIndex: number;
   undoMessage: string | null;
+  syncError: string | null;
   notificationPrefs: NotificationPrefs;
   notificationEvents: NotificationEvent[];
   kitchenScope: "active" | "all";
@@ -173,6 +199,7 @@ function initialState(): ThatFridgeState {
     chatThreads: [],
     stylingFridgeIndex: 0,
     undoMessage: null,
+    syncError: null,
     notificationPrefs: { expiryAlerts: true, lowStock: true, recipeTips: true, weeklyDigest: false },
     notificationEvents: [],
     kitchenScope: "all",
@@ -199,39 +226,45 @@ export function useThatFridge() {
   const onAuthEmailChange = (value: string) => patch({ authEmail: value });
   const onAuthPasswordChange = (value: string) => patch({ authPassword: value });
   const onAuthConfirmPasswordChange = (value: string) => patch({ authConfirmPassword: value });
-  const submitAuth = () => {
-    patch((s) => {
-      const email = s.authEmail.trim();
-      const password = s.authPassword;
-      if (!email || !password) return { authError: "Enter your email and password." };
-      if (s.authMode === "signup") {
-        const name = s.authName.trim();
-        if (!name) return { authError: "Enter your name." };
-        if (password !== s.authConfirmPassword) return { authError: "Passwords don't match." };
-        return {
+  const submitAuth = async () => {
+    const email = state.authEmail.trim();
+    const password = state.authPassword;
+    if (!email || !password) return patch({ authError: "Enter your email and password." });
+
+    if (state.authMode === "signup") {
+      const name = state.authName.trim();
+      if (!name) return patch({ authError: "Enter your name." });
+      if (password !== state.authConfirmPassword) return patch({ authError: "Passwords don't match." });
+      try {
+        const { user } = await register(name, email, password);
+        patch({
           isAuthenticated: true,
           isLoading: true,
-          currentUser: { name, email },
+          currentUser: user,
           authError: null,
           authPassword: "",
           authConfirmPassword: "",
-        };
+        });
+      } catch (err) {
+        patch({ authError: describeError(err, "Couldn't create your account.") });
       }
-      const derivedName = email
-        .split("@")[0]
-        .replace(/[._-]+/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase())
-        .trim();
-      return {
-        isAuthenticated: true,
-        isLoading: true,
-        currentUser: { name: derivedName || "Friend", email },
-        authError: null,
-        authPassword: "",
-      };
-    });
+      return;
+    }
+
+    try {
+      const { user } = await login(email, password);
+      patch({ isAuthenticated: true, isLoading: true, currentUser: user, authError: null, authPassword: "" });
+    } catch (err) {
+      patch({ authError: describeError(err, "Couldn't log you in.") });
+    }
   };
-  const signOut = () =>
+  const signOut = async () => {
+    try {
+      await logout();
+    } catch {
+      // best-effort — the session is over locally regardless of whether the server call succeeds
+    }
+    clearToken();
     patch({
       isAuthenticated: false,
       currentUser: null,
@@ -246,15 +279,49 @@ export function useThatFridge() {
       authError: null,
       fridges: [],
       recipes: [],
+      shoppingList: [],
+      shoppingSeeded: false,
     });
+  };
+
+  // Restore a session from a stored token so a page refresh doesn't bounce to the login screen.
+  useEffect(() => {
+    if (!getToken()) return;
+    let cancelled = false;
+    patch({ isLoading: true });
+    fetchMe()
+      .then((user) => {
+        if (cancelled) return;
+        patch({ isAuthenticated: true, currentUser: user });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        clearToken();
+        patch({ isLoading: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!state.isAuthenticated) return;
     let cancelled = false;
-    Promise.all([fetchFridges(), fetchRecipes()]).then(([fridges, recipes]) => {
-      if (cancelled) return;
-      patch({ fridges, recipes, isLoading: false, notificationEvents: buildNotificationSeed(fridges) });
-    });
+    Promise.all([fetchFridges(), fetchRecipes(), fetchShoppingItems(), fetchNotificationPrefs()]).then(
+      ([fridges, recipes, shoppingList, notificationPrefs]) => {
+        if (cancelled) return;
+        patch({
+          fridges,
+          recipes,
+          shoppingList,
+          shoppingSeeded: true,
+          notificationPrefs,
+          isLoading: false,
+          notificationEvents: buildNotificationSeed(fridges),
+        });
+      }
+    );
     return () => {
       cancelled = true;
     };
@@ -262,10 +329,12 @@ export function useThatFridge() {
 
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoActions = useRef<{ onCommit: () => void; onRestore: () => void } | null>(null);
+  const qtyDebounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => {
     return () => {
       if (undoTimer.current) clearTimeout(undoTimer.current);
+      Object.values(qtyDebounceTimers.current).forEach(clearTimeout);
     };
   }, []);
 
@@ -293,13 +362,25 @@ export function useThatFridge() {
     patch({ undoMessage: null });
   };
 
+  const dismissSyncError = () => patch({ syncError: null });
+
   const setItemLocation = (id: string, location: StorageLocation) => {
+    const prevLocation = findItem(state, id)?.item.location;
     patch((s) => ({
       fridges: s.fridges.map((f) => ({
         ...f,
         sections: f.sections.map((sec) => ({ ...sec, items: sec.items.map((it) => (it.id === id ? { ...it, location } : it)) })),
       })),
     }));
+    updateItem(id, { location }).catch((err) => {
+      patch((s) => ({
+        fridges: s.fridges.map((f) => ({
+          ...f,
+          sections: f.sections.map((sec) => ({ ...sec, items: sec.items.map((it) => (it.id === id ? { ...it, location: prevLocation } : it)) })),
+        })),
+      }));
+      patch({ syncError: describeError(err, "Couldn't update the item's location.") });
+    });
   };
 
   const selectFridgeScope = (choice: number | "all") =>
@@ -324,12 +405,18 @@ export function useThatFridge() {
   };
 
   const onNewFridgeNameChange = (value: string) => patch({ newFridgeName: value });
-  const addFridge = () => {
+  const addFridge = async () => {
     const name = state.newFridgeName.trim() || "New Fridge";
-    patch((s) => {
-      const fridges = [...s.fridges, { id: "f" + Date.now(), name, sections: [] }];
-      return { fridges, newFridgeName: "", heroSlide: fridges.length - 1, activeFridge: fridges.length - 1 };
-    });
+    patch({ newFridgeName: "" });
+    try {
+      const fridge = await createFridge(name);
+      patch((s) => {
+        const fridges = [...s.fridges, fridge];
+        return { fridges, heroSlide: fridges.length - 1, activeFridge: fridges.length - 1 };
+      });
+    } catch (err) {
+      patch({ syncError: describeError(err, "Couldn't create the fridge.") });
+    }
   };
   const onNewFridgeNameKeyDown = (key: string) => {
     if (key === "Enter") addFridge();
@@ -351,8 +438,14 @@ export function useThatFridge() {
     });
   };
   const openAbout = () => patch({ screen: "about", showProfilePanel: false });
-  const toggleNotificationPref = (key: keyof NotificationPrefs) =>
+  const toggleNotificationPref = (key: keyof NotificationPrefs) => {
+    const prevValue = state.notificationPrefs[key];
     patch((s) => ({ notificationPrefs: { ...s.notificationPrefs, [key]: !s.notificationPrefs[key] } }));
+    updateNotificationPrefs({ [key]: !prevValue }).catch((err) => {
+      patch((s) => ({ notificationPrefs: { ...s.notificationPrefs, [key]: prevValue } }));
+      patch({ syncError: describeError(err, "Couldn't save your notification settings.") });
+    });
+  };
 
   const openAIDataSettings = () => patch({ screen: "aiData", showProfilePanel: false });
   const deleteChatThread = (id: string) => patch((s) => ({ chatThreads: s.chatThreads.filter((t) => t.id !== id) }));
@@ -368,21 +461,39 @@ export function useThatFridge() {
 
   const openStylePicker = (i: number) => patch({ stylingFridgeIndex: i, screen: "fridgeStyle" });
   const closeStylePicker = () => patch({ screen: "home" });
-  const selectFridgeStyle = (key: FridgeStyleKey) =>
+  const selectFridgeStyle = (key: FridgeStyleKey) => {
+    const index = state.stylingFridgeIndex;
+    const fridge = state.fridges[index];
+    const prevStyle = fridge?.style;
     patch((s) => ({
-      fridges: s.fridges.map((f, i) => (i === s.stylingFridgeIndex ? { ...f, style: key } : f)),
+      fridges: s.fridges.map((f, i) => (i === index ? { ...f, style: key } : f)),
       screen: "home",
     }));
+    if (!fridge) return;
+    updateFridge(fridge.id, { style: key }).catch((err) => {
+      patch((s) => ({ fridges: s.fridges.map((f, i) => (i === index ? { ...f, style: prevStyle } : f)) }));
+      patch({ syncError: describeError(err, "Couldn't save the fridge style.") });
+    });
+  };
 
   const renameFridge = (name: string) =>
     patch((s) => ({ fridges: s.fridges.map((f, i) => (i === s.stylingFridgeIndex ? { ...f, name } : f)) }));
-  const renameFridgeBlur = () =>
+  const renameFridgeBlur = () => {
+    const index = state.stylingFridgeIndex;
+    const fridge = state.fridges[index];
+    if (!fridge) return;
+    const name = fridge.name.trim() || "My Fridge";
     patch((s) => ({
-      fridges: s.fridges.map((f, i) => (i === s.stylingFridgeIndex && !f.name.trim() ? { ...f, name: "My Fridge" } : f)),
+      fridges: s.fridges.map((f, i) => (i === index && !f.name.trim() ? { ...f, name: "My Fridge" } : f)),
     }));
-  const deleteFridge = (index: number) =>
+    updateFridge(fridge.id, { name }).catch((err) => {
+      patch({ syncError: describeError(err, "Couldn't save the fridge name.") });
+    });
+  };
+  const deleteFridge = (index: number) => {
+    const fridge = state.fridges[index];
+    if (!fridge || state.fridges.length <= 1) return;
     patch((s) => {
-      if (s.fridges.length <= 1) return {};
       const fridges = s.fridges.filter((_, i) => i !== index);
       let activeFridge = s.activeFridge;
       if (index < s.activeFridge) activeFridge -= 1;
@@ -390,6 +501,11 @@ export function useThatFridge() {
       activeFridge = Math.min(activeFridge, fridges.length - 1);
       return { fridges, activeFridge, heroSlide: activeFridge, screen: "home" };
     });
+    apiDeleteFridge(fridge.id).catch((err) => {
+      patch((s) => ({ fridges: [...s.fridges.slice(0, index), fridge, ...s.fridges.slice(index)] }));
+      patch({ syncError: describeError(err, "Couldn't delete the fridge.") });
+    });
+  };
 
   const openSearch = () => patch({ screen: "search", searchQuery: "" });
 
@@ -436,33 +552,50 @@ export function useThatFridge() {
   const closeRecipeDetail = () => patch({ screen: "foodHub" });
 
   const onNewShoppingChange = (value: string) => patch({ newShoppingText: value });
-  const addShoppingItem = () => {
+  const addShoppingItem = async () => {
     const name = state.newShoppingText.trim();
     if (!name) return;
-    const entry: ShoppingItem = { id: "sh-" + Date.now(), name, icon: null, section: "other", checked: false };
-    patch((s) => ({ shoppingList: [...s.shoppingList, entry], newShoppingText: "" }));
+    patch({ newShoppingText: "" });
+    try {
+      const entry = await createShoppingItem({ name, icon: null, section: "other" });
+      patch((s) => ({ shoppingList: [...s.shoppingList, entry] }));
+    } catch (err) {
+      patch({ syncError: describeError(err, "Couldn't add the shopping item.") });
+    }
   };
   const onNewShoppingKeyDown = (key: string) => {
     if (key === "Enter") addShoppingItem();
   };
-  const toggleShoppingItem = (id: string) =>
+  const toggleShoppingItem = (id: string) => {
+    const current = state.shoppingList.find((i) => i.id === id);
+    if (!current) return;
     patch((s) => ({ shoppingList: s.shoppingList.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)) }));
-  const removeShoppingItem = (id: string) =>
-    patch((s) => ({ shoppingList: s.shoppingList.filter((i) => i.id !== id) }));
-  const clearBought = () => patch((s) => ({ shoppingList: s.shoppingList.filter((i) => !i.checked) }));
-
-  const addPredictedToShopping = (name: string, icon: string) => {
-    patch((s) => {
-      if (s.shoppingList.some((i) => !i.checked && i.name.toLowerCase() === name.toLowerCase())) return {};
-      const entry: ShoppingItem = {
-        id: "pr-" + icon + "-" + Date.now(),
-        name,
-        icon,
-        section: ICON_SECTION[icon] || "other",
-        checked: false,
-      };
-      return { shoppingList: [...s.shoppingList, entry] };
+    updateShoppingItem(id, { checked: !current.checked }).catch((err) => {
+      patch((s) => ({ shoppingList: s.shoppingList.map((i) => (i.id === id ? { ...i, checked: current.checked } : i)) }));
+      patch({ syncError: describeError(err, "Couldn't update the shopping item.") });
     });
+  };
+  const removeShoppingItem = (id: string) => {
+    patch((s) => ({ shoppingList: s.shoppingList.filter((i) => i.id !== id) }));
+    deleteShoppingItem(id).catch((err) => patch({ syncError: describeError(err, "Couldn't remove the shopping item.") }));
+  };
+  const clearBought = async () => {
+    const bought = state.shoppingList.filter((i) => i.checked);
+    if (!bought.length) return;
+    patch((s) => ({ shoppingList: s.shoppingList.filter((i) => !i.checked) }));
+    const results = await Promise.allSettled(bought.map((i) => deleteShoppingItem(i.id)));
+    const failedCount = results.filter((r) => r.status === "rejected").length;
+    if (failedCount) patch({ syncError: `Couldn't clear ${failedCount} item${failedCount > 1 ? "s" : ""}.` });
+  };
+
+  const addPredictedToShopping = async (name: string, icon: string) => {
+    if (state.shoppingList.some((i) => !i.checked && i.name.toLowerCase() === name.toLowerCase())) return;
+    try {
+      const entry = await createShoppingItem({ name, icon, section: ICON_SECTION[icon] || "other" });
+      patch((s) => ({ shoppingList: [...s.shoppingList, entry] }));
+    } catch (err) {
+      patch({ syncError: describeError(err, "Couldn't add the suggestion.") });
+    }
   };
 
   const onSearchChange = (value: string) => patch({ searchQuery: value });
@@ -570,21 +703,27 @@ export function useThatFridge() {
     if (!id) return;
     const name = state.editName.trim();
     if (!name) return;
+    const found = findItem(state, id);
+    if (!found) return;
+    const { item: prevItem, section: fromSection } = found;
+    const toSectionId = state.editSectionId || fromSection.id;
+    const icon = state.editIcon || prevItem.icon;
+    const moved = toSectionId !== fromSection.id;
+
     patch((s) => {
-      const found = findItem(s, id);
-      if (!found) return {};
-      const { item, section: fromSection, fridgeIndex } = found;
+      const found2 = findItem(s, id);
+      if (!found2) return {};
+      const { item, section: fromSec, fridgeIndex } = found2;
       const fridge = s.fridges[fridgeIndex];
-      const toSectionId = s.editSectionId || fromSection.id;
-      const updatedItem = { ...item, name, icon: s.editIcon || item.icon };
+      const updatedItem = { ...item, name, icon };
 
       const sections =
-        toSectionId === fromSection.id
+        toSectionId === fromSec.id
           ? fridge.sections.map((sec) =>
-              sec.id === fromSection.id ? { ...sec, items: sec.items.map((it) => (it.id === id ? updatedItem : it)) } : sec
+              sec.id === fromSec.id ? { ...sec, items: sec.items.map((it) => (it.id === id ? updatedItem : it)) } : sec
             )
           : fridge.sections.map((sec) => {
-              if (sec.id === fromSection.id) return { ...sec, items: sec.items.filter((it) => it.id !== id) };
+              if (sec.id === fromSec.id) return { ...sec, items: sec.items.filter((it) => it.id !== id) };
               if (sec.id === toSectionId) return { ...sec, items: [...sec.items, updatedItem] };
               return sec;
             });
@@ -594,9 +733,31 @@ export function useThatFridge() {
         isEditingItem: false,
       };
     });
+
+    updateItem(id, { name, icon, ...(moved ? { section_id: toSectionId } : {}) }).catch((err) => {
+      patch((s) => {
+        const found3 = findItem(s, id);
+        if (!found3) return {};
+        const { section: curSection, fridgeIndex } = found3;
+        const fridge = s.fridges[fridgeIndex];
+        const sections =
+          curSection.id === fromSection.id
+            ? fridge.sections.map((sec) =>
+                sec.id === fromSection.id ? { ...sec, items: sec.items.map((it) => (it.id === id ? prevItem : it)) } : sec
+              )
+            : fridge.sections.map((sec) => {
+                if (sec.id === curSection.id) return { ...sec, items: sec.items.filter((it) => it.id !== id) };
+                if (sec.id === fromSection.id) return { ...sec, items: [...sec.items, prevItem] };
+                return sec;
+              });
+        return { fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections } : f)) };
+      });
+      patch({ syncError: describeError(err, "Couldn't save the item.") });
+    });
   };
 
   const adjustItemQty = (id: string, delta: number) => {
+    let newQty = 0;
     patch((s) => {
       const found = findItem(s, id);
       if (!found) return {};
@@ -607,13 +768,32 @@ export function useThatFridge() {
             ? {
                 ...f,
                 sections: f.sections.map((sec) =>
-                  sec.id === section.id ? { ...sec, items: sec.items.map((it) => (it.id === id ? { ...it, qty: Math.max(0, it.qty + delta) } : it)) } : sec
+                  sec.id === section.id
+                    ? {
+                        ...sec,
+                        items: sec.items.map((it) => {
+                          if (it.id !== id) return it;
+                          newQty = Math.max(0, it.qty + delta);
+                          return { ...it, qty: newQty };
+                        }),
+                      }
+                    : sec
                 ),
               }
             : f
         ),
       };
     });
+
+    const existingTimer = qtyDebounceTimers.current[id];
+    if (existingTimer) clearTimeout(existingTimer);
+    qtyDebounceTimers.current[id] = setTimeout(() => {
+      delete qtyDebounceTimers.current[id];
+      // Backend requires quantity >= 1; a locally-displayed 0 (about to be discarded) is sent as 1.
+      updateItem(id, { quantity: Math.max(1, newQty) }).catch((err) => {
+        patch({ syncError: describeError(err, "Couldn't save the quantity.") });
+      });
+    }, 450);
   };
 
   const recordUsage = (s: ThatFridgeState, name: string, icon: string): UsageHistoryEntry[] => {
@@ -643,20 +823,27 @@ export function useThatFridge() {
       isEditingItem: false,
     }));
 
-    scheduleUndo(message, () => {
-      patch((s) => ({
-        fridges: s.fridges.map((f, i) =>
-          i === fridgeIndex
-            ? {
-                ...f,
-                sections: f.sections.map((sec) =>
-                  sec.id === section.id ? { ...sec, items: [...sec.items.slice(0, itemIndex), item, ...sec.items.slice(itemIndex)] } : sec
-                ),
-              }
-            : f
-        ),
-      }));
-    }, onCommit);
+    scheduleUndo(
+      message,
+      () => {
+        patch((s) => ({
+          fridges: s.fridges.map((f, i) =>
+            i === fridgeIndex
+              ? {
+                  ...f,
+                  sections: f.sections.map((sec) =>
+                    sec.id === section.id ? { ...sec, items: [...sec.items.slice(0, itemIndex), item, ...sec.items.slice(itemIndex)] } : sec
+                  ),
+                }
+              : f
+          ),
+        }));
+      },
+      () => {
+        onCommit?.();
+        deleteItem(id).catch((err) => patch({ syncError: describeError(err, "Couldn't delete the item.") }));
+      }
+    );
   };
   const markUsed = () => {
     const id = state.selectedItemId;
@@ -770,57 +957,101 @@ export function useThatFridge() {
       return { manualExpiryDate: toISODate(target), manualLocation: guessLocation(s.manualName) };
     });
   const onManualNoteChange = (value: string) => patch({ manualNote: value });
-  const confirmManualAdd = () => {
+  const confirmManualAdd = async () => {
     const name = state.manualName.trim();
     if (!name) return;
-    patch((s) => {
-      const days = daysUntil(s.manualExpiryDate);
-      const fridge = s.fridges[s.addFridgeIndex];
-      const sectionId = s.manualSectionId || fridge.sections[0]?.id;
-      const newItem = {
-        id: "man-" + Date.now(),
+    const fridgeIndex = state.addFridgeIndex;
+    const fridge = state.fridges[fridgeIndex];
+    let sectionId = state.manualSectionId || fridge.sections[0]?.id;
+    const icon = state.manualIcon || (sectionId && DEFAULT_ICON_BY_SECTION[sectionId]) || "leftovers";
+    const note = state.manualNote.trim() || "Added manually";
+    const location = state.manualLocation;
+    const expiryDate = state.manualExpiryDate;
+    const shelfLifeDays = Math.max(1, daysUntil(expiryDate));
+
+    patch({ screen: state.lastMainScreen, addStep: 0, scanMethod: null, manualName: "", manualNote: "" });
+
+    try {
+      if (!fridge.sections.some((sec) => sec.id === sectionId)) {
+        const section = await createSection(fridge.id, "General");
+        sectionId = section.id;
+        patch((s) => ({
+          fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections: [...f.sections, section] } : f)),
+        }));
+      }
+      const item = await createItem(sectionId!, {
         name,
-        icon: s.manualIcon || (sectionId && DEFAULT_ICON_BY_SECTION[sectionId]) || "leftovers",
-        freshness: 100,
-        days,
-        note: s.manualNote.trim() || "Added manually",
-        qty: 1,
-        location: s.manualLocation,
-      };
-      const sections = fridge.sections.some((sec) => sec.id === sectionId)
-        ? fridge.sections.map((sec) => (sec.id === sectionId ? { ...sec, items: [...sec.items, newItem] } : sec))
-        : [...fridge.sections, { id: "general", name: "General", items: [newItem] }];
-      return {
-        fridges: s.fridges.map((f, i) => (i === s.addFridgeIndex ? { ...f, sections } : f)),
-        screen: s.lastMainScreen,
-        addStep: 0,
-        scanMethod: null,
-        manualName: "",
-        manualNote: "",
-      };
-    });
+        icon,
+        location,
+        quantity: 1,
+        expiry_date: expiryDate,
+        shelf_life_days: shelfLifeDays,
+        note,
+      });
+      patch((s) => ({
+        fridges: s.fridges.map((f, i) =>
+          i === fridgeIndex
+            ? { ...f, sections: f.sections.map((sec) => (sec.id === sectionId ? { ...sec, items: [...sec.items, item] } : sec)) }
+            : f
+        ),
+      }));
+    } catch (err) {
+      patch({ syncError: describeError(err, "Couldn't add the item.") });
+    }
   };
 
-  const confirmAdd = () => {
-    patch((s) => {
-      const toAdd = s.detected.filter((d) => d.checked);
-      const sections = s.fridges[s.addFridgeIndex].sections.map((sec) => {
-        const added = toAdd
-          .filter((d) => d.section === sec.id)
-          .map((d) => {
-            const days = d.expiryDate ? daysUntil(d.expiryDate) : suggestShelfLifeDays(d.icon);
-            return { id: d.id + "-" + Date.now(), name: d.name, icon: d.icon, freshness: 100, days, note: "Just added", qty: d.qty, location: d.location };
-          });
-        return added.length ? { ...sec, items: [...sec.items, ...added] } : sec;
-      });
-      return {
-        fridges: s.fridges.map((f, i) => (i === s.addFridgeIndex ? { ...f, sections } : f)),
-        screen: s.lastMainScreen,
-        addStep: 0,
-        scanMethod: null,
-        detected: [],
-      };
-    });
+  const confirmAdd = async () => {
+    const fridgeIndex = state.addFridgeIndex;
+    const toAdd = state.detected.filter((d) => d.checked);
+    patch({ screen: state.lastMainScreen, addStep: 0, scanMethod: null, detected: [] });
+    if (!toAdd.length) return;
+
+    const results = await Promise.allSettled(
+      toAdd.map(async (d) => {
+        const shelfLifeDays = d.expiryDate ? Math.max(1, daysUntil(d.expiryDate)) : suggestShelfLifeDays(d.icon);
+        const expiryDate =
+          d.expiryDate ||
+          (() => {
+            const target = new Date();
+            target.setDate(target.getDate() + shelfLifeDays);
+            return toISODate(target);
+          })();
+        const item = await createItem(d.section, {
+          name: d.name,
+          icon: d.icon,
+          location: d.location,
+          quantity: d.qty,
+          expiry_date: expiryDate,
+          shelf_life_days: shelfLifeDays,
+          note: "Just added",
+        });
+        return { sectionId: d.section, item };
+      })
+    );
+
+    const succeeded = results.filter(
+      (r): r is PromiseFulfilledResult<{ sectionId: string; item: Item }> => r.status === "fulfilled"
+    );
+    const failedCount = results.length - succeeded.length;
+
+    if (succeeded.length) {
+      patch((s) => ({
+        fridges: s.fridges.map((f, i) =>
+          i === fridgeIndex
+            ? {
+                ...f,
+                sections: f.sections.map((sec) => {
+                  const toAppend = succeeded.filter((r) => r.value.sectionId === sec.id).map((r) => r.value.item);
+                  return toAppend.length ? { ...sec, items: [...sec.items, ...toAppend] } : sec;
+                }),
+              }
+            : f
+        ),
+      }));
+    }
+    if (failedCount) {
+      patch({ syncError: `Couldn't add ${failedCount} item${failedCount > 1 ? "s" : ""}.` });
+    }
   };
 
   const actions = {
@@ -897,6 +1128,7 @@ export function useThatFridge() {
     onEditIconChange,
     confirmEditItem,
     undoLastRemoval,
+    dismissSyncError,
     chooseMethod,
     toggleDetected,
     onDetectedSectionChange,
