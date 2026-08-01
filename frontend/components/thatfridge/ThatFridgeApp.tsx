@@ -4,6 +4,7 @@ import { ThatFridgeProvider, useThatFridgeCtx } from "./ThatFridgeContext";
 import TabBar from "./TabBar";
 import ProfileDrawer from "./ProfileDrawer";
 import UndoToast from "./UndoToast";
+import SyncErrorToast from "./SyncErrorToast";
 import HomeScreen from "./screens/HomeScreen";
 import InventoryScreen from "./screens/InventoryScreen";
 import FoodHubScreen from "./screens/FoodHubScreen";
@@ -93,6 +94,7 @@ function AppShell() {
     <div className="thatfridge-shell" style={shellStyle}>
       <Screens />
       <UndoToast />
+      <SyncErrorToast />
       <TabBar />
       <ProfileDrawer />
     </div>
