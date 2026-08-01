@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\IngestionController;
+use App\Http\Controllers\BarcodeController;
+use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\PhotoController;
+use App\Http\Controllers\AgentController;
 use App\Http\Controllers\FridgeController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\NotificationPrefController;
@@ -8,32 +13,50 @@ use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShoppingItemController;
 use Illuminate\Support\Facades\Route;
 
+// Auth routes (public)
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/test/items', [IngestionController::class, 'store']);
 
+// TRACK B: Ingestion & Agents (public - no auth required)
+Route::prefix('sections/{section}')->group(function () {
+    Route::post('items/manual', [IngestionController::class, 'store']);
+    Route::post('items/barcode', [BarcodeController::class, 'scan']);
+    Route::post('items/receipt/scan', [ReceiptController::class, 'scan']);
+    Route::post('items/receipt/confirm', [ReceiptController::class, 'confirm']);
+    Route::post('items/photo/scan', [PhotoController::class, 'scan']);
+    Route::post('items/photo/confirm', [PhotoController::class, 'confirm']);
+});
+
+Route::prefix('chat')->group(function () {
+    Route::get('/', [AgentController::class, 'history']);
+    Route::post('/', [AgentController::class, 'send']);
+});
+
+// Protected routes (Track A - requires auth)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
-
+    
     Route::get('/fridges', [FridgeController::class, 'index']);
     Route::post('/fridges', [FridgeController::class, 'store']);
     Route::get('/fridges/{fridge}', [FridgeController::class, 'show']);
     Route::patch('/fridges/{fridge}', [FridgeController::class, 'update']);
     Route::delete('/fridges/{fridge}', [FridgeController::class, 'destroy']);
-
+    
     Route::post('/fridges/{fridge}/sections', [SectionController::class, 'store']);
     Route::patch('/sections/{section}', [SectionController::class, 'update']);
     Route::delete('/sections/{section}', [SectionController::class, 'destroy']);
-
+    
     Route::post('/sections/{section}/items', [ItemController::class, 'store']);
     Route::patch('/items/{item}', [ItemController::class, 'update']);
     Route::delete('/items/{item}', [ItemController::class, 'destroy']);
-
+    
     Route::get('/shopping-items', [ShoppingItemController::class, 'index']);
     Route::post('/shopping-items', [ShoppingItemController::class, 'store']);
     Route::patch('/shopping-items/{shoppingItem}', [ShoppingItemController::class, 'update']);
     Route::delete('/shopping-items/{shoppingItem}', [ShoppingItemController::class, 'destroy']);
-
+    
     Route::get('/notification-prefs', [NotificationPrefController::class, 'show']);
     Route::patch('/notification-prefs', [NotificationPrefController::class, 'update']);
 });

@@ -20,6 +20,11 @@ class AgentService
      */
     public function chat($message, $agent = 'Chef', $inventory = null)
     {
+        // Mock response if no API key (for testing)
+        if (!$this->apiKey) {
+            return $this->mockResponse($message, $agent, $inventory);
+        }
+
         try {
             $systemPrompt = $this->getSystemPrompt($agent, $inventory);
             
@@ -60,6 +65,26 @@ class AgentService
             Log::error('Agent chat failed', ['agent' => $agent, 'error' => $e->getMessage()]);
             return null;
         }
+    }
+
+    /**
+     * Mock response when API key is not set (for testing)
+     */
+    private function mockResponse($message, $agent, $inventory = null)
+    {
+        $mockResponses = [
+            'Chef' => "I'd suggest making a delicious meal! With the current inventory, you could prepare something tasty and use items expiring soon.",
+            'Guardian' => "Keep an eye on items expiring in the next 3-5 days. Store soft items in the fridge and frozen items in the freezer for best results.",
+            'Organizer' => "Store fresh produce in the vegetable crisper, dairy on middle shelves, and frozen items in the freezer for optimal organization.",
+            'Shopkeeper' => "Consider restocking dairy, fresh vegetables, and pantry staples. Check expiration dates before your next shopping trip!",
+        ];
+
+        return [
+            'agent' => $agent,
+            'user_message' => $message,
+            'agent_response' => $mockResponses[$agent] ?? $mockResponses['Chef'],
+            'status' => 'success',
+        ];
     }
 
     /**

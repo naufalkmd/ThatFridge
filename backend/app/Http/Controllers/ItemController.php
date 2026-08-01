@@ -12,7 +12,7 @@ class ItemController extends Controller
 {
     public function store(Request $request, Section $section)
     {
-        $this->authorize('update', $section);
+        //$this->authorize('update', $section);
 
         $data = $request->validate([
             'product_id' => ['nullable', 'exists:products,id'],

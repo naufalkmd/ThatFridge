@@ -9,7 +9,7 @@ class IngestionController extends Controller
     /**
      * Manual item entry - Track B endpoint
      */
-    public function store(Request $request, $section)
+    public function store(Request $request) //, $section is removed
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -27,7 +27,7 @@ class IngestionController extends Controller
         // MOCK RESPONSE - Until Track A's endpoint exists
         return response()->json([
             'id' => rand(1, 10000),
-            'section_id' => $section,
+            'section_id' => null, // Section ID is not provided in this endpoint
             'product_id' => null,
             'name' => $validated['name'],
             'icon' => $validated['icon'],
