@@ -960,13 +960,13 @@ export function useThatFridge() {
     }, 1300);
   };
   const onBarcodeInputChange = (value: string) => patch({ barcodeInput: value, barcodeError: null });
-  const lookupBarcode = async () => {
-    const barcode = state.barcodeInput.trim();
+  const lookupBarcode = async (explicitBarcode?: string) => {
+    const barcode = (explicitBarcode ?? state.barcodeInput).trim();
     if (!barcode) return;
     const fridgeIndex = state.addFridgeIndex;
     const fridge = state.fridges[fridgeIndex];
     if (!fridge) return;
-    patch({ barcodeLoading: true, barcodeError: null });
+    patch({ barcodeLoading: true, barcodeError: null, barcodeInput: barcode });
     try {
       let sectionId = fridge.sections[0]?.id;
       if (!sectionId) {

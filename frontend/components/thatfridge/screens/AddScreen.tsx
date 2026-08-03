@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import type { IScannerControls } from "@zxing/browser";
 import { Camera, Check, ChevronDown, ChevronRight, Keyboard, Minus, Plus, Receipt, Refrigerator, ScanBarcode, Sparkles, X } from "lucide-react";
 import { FOOD_ICON_KEYS, ICON_LABELS, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -10,7 +12,7 @@ import type { ScanMethod, StorageLocation } from "@/lib/thatfridge/types";
 
 const SCAN_METHODS: { key: ScanMethod; title: string; desc: string; Icon: typeof Receipt }[] = [
   { key: "receipt", title: "Scan receipt", desc: "Snap your grocery receipt", Icon: Receipt },
-  { key: "barcode", title: "Scan barcode", desc: "Enter the barcode number", Icon: ScanBarcode },
+  { key: "barcode", title: "Scan barcode", desc: "Point your camera at a product barcode", Icon: ScanBarcode },
   { key: "photo", title: "Photo of fridge", desc: "Let AI spot what changed", Icon: Camera },
   { key: "manual", title: "Add manually", desc: "Type in the item yourself", Icon: Keyboard },
 ];
@@ -89,6 +91,77 @@ export default function AddScreen() {
   const targetFridge = state.fridges[state.addFridgeIndex];
   const sections = targetFridge?.sections || [];
 
+  // Barcode capture: live camera scan (primary), photo upload (secondary), manual entry (fallback).
+  const [barcodeMode, setBarcodeMode] = useState<"camera" | "manual">("camera");
+  const [cameraStatus, setCameraStatus] = useState<"starting" | "scanning" | "error">("starting");
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [photoDecodeError, setPhotoDecodeError] = useState<string | null>(null);
+  const [photoDecodeLoading, setPhotoDecodeLoading] = useState(false);
+  const barcodeVideoRef = useRef<HTMLVideoElement | null>(null);
+  const barcodePhotoInputRef = useRef<HTMLInputElement | null>(null);
+  const barcodeControlsRef = useRef<IScannerControls | null>(null);
+
+  useEffect(() => {
+    if (state.addStep === 4) setBarcodeMode("camera");
+  }, [state.addStep]);
+
+  useEffect(() => {
+    if (state.addStep !== 4 || barcodeMode !== "camera") return;
+    let cancelled = false;
+    setCameraStatus("starting");
+    setCameraError(null);
+    const reader = new BrowserMultiFormatReader();
+
+    reader
+      .decodeFromVideoDevice(undefined, barcodeVideoRef.current ?? undefined, (result, _err, controls) => {
+        barcodeControlsRef.current = controls;
+        if (cancelled || !result) return;
+        controls.stop();
+        actions.lookupBarcode(result.getText());
+      })
+      .then(() => {
+        if (!cancelled) setCameraStatus("scanning");
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setCameraStatus("error");
+        const msg = err instanceof Error ? err.message : String(err);
+        setCameraError(
+          /permission|notallowed/i.test(msg)
+            ? "Camera access was denied — use the options below instead."
+            : "Couldn't access the camera — use the options below instead."
+        );
+      });
+
+    return () => {
+      cancelled = true;
+      barcodeControlsRef.current?.stop();
+      barcodeControlsRef.current = null;
+    };
+    // Only restart the camera when the step or mode actually changes — `actions` is a fresh
+    // object every render and would otherwise tear down/restart the camera constantly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.addStep, barcodeMode]);
+
+  const handleBarcodePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setPhotoDecodeError(null);
+    setPhotoDecodeLoading(true);
+    const url = URL.createObjectURL(file);
+    try {
+      const reader = new BrowserMultiFormatReader();
+      const result = await reader.decodeFromImageUrl(url);
+      actions.lookupBarcode(result.getText());
+    } catch {
+      setPhotoDecodeError("Couldn't find a barcode in that photo. Try again or use the camera.");
+    } finally {
+      setPhotoDecodeLoading(false);
+      URL.revokeObjectURL(url);
+    }
+  };
+
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb)", padding: "28px 20px 30px", display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
@@ -142,33 +215,84 @@ export default function AddScreen() {
       )}
 
       {state.addStep === 4 && (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)" }}>Type or paste the barcode number printed under it</div>
-          <input
-            autoFocus
-            inputMode="numeric"
-            value={state.barcodeInput}
-            onChange={(e) => actions.onBarcodeInputChange(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && actions.lookupBarcode()}
-            placeholder="e.g. 0123456789012"
-            style={fieldStyle}
-          />
-          {state.barcodeError && <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e" }}>{state.barcodeError}</div>}
-          <div
-            onClick={actions.lookupBarcode}
-            style={{
-              textAlign: "center",
-              padding: 14,
-              borderRadius: 14,
-              background: state.barcodeInput.trim() && !state.barcodeLoading ? "#16325c" : "rgba(22,50,92,0.25)",
-              color: "#fff",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            {state.barcodeLoading ? "Looking up…" : "Look up product"}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
+          {barcodeMode === "camera" ? (
+            <>
+              <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", textAlign: "center" }}>Point your camera at the barcode</div>
+              <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: 20, overflow: "hidden", background: "#000" }}>
+                <video ref={barcodeVideoRef} muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                {cameraStatus === "scanning" && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "8%",
+                      right: "8%",
+                      top: "48%",
+                      height: 2,
+                      background: "#5ecbff",
+                      boxShadow: "0 0 8px #5ecbff",
+                      animation: "scanline 1.1s linear infinite",
+                    }}
+                  />
+                )}
+              </div>
+              {cameraStatus === "starting" && (
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(22,50,92,0.5)", textAlign: "center" }}>Starting camera…</div>
+              )}
+              {cameraError && <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center" }}>{cameraError}</div>}
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)" }}>Type or paste the barcode number printed under it</div>
+              <input
+                autoFocus
+                inputMode="numeric"
+                value={state.barcodeInput}
+                onChange={(e) => actions.onBarcodeInputChange(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && actions.lookupBarcode()}
+                placeholder="e.g. 0123456789012"
+                style={fieldStyle}
+              />
+              <div
+                onClick={() => actions.lookupBarcode()}
+                style={{
+                  textAlign: "center",
+                  padding: 14,
+                  borderRadius: 14,
+                  background: state.barcodeInput.trim() && !state.barcodeLoading ? "#16325c" : "rgba(22,50,92,0.25)",
+                  color: "#fff",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {state.barcodeLoading ? "Looking up…" : "Look up product"}
+              </div>
+            </>
+          )}
+
+          {state.barcodeLoading && barcodeMode === "camera" && (
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(22,50,92,0.5)", textAlign: "center" }}>Looking up product…</div>
+          )}
+          {state.barcodeError && <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center" }}>{state.barcodeError}</div>}
+          {photoDecodeLoading && <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(22,50,92,0.5)", textAlign: "center" }}>Reading photo…</div>}
+          {photoDecodeError && <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center" }}>{photoDecodeError}</div>}
+
+          <div style={{ display: "flex", justifyContent: "center", gap: 18 }}>
+            <div
+              onClick={() => barcodePhotoInputRef.current?.click()}
+              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Upload a photo
+            </div>
+            <div
+              onClick={() => setBarcodeMode(barcodeMode === "camera" ? "manual" : "camera")}
+              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+            >
+              {barcodeMode === "camera" ? "Enter manually" : "Use camera instead"}
+            </div>
           </div>
+          <input ref={barcodePhotoInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleBarcodePhotoUpload} />
         </div>
       )}
 
