@@ -30,9 +30,12 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
 
 export async function apiFetch<T = unknown>(path: string, opts: RequestInit = {}): Promise<T> {
   const token = getToken();
+  // FormData bodies must NOT get an explicit Content-Type — the browser sets its own
+  // multipart boundary. Only stringified-JSON bodies (plain string) get the JSON header.
+  const isFormData = typeof FormData !== "undefined" && opts.body instanceof FormData;
   const headers: Record<string, string> = {
     Accept: "application/json",
-    ...(opts.body ? { "Content-Type": "application/json" } : {}),
+    ...(opts.body && !isFormData ? { "Content-Type": "application/json" } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(opts.headers as Record<string, string> | undefined),
   };
@@ -44,7 +47,7 @@ export async function apiFetch<T = unknown>(path: string, opts: RequestInit = {}
   const body = await res.json().catch(() => null);
 
   if (!res.ok) {
-    const message = body?.message || `Request failed with status ${res.status}`;
+    const message = body?.message || body?.error || `Request failed with status ${res.status}`;
     throw new ApiError(res.status, message, body?.errors);
   }
 

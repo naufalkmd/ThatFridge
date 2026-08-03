@@ -5,6 +5,7 @@ use App\Http\Controllers\IngestionController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\PhotoController;
+use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\FridgeController;
 use App\Http\Controllers\ItemController;
@@ -26,6 +27,7 @@ Route::prefix('sections/{section}')->group(function () {
     Route::post('items/receipt/confirm', [ReceiptController::class, 'confirm']);
     Route::post('items/photo/scan', [PhotoController::class, 'scan']);
     Route::post('items/photo/confirm', [PhotoController::class, 'confirm']);
+    Route::post('items/expiry-scan', [ExpiryScanController::class, 'scan']);
 });
 
 Route::prefix('chat')->group(function () {
