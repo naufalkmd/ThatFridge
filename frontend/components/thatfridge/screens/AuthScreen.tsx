@@ -40,6 +40,7 @@ export default function AuthScreen() {
         background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)",
         display: "flex",
         flexDirection: "column",
+        justifyContent: "center",
         overflowY: "auto",
         padding: "56px 24px 40px",
       }}

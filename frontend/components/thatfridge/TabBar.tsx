@@ -51,6 +51,7 @@ export default function TabBar() {
 
   return (
     <div
+      className="thatfridge-tabbar"
       style={{
         position: "absolute",
         left: "50%",

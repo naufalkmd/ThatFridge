@@ -1,7 +1,9 @@
 "use client";
 
+import { Refrigerator } from "lucide-react";
 import { ThatFridgeProvider, useThatFridgeCtx } from "./ThatFridgeContext";
 import TabBar from "./TabBar";
+import Sidebar from "./Sidebar";
 import ProfileDrawer from "./ProfileDrawer";
 import UndoToast from "./UndoToast";
 import SyncErrorToast from "./SyncErrorToast";
@@ -68,35 +70,61 @@ const shellStyle: React.CSSProperties = {
   color: "#16325c",
 };
 
+function DesktopBrand() {
+  return (
+    <div className="thatfridge-desktop-brand">
+      <div className="thatfridge-desktop-brand-icon">
+        <Refrigerator size={20} color="#fff" strokeWidth={1.8} />
+      </div>
+      <div>
+        <div className="thatfridge-desktop-brand-title">ThatFridge</div>
+        <div className="thatfridge-desktop-brand-tagline">Know what&apos;s inside before you open the door.</div>
+      </div>
+    </div>
+  );
+}
+
 function AppShell() {
   const { state } = useThatFridgeCtx();
 
   if (!state.isAuthenticated) {
     return (
-      <div className="thatfridge-shell" style={shellStyle}>
-        <AuthScreen />
+      <div className="thatfridge-shell-wrap">
+        <DesktopBrand />
+        <div className="thatfridge-shell" style={shellStyle}>
+          <AuthScreen />
+        </div>
       </div>
     );
   }
 
   if (state.isLoading) {
     return (
-      <div
-        className="thatfridge-shell"
-        style={{ ...shellStyle, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600 }}
-      >
-        Loading your fridge…
+      <div className="thatfridge-shell-wrap">
+        <DesktopBrand />
+        <div
+          className="thatfridge-shell"
+          style={{ ...shellStyle, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600 }}
+        >
+          Loading your fridge…
+        </div>
       </div>
     );
   }
 
+  // Signed in: below 900px this renders as plain full-bleed mobile (same as a real phone,
+  // no framed-preview tier); at >=900px CSS swaps it for Sidebar + a full-width shell — see
+  // the .thatfridge-app-wrap rules in globals.css.
   return (
-    <div className="thatfridge-shell" style={shellStyle}>
-      <Screens />
-      <UndoToast />
-      <SyncErrorToast />
-      <TabBar />
-      <ProfileDrawer />
+    <div className="thatfridge-app-wrap">
+      <Sidebar />
+      <div className="thatfridge-shell" style={shellStyle}>
+        <Screens />
+        <UndoToast />
+        <SyncErrorToast />
+        <TabBar />
+        <ProfileDrawer />
+      </div>
     </div>
   );
 }
