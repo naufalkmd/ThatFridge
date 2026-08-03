@@ -1022,6 +1022,10 @@ export function useThatFridge() {
   const skipExpiryPhoto = () => patch({ addStep: 2, expiryPhotoError: null, expiryScanNote: null });
   const toggleDetected = (id: string) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, checked: !d.checked } : d)) }));
+  const onDetectedNameChange = (id: string, name: string) =>
+    patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, name } : d)) }));
+  const onDetectedIconChange = (id: string, icon: string) =>
+    patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, icon } : d)) }));
   const onDetectedSectionChange = (id: string, sectionId: string) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, section: sectionId } : d)) }));
   const adjustDetectedQty = (id: string, delta: number) =>
@@ -1242,6 +1246,8 @@ export function useThatFridge() {
     dismissSyncError,
     chooseMethod,
     toggleDetected,
+    onDetectedNameChange,
+    onDetectedIconChange,
     onDetectedSectionChange,
     adjustDetectedQty,
     onDetectedExpiryChange,

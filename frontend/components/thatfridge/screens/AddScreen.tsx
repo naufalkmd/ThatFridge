@@ -85,11 +85,75 @@ function LocationPicker({ value, onChange }: { value: StorageLocation; onChange:
 export default function AddScreen() {
   const { state, actions } = useThatFridgeCtx();
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconPickerForId, setIconPickerForId] = useState<string | null>(null);
   const expiryFileInputRef = useRef<HTMLInputElement | null>(null);
   const scanningLabel = state.scanMethod === "receipt" ? "Reading receipt…" : "Scanning fridge photo…";
   const checkedCount = state.detected.filter((d) => d.checked).length;
   const targetFridge = state.fridges[state.addFridgeIndex];
   const sections = targetFridge?.sections || [];
+
+  // Expiry-date capture: live camera preview + shutter (primary), photo upload (secondary),
+  // skip-to-manual (fallback, jumps straight to the already-editable date field on the review
+  // screen). Unlike barcode decoding (local, free, every frame), reading the date is a paid AI
+  // vision call, so we capture one still frame on tap rather than scanning continuously.
+  const [expiryCameraStatus, setExpiryCameraStatus] = useState<"starting" | "ready" | "error">("starting");
+  const [expiryCameraError, setExpiryCameraError] = useState<string | null>(null);
+  const expiryVideoRef = useRef<HTMLVideoElement | null>(null);
+  const expiryStreamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    if (state.addStep !== 6) return;
+    let cancelled = false;
+    setExpiryCameraStatus("starting");
+    setExpiryCameraError(null);
+
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: "environment" } })
+      .then((stream) => {
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        expiryStreamRef.current = stream;
+        if (expiryVideoRef.current) expiryVideoRef.current.srcObject = stream;
+        setExpiryCameraStatus("ready");
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setExpiryCameraStatus("error");
+        const msg = err instanceof Error ? err.message : String(err);
+        setExpiryCameraError(
+          /permission|notallowed/i.test(msg)
+            ? "Camera access was denied — use the options below instead."
+            : "Couldn't access the camera — use the options below instead."
+        );
+      });
+
+    return () => {
+      cancelled = true;
+      expiryStreamRef.current?.getTracks().forEach((t) => t.stop());
+      expiryStreamRef.current = null;
+    };
+  }, [state.addStep]);
+
+  const captureExpiryFrame = () => {
+    const video = expiryVideoRef.current;
+    if (!video || !video.videoWidth) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        actions.captureExpiryPhoto(new File([blob], "expiry.jpg", { type: "image/jpeg" }));
+      },
+      "image/jpeg",
+      0.9
+    );
+  };
 
   // Barcode capture: live camera scan (primary), photo upload (secondary), manual entry (fallback).
   const [barcodeMode, setBarcodeMode] = useState<"camera" | "manual">("camera");
@@ -297,30 +361,67 @@ export default function AddScreen() {
       )}
 
       {state.addStep === 6 && (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18 }}>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", textAlign: "center", padding: "0 16px" }}>
-            Snap a photo of the printed expiry / best-before date on the package
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", textAlign: "center" }}>
+            Line up the printed expiry / best-before date, then tap to capture
           </div>
-          <div
-            onClick={() => expiryFileInputRef.current?.click()}
-            style={{
-              width: 120,
-              height: 120,
-              borderRadius: 24,
-              background: "#eaf6ff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >
-            <Camera size={40} color="#4a6fa5" strokeWidth={1.8} />
+          <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: 20, overflow: "hidden", background: "#000" }}>
+            <video ref={expiryVideoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          </div>
+          {expiryCameraStatus === "starting" && (
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(22,50,92,0.5)", textAlign: "center" }}>Starting camera…</div>
+          )}
+          {expiryCameraError && (
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center" }}>{expiryCameraError}</div>
+          )}
+          {expiryCameraStatus === "ready" && (
+            <div
+              onClick={captureExpiryFrame}
+              style={{
+                alignSelf: "center",
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                background: "#16325c",
+                border: "4px solid rgba(255,255,255,0.85)",
+                boxShadow: "0 6px 16px rgba(22,50,92,0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+              }}
+            >
+              <Camera size={26} color="#fff" strokeWidth={2} />
+            </div>
+          )}
+
+          {state.expiryPhotoLoading && (
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(22,50,92,0.6)", textAlign: "center" }}>Reading the date…</div>
+          )}
+          {state.expiryPhotoError && (
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center", padding: "0 20px" }}>
+              {state.expiryPhotoError}
+            </div>
+          )}
+
+          <div style={{ display: "flex", justifyContent: "center", gap: 18 }}>
+            <div
+              onClick={() => expiryFileInputRef.current?.click()}
+              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Upload a photo
+            </div>
+            <div
+              onClick={actions.skipExpiryPhoto}
+              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Skip — enter manually
+            </div>
           </div>
           <input
             ref={expiryFileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             style={{ display: "none" }}
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -328,20 +429,6 @@ export default function AddScreen() {
               e.target.value = "";
             }}
           />
-          {state.expiryPhotoLoading && (
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(22,50,92,0.6)" }}>Reading the date…</div>
-          )}
-          {state.expiryPhotoError && (
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center", padding: "0 20px" }}>
-              {state.expiryPhotoError}
-            </div>
-          )}
-          <div
-            onClick={actions.skipExpiryPhoto}
-            style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
-          >
-            Skip — I&apos;ll enter the date manually
-          </div>
         </div>
       )}
 
@@ -367,12 +454,21 @@ export default function AddScreen() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, overflowY: "auto" }}>
             {state.detected.map((d) => (
               <div key={d.id} style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-                <div onClick={() => actions.toggleDetected(d.id)} style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-                  <div style={{ position: "relative", width: 28, height: 28, flex: "none" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div
+                    onClick={() => setIconPickerForId(iconPickerForId === d.id ? null : d.id)}
+                    title="Change picture"
+                    style={{ position: "relative", width: 28, height: 28, flex: "none", cursor: "pointer" }}
+                  >
                     <FoodIcon icon={d.icon} />
                   </div>
-                  <div style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{d.name}</div>
+                  <input
+                    value={d.name}
+                    onChange={(e) => actions.onDetectedNameChange(d.id, e.target.value)}
+                    style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 14, fontWeight: 600, color: "#16325c", padding: 0 }}
+                  />
                   <div
+                    onClick={() => actions.toggleDetected(d.id)}
                     style={{
                       width: 22,
                       height: 22,
@@ -383,11 +479,45 @@ export default function AddScreen() {
                       alignItems: "center",
                       justifyContent: "center",
                       flex: "none",
+                      cursor: "pointer",
                     }}
                   >
                     {d.checked && <Check size={13} color="#fff" strokeWidth={2.5} />}
                   </div>
                 </div>
+
+                {iconPickerForId === d.id && (
+                  <div style={{ maxHeight: 180, overflowY: "auto", background: "#eaf6ff", borderRadius: 12, padding: 10 }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {FOOD_ICON_KEYS.map((key) => (
+                        <div
+                          key={key}
+                          title={ICON_LABELS[key]}
+                          onClick={() => {
+                            actions.onDetectedIconChange(d.id, key);
+                            setIconPickerForId(null);
+                          }}
+                          style={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: 12,
+                            background: "#fff",
+                            border: `2px solid ${d.icon === key ? "#2f6fb0" : "transparent"}`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            flex: "none",
+                          }}
+                        >
+                          <div style={{ position: "relative", width: 22, height: 22 }}>
+                            <FoodIcon icon={key} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ display: "flex", gap: 8 }}>
                   <select
