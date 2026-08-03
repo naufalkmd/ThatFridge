@@ -15,19 +15,21 @@ class AgentController extends Controller
     }
 
     /**
-     * Get chat history (mock for now)
+     * Get the authenticated user's chat history, oldest first.
      */
     public function history(Request $request)
     {
-        // In real implementation, fetch from ChatHistory table
+        $messages = $request->user()->chatHistory()->orderBy('created_at')->get([
+            'id', 'agent', 'user_message', 'agent_response', 'created_at',
+        ]);
+
         return response()->json([
-            'messages' => [],
-            'message' => 'Chat history endpoint (will pull from database when Track A is ready)',
+            'messages' => $messages,
         ], 200);
     }
 
     /**
-     * Send message to agent and get response
+     * Send message to agent, persist the exchange, and return the response
      */
     public function send(Request $request)
     {
@@ -47,12 +49,18 @@ class AgentController extends Controller
             return response()->json(['error' => 'Failed to get agent response'], 500);
         }
 
-        return response()->json([
-            'id' => rand(1, 100000),
-            'user_message' => $result['user_message'],
+        $record = $request->user()->chatHistory()->create([
             'agent' => $result['agent'],
+            'user_message' => $result['user_message'],
             'agent_response' => $result['agent_response'],
-            'created_at' => now()->toIso8601String(),
+        ]);
+
+        return response()->json([
+            'id' => $record->id,
+            'user_message' => $record->user_message,
+            'agent' => $record->agent,
+            'agent_response' => $record->agent_response,
+            'created_at' => $record->created_at->toIso8601String(),
         ], 200);
     }
 }

@@ -30,15 +30,16 @@ Route::prefix('sections/{section}')->group(function () {
     Route::post('items/expiry-scan', [ExpiryScanController::class, 'scan']);
 });
 
-Route::prefix('chat')->group(function () {
-    Route::get('/', [AgentController::class, 'history']);
-    Route::post('/', [AgentController::class, 'send']);
-});
-
 // Protected routes (Track A - requires auth)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+
+    // Chat history is per-user, so it needs auth to know whose history to read/write.
+    Route::prefix('chat')->group(function () {
+        Route::get('/', [AgentController::class, 'history']);
+        Route::post('/', [AgentController::class, 'send']);
+    });
     
     Route::get('/fridges', [FridgeController::class, 'index']);
     Route::post('/fridges', [FridgeController::class, 'store']);

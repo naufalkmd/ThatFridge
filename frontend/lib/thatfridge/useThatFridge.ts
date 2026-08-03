@@ -10,6 +10,7 @@ import {
   deleteFridge as apiDeleteFridge,
   deleteItem,
   deleteShoppingItem,
+  fetchChatHistory,
   fetchFridges,
   fetchMe,
   fetchNotificationPrefs,
@@ -334,9 +335,13 @@ export function useThatFridge() {
   useEffect(() => {
     if (!state.isAuthenticated) return;
     let cancelled = false;
-    Promise.all([fetchFridges(), fetchRecipes(), fetchShoppingItems(), fetchNotificationPrefs()]).then(
-      ([fridges, recipes, shoppingList, notificationPrefs]) => {
+    Promise.all([fetchFridges(), fetchRecipes(), fetchShoppingItems(), fetchNotificationPrefs(), fetchChatHistory()]).then(
+      ([fridges, recipes, shoppingList, notificationPrefs, chatHistory]) => {
         if (cancelled) return;
+        const restoredChatMessages: ChatMessage[] = chatHistory.flatMap((row) => [
+          { id: `u${row.id}`, from: "user" as const, text: row.user_message },
+          ...(row.agent_response ? [{ id: `b${row.id}`, from: "bot" as const, text: row.agent_response }] : []),
+        ]);
         patch({
           fridges,
           recipes,
@@ -345,6 +350,7 @@ export function useThatFridge() {
           notificationPrefs,
           isLoading: false,
           notificationEvents: buildNotificationSeed(fridges),
+          ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
       }
     );

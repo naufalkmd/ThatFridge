@@ -194,3 +194,16 @@ export function sendChatMessage(message: string, agent: ChatAgentName, inventory
     body: JSON.stringify({ message, agent, inventory }),
   });
 }
+
+export interface ChatHistoryRow {
+  id: number;
+  agent: ChatAgentName;
+  user_message: string;
+  agent_response: string | null;
+  created_at: string;
+}
+
+export async function fetchChatHistory(): Promise<ChatHistoryRow[]> {
+  const res = await apiFetch<{ messages: ChatHistoryRow[] }>("/chat");
+  return res.messages;
+}

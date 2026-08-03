@@ -47,4 +47,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(NotificationPref::class);
     }
+
+    public function chatHistory(): HasMany
+    {
+        return $this->hasMany(ChatHistory::class);
+    }
 }
