@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Camera, Check, ChevronDown, ChevronRight, Keyboard, Minus, Plus, Receipt, Refrigerator, ScanBarcode, Sparkles, X } from "lucide-react";
 import { FOOD_ICON_KEYS, ICON_LABELS, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -10,7 +10,7 @@ import type { ScanMethod, StorageLocation } from "@/lib/thatfridge/types";
 
 const SCAN_METHODS: { key: ScanMethod; title: string; desc: string; Icon: typeof Receipt }[] = [
   { key: "receipt", title: "Scan receipt", desc: "Snap your grocery receipt", Icon: Receipt },
-  { key: "barcode", title: "Scan barcode", desc: "Point at a product barcode", Icon: ScanBarcode },
+  { key: "barcode", title: "Scan barcode", desc: "Enter the barcode number", Icon: ScanBarcode },
   { key: "photo", title: "Photo of fridge", desc: "Let AI spot what changed", Icon: Camera },
   { key: "manual", title: "Add manually", desc: "Type in the item yourself", Icon: Keyboard },
 ];
@@ -83,8 +83,8 @@ function LocationPicker({ value, onChange }: { value: StorageLocation; onChange:
 export default function AddScreen() {
   const { state, actions } = useThatFridgeCtx();
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const scanningLabel =
-    state.scanMethod === "barcode" ? "Reading barcode…" : state.scanMethod === "receipt" ? "Reading receipt…" : "Scanning fridge photo…";
+  const expiryFileInputRef = useRef<HTMLInputElement | null>(null);
+  const scanningLabel = state.scanMethod === "receipt" ? "Reading receipt…" : "Scanning fridge photo…";
   const checkedCount = state.detected.filter((d) => d.checked).length;
   const targetFridge = state.fridges[state.addFridgeIndex];
   const sections = targetFridge?.sections || [];
@@ -141,6 +141,86 @@ export default function AddScreen() {
         </>
       )}
 
+      {state.addStep === 4 && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)" }}>Type or paste the barcode number printed under it</div>
+          <input
+            autoFocus
+            inputMode="numeric"
+            value={state.barcodeInput}
+            onChange={(e) => actions.onBarcodeInputChange(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && actions.lookupBarcode()}
+            placeholder="e.g. 0123456789012"
+            style={fieldStyle}
+          />
+          {state.barcodeError && <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e" }}>{state.barcodeError}</div>}
+          <div
+            onClick={actions.lookupBarcode}
+            style={{
+              textAlign: "center",
+              padding: 14,
+              borderRadius: 14,
+              background: state.barcodeInput.trim() && !state.barcodeLoading ? "#16325c" : "rgba(22,50,92,0.25)",
+              color: "#fff",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            {state.barcodeLoading ? "Looking up…" : "Look up product"}
+          </div>
+        </div>
+      )}
+
+      {state.addStep === 6 && (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18 }}>
+          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", textAlign: "center", padding: "0 16px" }}>
+            Snap a photo of the printed expiry / best-before date on the package
+          </div>
+          <div
+            onClick={() => expiryFileInputRef.current?.click()}
+            style={{
+              width: 120,
+              height: 120,
+              borderRadius: 24,
+              background: "#eaf6ff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >
+            <Camera size={40} color="#4a6fa5" strokeWidth={1.8} />
+          </div>
+          <input
+            ref={expiryFileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) actions.captureExpiryPhoto(file);
+              e.target.value = "";
+            }}
+          />
+          {state.expiryPhotoLoading && (
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(22,50,92,0.6)" }}>Reading the date…</div>
+          )}
+          {state.expiryPhotoError && (
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center", padding: "0 20px" }}>
+              {state.expiryPhotoError}
+            </div>
+          )}
+          <div
+            onClick={actions.skipExpiryPhoto}
+            style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+          >
+            Skip — I&apos;ll enter the date manually
+          </div>
+        </div>
+      )}
+
       {state.addStep === 1 && (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18 }}>
           <div style={{ position: "relative", width: 160, height: 160, borderRadius: 24, background: "#eaf6ff", overflow: "hidden" }}>
@@ -152,9 +232,14 @@ export default function AddScreen() {
 
       {state.addStep === 2 && (
         <>
-          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: 14 }}>
-            Found {state.detected.length} items — the scan can&apos;t tell expiry or storage, so set them below or tap Auto-fill
+          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: state.expiryScanNote ? 6 : 14 }}>
+            {state.scanMethod === "barcode"
+              ? "Found the product — double-check the details below before adding"
+              : "Found " + state.detected.length + " items — the scan can’t tell expiry or storage, so set them below or tap Auto-fill"}
           </div>
+          {state.expiryScanNote && (
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#4a6fa5", marginBottom: 14 }}>{state.expiryScanNote}</div>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, overflowY: "auto" }}>
             {state.detected.map((d) => (
               <div key={d.id} style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>

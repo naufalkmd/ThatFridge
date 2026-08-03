@@ -122,6 +122,40 @@ export function deleteItem(id: string): Promise<void> {
   return apiFetch<void>(`/items/${id}`, { method: "DELETE" });
 }
 
+export interface BarcodeSuggestion {
+  name: string;
+  icon: string;
+  category: string | null;
+  default_shelf_life_days: number;
+  barcode: string;
+  image_url: string | null;
+}
+
+export async function scanBarcode(sectionId: string, barcode: string): Promise<BarcodeSuggestion> {
+  const res = await apiFetch<{ suggestion: BarcodeSuggestion }>(`/sections/${sectionId}/items/barcode`, {
+    method: "POST",
+    body: JSON.stringify({ barcode }),
+  });
+  return res.suggestion;
+}
+
+export interface ExpiryScanResult {
+  found: boolean;
+  date?: string;
+  raw_text?: string | null;
+  confidence?: "high" | "medium" | "low";
+  message?: string;
+}
+
+export function scanExpiryPhoto(sectionId: string, image: File): Promise<ExpiryScanResult> {
+  const formData = new FormData();
+  formData.append("image", image);
+  return apiFetch<ExpiryScanResult>(`/sections/${sectionId}/items/expiry-scan`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 export function fetchShoppingItems(): Promise<ShoppingItem[]> {
   return apiFetch<ShoppingItem[]>("/shopping-items");
 }
@@ -144,4 +178,19 @@ export function fetchNotificationPrefs(): Promise<NotificationPrefs> {
 
 export function updateNotificationPrefs(data: Partial<NotificationPrefs>): Promise<NotificationPrefs> {
   return apiFetch<NotificationPrefs>("/notification-prefs", { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export type ChatAgentName = "Chef" | "Guardian" | "Organizer" | "Shopkeeper";
+
+export interface SendChatMessageResult {
+  agent: ChatAgentName;
+  user_message: string;
+  agent_response: string;
+}
+
+export function sendChatMessage(message: string, agent: ChatAgentName, inventory?: string): Promise<SendChatMessageResult> {
+  return apiFetch<SendChatMessageResult>("/chat", {
+    method: "POST",
+    body: JSON.stringify({ message, agent, inventory }),
+  });
 }

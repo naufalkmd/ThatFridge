@@ -33,7 +33,7 @@ class AgentService
                 'HTTP-Referer' => env('APP_URL'),
                 'X-Title' => 'ThatFridge',
             ])->post($this->baseUrl, [
-                'model' => 'google/gemini-2.0-flash-001',
+                'model' => 'anthropic/claude-haiku-4.5',
                 'max_tokens' => 1000,
                 'messages' => [
                     [

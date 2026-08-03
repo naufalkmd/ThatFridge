@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FOOD_TAB_ORDER, ICON_SECTION, guessIcon, guessLocation, suggestShelfLifeDays } from "./data";
+import { FOOD_ICON_KEYS, FOOD_TAB_ORDER, ICON_SECTION, guessIcon, guessLocation, suggestShelfLifeDays } from "./data";
 import {
   createFridge,
   createItem,
@@ -18,6 +18,9 @@ import {
   login,
   logout,
   register,
+  scanBarcode,
+  scanExpiryPhoto,
+  sendChatMessage,
   updateFridge,
   updateItem,
   updateNotificationPrefs,
@@ -44,9 +47,15 @@ import type {
   StorageLocation,
   UsageHistoryEntry,
 } from "./types";
-import { chatBotReply } from "./chat";
-
 const DEFAULT_CHAT_MESSAGES: ChatMessage[] = [{ id: "m0", from: "bot", text: "Hi! Ask me anything about what's in your fridge." }];
+
+function buildInventorySummary(fridge: Fridge | undefined): string | undefined {
+  if (!fridge) return undefined;
+  const lines = fridge.sections.flatMap((section) =>
+    section.items.map((item) => `${item.name} — qty ${item.qty}, ${item.location ?? "fridge"}, use within ${item.days} day${item.days === 1 ? "" : "s"}`)
+  );
+  return lines.length ? lines.join("\n") : "Fridge is currently empty.";
+}
 
 function deriveThreadTitle(messages: ChatMessage[]): string {
   const firstUserMsg = messages.find((m) => m.from === "user")?.text.trim();
@@ -66,7 +75,12 @@ function archiveCurrentThread(s: ThatFridgeState): ChatThread[] {
 }
 
 function toISODate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  // Use local calendar date components, not toISOString() (which converts to UTC first and
+  // shifts the date backward by a day for timezones ahead of UTC during early local hours).
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function defaultExpiryDate(): string {
@@ -121,6 +135,12 @@ export interface ThatFridgeState {
   addFridgeIndex: number;
   scanMethod: ScanMethod | null;
   detected: DetectedItem[];
+  barcodeInput: string;
+  barcodeLoading: boolean;
+  barcodeError: string | null;
+  expiryPhotoLoading: boolean;
+  expiryPhotoError: string | null;
+  expiryScanNote: string | null;
   manualName: string;
   manualSectionId: string;
   manualSectionAuto: boolean;
@@ -178,6 +198,12 @@ function initialState(): ThatFridgeState {
     addFridgeIndex: 0,
     scanMethod: null,
     detected: [],
+    barcodeInput: "",
+    barcodeLoading: false,
+    barcodeError: null,
+    expiryPhotoLoading: false,
+    expiryPhotoError: null,
+    expiryScanNote: null,
     manualName: "",
     manualSectionId: "",
     manualSectionAuto: true,
@@ -512,7 +538,7 @@ export function useThatFridge() {
   const ensureShoppingSeed = () => {
     patch((s) => {
       if (s.shoppingSeeded) return {};
-      const lowStock = s.fridges[s.activeFridge].sections
+      const lowStock = (s.fridges[s.activeFridge]?.sections || [])
         .flatMap((sec) => sec.items)
         .filter((i) => /left|remaining/i.test(i.note));
       const seeded: ShoppingItem[] = lowStock.map((i) => ({
@@ -628,11 +654,23 @@ export function useThatFridge() {
     if (!trimmed && !attachmentName) return;
     const userMsg: ChatMessage = { id: "u" + Date.now(), from: "user", text: trimmed, attachmentName };
     patch((s) => ({ chatMessages: [...s.chatMessages, userMsg], chatDraft: "", isTyping: true }));
-    setTimeout(() => {
-      const replyText = trimmed ? chatBotReply(trimmed) : `Thanks for sharing "${attachmentName}" — I'll take a look!`;
-      const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: replyText };
+
+    if (!trimmed) {
+      const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: `Thanks for sharing "${attachmentName}" — I'll take a look!` };
       patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false }));
-    }, 900);
+      return;
+    }
+
+    const inventory = buildInventorySummary(state.fridges[state.activeFridge]);
+    sendChatMessage(trimmed, "Chef", inventory)
+      .then((res) => {
+        const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: res.agent_response };
+        patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false }));
+      })
+      .catch((err) => {
+        const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: describeError(err, "Sorry, I couldn't reach the assistant right now.") };
+        patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false }));
+      });
   };
   const sendMessage = (attachmentName?: string) => sendChat(state.chatDraft, attachmentName);
   const onChatKeyDown = (key: string) => {
@@ -648,6 +686,8 @@ export function useThatFridge() {
       addStep: 0,
       scanMethod: null,
       detected: [],
+      expiryScanNote: null,
+      expiryPhotoError: null,
       manualName: "",
       manualSectionId: "",
       manualExpiryDate: defaultExpiryDate(),
@@ -666,7 +706,7 @@ export function useThatFridge() {
       scanMethod: null,
       detected: [],
       manualName: "",
-      manualSectionId: s.fridges[s.activeFridge].sections[0]?.id || "",
+      manualSectionId: s.fridges[s.activeFridge]?.sections[0]?.id || "",
       manualSectionAuto: true,
       manualIcon: "leftovers",
       manualIconAuto: true,
@@ -880,7 +920,7 @@ export function useThatFridge() {
         scanMethod: method,
         addStep: 3,
         manualName: "",
-        manualSectionId: s.fridges[s.addFridgeIndex].sections[0]?.id || "",
+        manualSectionId: s.fridges[s.addFridgeIndex]?.sections[0]?.id || "",
         manualSectionAuto: true,
         manualIcon: "leftovers",
         manualIconAuto: true,
@@ -890,8 +930,14 @@ export function useThatFridge() {
       }));
       return;
     }
+    if (method === "barcode") {
+      patch({ scanMethod: method, addStep: 4, barcodeInput: "", barcodeError: null, expiryScanNote: null, expiryPhotoError: null });
+      return;
+    }
+    // Receipt & photo scanning aren't wired to a real vision backend yet — this stays a
+    // placeholder flow until that's built (see AGENTS.md / product audit notes).
     const detectedTemplates: { name: string; icon: string; group: string }[] = [
-      { name: method === "barcode" ? "Scanned item" : "Orange juice", icon: "milk", group: "dairy" },
+      { name: "Orange juice", icon: "milk", group: "dairy" },
       { name: "Bell peppers", icon: "carrot", group: "produce" },
       { name: "Sour cream", icon: "yogurt", group: "dairy" },
     ];
@@ -913,6 +959,67 @@ export function useThatFridge() {
       });
     }, 1300);
   };
+  const onBarcodeInputChange = (value: string) => patch({ barcodeInput: value, barcodeError: null });
+  const lookupBarcode = async () => {
+    const barcode = state.barcodeInput.trim();
+    if (!barcode) return;
+    const fridgeIndex = state.addFridgeIndex;
+    const fridge = state.fridges[fridgeIndex];
+    if (!fridge) return;
+    patch({ barcodeLoading: true, barcodeError: null });
+    try {
+      let sectionId = fridge.sections[0]?.id;
+      if (!sectionId) {
+        // Brand-new fridges start with zero sections — create one on the fly, same as manual add.
+        const section = await createSection(fridge.id, "General");
+        sectionId = section.id;
+        patch((s) => ({
+          fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections: [...f.sections, section] } : f)),
+        }));
+      }
+      const product = await scanBarcode(sectionId, barcode);
+      const icon = FOOD_ICON_KEYS.includes(product.icon) ? product.icon : guessIcon(product.name) || "leftovers";
+      const group = ICON_SECTION[icon];
+      const target = new Date();
+      target.setDate(target.getDate() + (product.default_shelf_life_days || suggestShelfLifeDays(icon)));
+      const detected: DetectedItem = {
+        id: "bc" + Date.now(),
+        name: product.name,
+        icon,
+        section: (group && findSectionIdForGroup(fridge.sections, group)) || sectionId,
+        checked: true,
+        qty: 1,
+        expiryDate: toISODate(target),
+        location: guessLocation(product.name),
+      };
+      patch({ addStep: 6, detected: [detected], barcodeLoading: false, barcodeInput: "" });
+    } catch (err) {
+      patch({ barcodeLoading: false, barcodeError: describeError(err, "Couldn't look up that barcode.") });
+    }
+  };
+  const captureExpiryPhoto = async (file: File) => {
+    const sectionId = state.detected[0]?.section;
+    if (!sectionId) return;
+    patch({ expiryPhotoLoading: true, expiryPhotoError: null });
+    try {
+      const result = await scanExpiryPhoto(sectionId, file);
+      if (!result.found || !result.date) {
+        patch({ expiryPhotoLoading: false, expiryPhotoError: result.message || "Couldn't read a date on that photo." });
+        return;
+      }
+      const note = `AI read the expiry date as ${result.date}${result.confidence ? ` (${result.confidence} confidence)` : ""} — double-check before adding.`;
+      patch((s) => ({
+        detected: s.detected.map((d, i) => (i === 0 ? { ...d, expiryDate: result.date! } : d)),
+        expiryPhotoLoading: false,
+        expiryPhotoError: null,
+        expiryScanNote: note,
+        addStep: 2,
+      }));
+    } catch (err) {
+      patch({ expiryPhotoLoading: false, expiryPhotoError: describeError(err, "Couldn't read a date on that photo.") });
+    }
+  };
+  const skipExpiryPhoto = () => patch({ addStep: 2, expiryPhotoError: null, expiryScanNote: null });
   const toggleDetected = (id: string) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, checked: !d.checked } : d)) }));
   const onDetectedSectionChange = (id: string, sectionId: string) =>
@@ -1003,7 +1110,7 @@ export function useThatFridge() {
   const confirmAdd = async () => {
     const fridgeIndex = state.addFridgeIndex;
     const toAdd = state.detected.filter((d) => d.checked);
-    patch({ screen: state.lastMainScreen, addStep: 0, scanMethod: null, detected: [] });
+    patch({ screen: state.lastMainScreen, addStep: 0, scanMethod: null, detected: [], expiryScanNote: null, expiryPhotoError: null });
     if (!toAdd.length) return;
 
     const results = await Promise.allSettled(
@@ -1117,6 +1224,10 @@ export function useThatFridge() {
     goTab,
     openAdd,
     selectAddFridge,
+    onBarcodeInputChange,
+    lookupBarcode,
+    captureExpiryPhoto,
+    skipExpiryPhoto,
     selectItem,
     adjustItemQty,
     markUsed,
