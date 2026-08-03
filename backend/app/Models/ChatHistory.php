@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+#[Fillable(['user_id', 'agent', 'user_message', 'agent_response'])]
+class ChatHistory extends Model
+{
+    // The migration created a singular `chat_history` table, not Eloquent's default
+    // pluralized guess (`chat_histories`).
+    protected $table = 'chat_history';
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+}
