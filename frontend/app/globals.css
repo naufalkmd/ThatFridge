@@ -30,6 +30,144 @@ body {
   height: 100dvh;
 }
 
+/* Desktop/tablet: frame the phone-shaped app as a deliberate preview instead of a
+   narrow page floating on blank white. Mobile viewports are untouched below this. */
+.thatfridge-desktop-brand {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  /* Scoped to the auth/loading wrapper only — the signed-in app (.thatfridge-app-wrap)
+     skips this framed-preview tier entirely and stays full-bleed mobile until the real
+     sidebar layout takes over at 900px. Two clean states, one clean jump, instead of
+     mobile -> framed-phone -> sidebar. */
+  body:has(.thatfridge-shell-wrap) {
+    justify-content: center;
+    align-items: center;
+    padding: 48px 24px;
+    background: radial-gradient(ellipse 900px 700px at 50% -10%, #2f5f9e 0%, #1a3a63 45%, #0a1a30 100%);
+  }
+
+  .thatfridge-shell-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+  }
+
+  .thatfridge-desktop-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .thatfridge-desktop-brand-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+  }
+
+  .thatfridge-desktop-brand-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.2px;
+  }
+
+  .thatfridge-desktop-brand-tagline {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .thatfridge-shell {
+    height: min(860px, 90vh);
+    border-radius: 36px;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  /* Higher specificity than the plain .thatfridge-shell rule above, so the signed-in app
+     opts back out of the framed-preview sizing and stays full-bleed at this width too. */
+  .thatfridge-app-wrap .thatfridge-shell {
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* Wide (>=900px), signed-in only: a real sidebar + fluid layout, not a scaled-up phone.
+   The auth/loading screens are never wrapped in .thatfridge-app-wrap, so they keep the
+   framed-preview treatment above at any width. */
+.thatfridge-sidebar {
+  display: none;
+}
+
+.thatfridge-home-wide,
+.thatfridge-inventory-wide {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  body:has(.thatfridge-app-wrap) {
+    padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+    background: #eaf6ff;
+  }
+
+  .thatfridge-app-wrap {
+    display: grid;
+    grid-template-columns: 264px 1fr;
+    align-items: stretch;
+    gap: 0;
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  /* shellStyle sets width/maxWidth/margin inline (it's shared with the narrow-shell states),
+     so !important is the deliberate override point for going full-width here. */
+  .thatfridge-app-wrap .thatfridge-shell {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .thatfridge-sidebar {
+    display: flex;
+  }
+
+  /* TabBar sets display:flex inline; !important is the deliberate override point for
+     swapping it out for the Sidebar at this breakpoint. */
+  .thatfridge-tabbar {
+    display: none !important;
+  }
+
+  .thatfridge-home-mobile,
+  .thatfridge-inventory-mobile {
+    display: none;
+  }
+
+  .thatfridge-home-wide,
+  .thatfridge-inventory-wide {
+    display: block;
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    padding: 32px 40px 60px;
+  }
+}
+
 @keyframes glow {
   0%, 100% { box-shadow: 0 0 0 rgba(74,111,165,0.0), inset 0 0 40px rgba(255,255,255,0.35); }
   50% { box-shadow: 0 0 24px rgba(74,111,165,0.2), inset 0 0 50px rgba(255,255,255,0.5); }
