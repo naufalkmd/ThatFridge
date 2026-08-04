@@ -21,8 +21,6 @@ const NAV_ITEMS: NavDef[] = [
 // which stays mobile-only. See globals.css for the breakpoint that swaps between them.
 export default function Sidebar() {
   const { state, actions } = useThatFridgeCtx();
-  const showSidebar = state.screen === "home" || state.screen === "inventory" || state.screen === "foodHub" || state.screen === "chat";
-  if (!showSidebar) return null;
 
   const userInitials = (state.currentUser?.name || "Friend")
     .split(/\s+/)

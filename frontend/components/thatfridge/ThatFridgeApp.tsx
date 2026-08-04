@@ -96,11 +96,23 @@ function AppShell() {
   // Signed in: below 900px this renders as plain full-bleed mobile (same as a real phone,
   // no framed-preview tier); at >=900px CSS swaps it for Sidebar + a full-width shell — see
   // the .thatfridge-app-wrap rules in globals.css.
+  //
+  // Only Home/Inventory have real wide-specific layouts (their own -wide blocks fill the
+  // full shell). Every other screen is still mobile-only markup — at >=900px it's wrapped
+  // in .thatfridge-screen-constrain so it renders as a centered, phone-width column instead
+  // of pinning to the top-left of a 1440px shell with the rest of the screen empty.
+  const isWideNativeScreen = state.screen === "home" || state.screen === "inventory";
   return (
     <div className="thatfridge-app-wrap">
       <Sidebar />
       <div className="thatfridge-shell" style={shellStyle}>
-        <Screens />
+        {isWideNativeScreen ? (
+          <Screens />
+        ) : (
+          <div className="thatfridge-screen-constrain">
+            <Screens />
+          </div>
+        )}
         <UndoToast />
         <SyncErrorToast />
         <TabBar />
