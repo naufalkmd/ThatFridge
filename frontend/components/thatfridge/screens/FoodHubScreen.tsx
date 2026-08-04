@@ -130,10 +130,10 @@ export default function FoodHubScreen() {
             : "Nothing to organize yet";
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: "none", background: "linear-gradient(160deg, #1e4576 0%, #16325c 55%, #0a1a30 100%)" }}>
-      <div className="thatfridge-wide-content" style={{ padding: "24px 20px 16px", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", overflowY: "auto" }}>
+      <div style={{ background: "linear-gradient(160deg, #1e4576 0%, #16325c 55%, #0a1a30 100%)" }}>
+      <div className="thatfridge-wide-content" style={{ padding: "24px 20px 24px", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>Crew</div>
           <div
             onClick={() => actions.goTab("home")}
@@ -155,7 +155,7 @@ export default function FoodHubScreen() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "138px 1fr", gap: 14, marginBottom: 18, alignItems: "stretch" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "138px 1fr", gap: 14, marginBottom: 20, alignItems: "stretch" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
             <Image
               src={activeMeta.icon}
@@ -243,18 +243,18 @@ export default function FoodHubScreen() {
       </div>
       </div>
 
-      <div className="thatfridge-wide-content" style={{ flex: 1, overflow: "hidden", position: "relative", boxSizing: "border-box" }} onTouchStart={actions.onSwipeStart} onTouchEnd={actions.onSwipeEnd}>
+      <div className="thatfridge-wide-content" style={{ overflowX: "hidden", position: "relative", boxSizing: "border-box" }} onTouchStart={actions.onSwipeStart} onTouchEnd={actions.onSwipeEnd}>
         <div
           style={{
             display: "flex",
             width: `${FOOD_TAB_ORDER.length * 100}%`,
-            height: "100%",
+            alignItems: "flex-start",
             transform: `translateX(-${activeIndex * (100 / FOOD_TAB_ORDER.length)}%)`,
             transition: "transform .28s ease",
           }}
         >
           {/* recipes pane */}
-          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
+          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", padding: "20px 20px 100px", boxSizing: "border-box" }}>
             {tonightPick && (
               <div onClick={() => actions.openRecipeDetail(tonightPick.id)} style={{ position: "relative", background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", marginBottom: 18, cursor: "pointer" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c", marginBottom: 8 }}>TONIGHT&apos;S PICK</div>
@@ -290,7 +290,7 @@ export default function FoodHubScreen() {
           </div>
 
           {/* shopping pane */}
-          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
+          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", padding: "20px 20px 100px", boxSizing: "border-box" }}>
             {expiringOwned.length > 0 && (
               <div style={{ marginBottom: 22 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 2 }}>ALREADY HAVE — DON&apos;T REBUY</div>
@@ -353,7 +353,7 @@ export default function FoodHubScreen() {
           </div>
 
           {/* guardian pane */}
-          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
+          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", padding: "20px 20px 100px", boxSizing: "border-box" }}>
             {allItems.length === 0 && (
               <div style={{ textAlign: "center", color: "rgba(22,50,92,0.45)", fontSize: 13, marginTop: 40 }}>
                 Nothing in this fridge yet — add items to have Guardian watch over them.
@@ -399,7 +399,7 @@ export default function FoodHubScreen() {
           </div>
 
           {/* organizer pane */}
-          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
+          <div style={{ width: `${100 / FOOD_TAB_ORDER.length}%`, flex: "none", padding: "20px 20px 100px", boxSizing: "border-box" }}>
             {allItems.length === 0 && (
               <div style={{ textAlign: "center", color: "rgba(22,50,92,0.45)", fontSize: 13, marginTop: 40 }}>
                 Nothing to organize yet — add items to sort them into place.
