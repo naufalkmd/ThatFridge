@@ -146,24 +146,19 @@ body {
     padding: 32px 40px 60px;
   }
 
-  /* Every screen other than Home/Inventory is still mobile-only markup (its root div sets
-     position:absolute; inset:0 inline). Centering *this* wrapper — rather than editing each
-     screen — makes that inset:0 resolve against a phone-width column instead of the full
-     1440px shell, so nothing pins to the top-left with the rest of the screen left empty. */
-  .thatfridge-screen-constrain {
-    position: absolute;
-    inset: 0;
-    max-width: 480px;
+  /* Every mobile-only screen (all but Home/Inventory) still fills the shell edge-to-edge —
+     header/footer bars stay full-width — but their actual content (lists, forms, message
+     threads) gets this wrapper so it doesn't stretch unreadably wide or pin to the top-left.
+     margin:auto centers a flex item once max-width caps its stretched width below 100%. */
+  .thatfridge-wide-content {
+    max-width: 640px;
+    width: 100%;
     margin: 0 auto;
-    border-radius: 24px;
-    overflow: hidden;
-    box-shadow: 0 24px 60px rgba(22, 50, 92, 0.16), 0 0 0 1px rgba(22, 50, 92, 0.06);
   }
 
-  /* Chat wants more room than a settings-panel-shaped screen — a wider column instead of
-     the generic phone-width one. */
-  .thatfridge-screen-constrain--chat {
-    max-width: 760px;
+  /* A message thread wants more room than a settings list or a form. */
+  .thatfridge-wide-content--chat {
+    max-width: 820px;
   }
 }
 

@@ -10,7 +10,7 @@ export default function ChatHistoryScreen() {
 
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+      <div className="thatfridge-wide-content" style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 12, boxSizing: "border-box" }}>
         <div
           onClick={actions.closeChatHistory}
           style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
@@ -23,7 +23,7 @@ export default function ChatHistoryScreen() {
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "6px 20px 100px" }}>
+      <div className="thatfridge-wide-content" style={{ flex: 1, overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
         {threads.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(22,50,92,0.45)", fontSize: 13 }}>
             No past conversations yet — start a new chat to see it here later.

@@ -18,7 +18,7 @@ export default function SearchScreen() {
 
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+      <div className="thatfridge-wide-content" style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 10, boxSizing: "border-box" }}>
         <div onClick={actions.goHome} style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
           <ChevronLeft size={20} color="#16325c" strokeWidth={2.2} />
         </div>
@@ -30,7 +30,7 @@ export default function SearchScreen() {
           style={{ flex: 1, border: "none", outline: "none", background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.08)", borderRadius: 14, padding: "11px 16px", fontSize: 14, color: "#16325c" }}
         />
       </div>
-      <div style={{ flex: "none", padding: "0 20px 10px" }}>
+      <div className="thatfridge-wide-content" style={{ flex: "none", padding: "0 20px 10px", boxSizing: "border-box" }}>
         <div
           onClick={actions.goHome}
           style={{
@@ -50,7 +50,7 @@ export default function SearchScreen() {
           {getScopeLabel(state)}
         </div>
       </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "6px 20px 30px" }}>
+      <div className="thatfridge-wide-content" style={{ flex: 1, overflowY: "auto", padding: "6px 20px 30px", boxSizing: "border-box" }}>
         {q.length === 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
             {SUGGESTIONS.map((label) => (

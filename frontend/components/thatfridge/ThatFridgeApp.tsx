@@ -97,25 +97,15 @@ function AppShell() {
   // no framed-preview tier); at >=900px CSS swaps it for Sidebar + a full-width shell — see
   // the .thatfridge-app-wrap rules in globals.css.
   //
-  // Only Home/Inventory have real wide-specific layouts (their own -wide blocks fill the
-  // full shell). Every other screen is still mobile-only markup — at >=900px it's wrapped
-  // in .thatfridge-screen-constrain so it renders as a centered column instead of pinning to
-  // the top-left of a 1440px shell with the rest of the screen empty. Chat gets a wider
-  // variant of that column (a chat thread wants more room than a settings panel does).
-  const isWideNativeScreen = state.screen === "home" || state.screen === "inventory";
-  const constrainClassName =
-    state.screen === "chat" ? "thatfridge-screen-constrain thatfridge-screen-constrain--chat" : "thatfridge-screen-constrain";
+  // Every screen fills the shell edge-to-edge at any width (no boxed/framed card). Screens
+  // whose content would otherwise stretch unreadably wide or pin to the top-left give their
+  // own content areas a .thatfridge-wide-content wrapper (max-width + centered) instead of
+  // the whole screen being capped — see each screen file and the >=900px rules in globals.css.
   return (
     <div className="thatfridge-app-wrap">
       <Sidebar />
       <div className="thatfridge-shell" style={shellStyle}>
-        {isWideNativeScreen ? (
-          <Screens />
-        ) : (
-          <div className={constrainClassName}>
-            <Screens />
-          </div>
-        )}
+        <Screens />
         <UndoToast />
         <SyncErrorToast />
         <TabBar />

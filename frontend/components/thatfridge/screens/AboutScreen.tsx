@@ -26,7 +26,7 @@ export default function AboutScreen() {
 
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+      <div className="thatfridge-wide-content" style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 12, boxSizing: "border-box" }}>
         <div
           onClick={actions.goHome}
           style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
@@ -36,7 +36,7 @@ export default function AboutScreen() {
         <div style={{ fontSize: 18, fontWeight: 800 }}>About ThatFridge</div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "6px 20px 100px" }}>
+      <div className="thatfridge-wide-content" style={{ flex: 1, overflowY: "auto", padding: "6px 20px 100px", boxSizing: "border-box" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "20px 12px 26px" }}>
           <div
             style={{

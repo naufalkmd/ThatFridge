@@ -140,53 +140,55 @@ export default function ChatScreen() {
         flexDirection: "column",
       }}
     >
-      <div style={{ flex: "none", padding: "28px 20px 14px", display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.55)", backdropFilter: "blur(10px)", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
-        <div onClick={actions.goHome} style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
-          <ChevronLeft size={20} color="#16325c" strokeWidth={2.2} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15.5, fontWeight: 800 }}>Quick Chat</div>
-          <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>Quick answers about your fridge</div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            onClick={actions.openChatHistory}
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 15,
-              background: "rgba(255,255,255,0.75)",
-              border: "1px solid rgba(22,50,92,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              flex: "none",
-            }}
-          >
-            <History size={15} color="#16325c" strokeWidth={2} />
+      <div style={{ flex: "none", padding: "28px 0 14px", background: "rgba(255,255,255,0.55)", backdropFilter: "blur(10px)", borderBottom: "1px solid rgba(22,50,92,0.06)" }}>
+        <div className="thatfridge-wide-content thatfridge-wide-content--chat" style={{ padding: "0 20px", display: "flex", alignItems: "center", gap: 10, boxSizing: "border-box" }}>
+          <div onClick={actions.goHome} style={{ width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
+            <ChevronLeft size={20} color="#16325c" strokeWidth={2.2} />
           </div>
-          <div
-            onClick={actions.startNewChat}
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 15,
-              background: "rgba(255,255,255,0.75)",
-              border: "1px solid rgba(22,50,92,0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              flex: "none",
-            }}
-          >
-            <SquarePen size={15} color="#16325c" strokeWidth={2} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15.5, fontWeight: 800 }}>Quick Chat</div>
+            <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>Quick answers about your fridge</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div
+              onClick={actions.openChatHistory}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                background: "rgba(255,255,255,0.75)",
+                border: "1px solid rgba(22,50,92,0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                flex: "none",
+              }}
+            >
+              <History size={15} color="#16325c" strokeWidth={2} />
+            </div>
+            <div
+              onClick={actions.startNewChat}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                background: "rgba(255,255,255,0.75)",
+                border: "1px solid rgba(22,50,92,0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                flex: "none",
+              }}
+            >
+              <SquarePen size={15} color="#16325c" strokeWidth={2} />
+            </div>
           </div>
         </div>
       </div>
 
-      <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div ref={chatScrollRef} className="thatfridge-wide-content thatfridge-wide-content--chat" style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px", display: "flex", flexDirection: "column", gap: 12, boxSizing: "border-box" }}>
         {state.chatMessages.map((m) => (
           <div key={m.id} style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start", animation: "pop .18s ease-out" }}>
             {m.from === "bot" ? (
@@ -217,7 +219,7 @@ export default function ChatScreen() {
       </div>
 
       {showQuickAsks && (
-        <div style={{ flex: "none", padding: "0 16px 10px", display: "flex", gap: 8, overflowX: "auto" }}>
+        <div className="thatfridge-wide-content thatfridge-wide-content--chat" style={{ flex: "none", padding: "0 16px 10px", display: "flex", gap: 8, overflowX: "auto", boxSizing: "border-box" }}>
           {QUICK_ASKS.map((label) => (
             <div
               key={label}
@@ -230,50 +232,52 @@ export default function ChatScreen() {
         </div>
       )}
 
-      <div style={{ flex: "none", padding: "8px 14px 80px", background: "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(22,50,92,0.08)" }}>
-        {attachmentName && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#eef4fa", borderRadius: 14, padding: "6px 10px", marginBottom: 8, fontSize: 12, fontWeight: 600, color: "#16325c", width: "fit-content" }}>
-            <Paperclip size={13} />
-            <span style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{attachmentName}</span>
-            <X size={13} style={{ cursor: "pointer" }} onClick={() => setAttachmentName(null)} />
-          </div>
-        )}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input ref={fileInputRef} type="file" onChange={handleFileChosen} style={{ display: "none" }} />
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            style={{ width: 38, height: 38, borderRadius: 19, background: "#eef4fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
-          >
-            <Paperclip size={16} color="#16325c" strokeWidth={2.2} />
-          </div>
-          <input
-            value={state.chatDraft}
-            onChange={(e) => actions.onDraftChange(e.target.value)}
-            onKeyDown={(e) => actions.onChatKeyDown(e.key)}
-            placeholder={isListening ? "Listening…" : "Ask about your fridge…"}
-            style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "#eef4fa", borderRadius: 20, padding: "11px 16px", fontSize: 13.5, color: "#16325c" }}
-          />
-          {voiceSupported && (
-            <div
-              onClick={toggleVoice}
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                background: isListening ? "#c1452e" : "#eef4fa",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                flex: "none",
-                animation: isListening ? "micPulse 1.4s ease-in-out infinite" : "none",
-              }}
-            >
-              {isListening ? <Square size={13} color="#fff" fill="#fff" /> : <Mic size={16} color="#16325c" strokeWidth={2.2} />}
+      <div style={{ flex: "none", padding: "8px 0 80px", background: "rgba(255,255,255,0.7)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(22,50,92,0.08)" }}>
+        <div className="thatfridge-wide-content thatfridge-wide-content--chat" style={{ padding: "0 14px", boxSizing: "border-box" }}>
+          {attachmentName && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#eef4fa", borderRadius: 14, padding: "6px 10px", marginBottom: 8, fontSize: 12, fontWeight: 600, color: "#16325c", width: "fit-content" }}>
+              <Paperclip size={13} />
+              <span style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{attachmentName}</span>
+              <X size={13} style={{ cursor: "pointer" }} onClick={() => setAttachmentName(null)} />
             </div>
           )}
-          <div onClick={handleSend} style={{ width: 38, height: 38, borderRadius: 19, background: "#16325c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
-            <ArrowUp size={17} color="#fff" strokeWidth={2.3} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <input ref={fileInputRef} type="file" onChange={handleFileChosen} style={{ display: "none" }} />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{ width: 38, height: 38, borderRadius: 19, background: "#eef4fa", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
+            >
+              <Paperclip size={16} color="#16325c" strokeWidth={2.2} />
+            </div>
+            <input
+              value={state.chatDraft}
+              onChange={(e) => actions.onDraftChange(e.target.value)}
+              onKeyDown={(e) => actions.onChatKeyDown(e.key)}
+              placeholder={isListening ? "Listening…" : "Ask about your fridge…"}
+              style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "#eef4fa", borderRadius: 20, padding: "11px 16px", fontSize: 13.5, color: "#16325c" }}
+            />
+            {voiceSupported && (
+              <div
+                onClick={toggleVoice}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  background: isListening ? "#c1452e" : "#eef4fa",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  flex: "none",
+                  animation: isListening ? "micPulse 1.4s ease-in-out infinite" : "none",
+                }}
+              >
+                {isListening ? <Square size={13} color="#fff" fill="#fff" /> : <Mic size={16} color="#16325c" strokeWidth={2.2} />}
+              </div>
+            )}
+            <div onClick={handleSend} style={{ width: 38, height: 38, borderRadius: 19, background: "#16325c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}>
+              <ArrowUp size={17} color="#fff" strokeWidth={2.3} />
+            </div>
           </div>
         </div>
       </div>
