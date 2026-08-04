@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { MapPin, Plus, Refrigerator } from "lucide-react";
+import { MapPin, Plus, Refrigerator, RefreshCw, Sparkles } from "lucide-react";
 import { FOOD_TAB_ORDER, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import {
   getExpiringOwnedItems,
@@ -14,10 +14,12 @@ import {
   type ShoppingRecommendation,
 } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
+import type { ChatAgentName } from "@/lib/thatfridge/api";
 import type { FoodSubtab } from "@/lib/thatfridge/types";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
 import LocationIcon from "../LocationIcon";
+import MarkdownText from "../MarkdownText";
 import ShoppingListPanel from "../ShoppingListPanel";
 
 const REC_SOURCE_META: Record<ShoppingRecommendation["source"], { label: string; color: string }> = {
@@ -31,6 +33,13 @@ const TAB_META: Record<FoodSubtab, { label: string; color: string; icon: string;
   shopping: { label: "Shopping", color: "#3f8f5c", icon: "/images/thatfridge/shopkeeper.gif", blurb: "Your list, plus what to buy again" },
   guardian: { label: "Guardian", color: "#c1452e", icon: "/images/thatfridge/guardian.gif", blurb: "Riskiest items are listed first" },
   organizer: { label: "Organizer", color: "#2f6fb0", icon: "/images/thatfridge/organizer.gif", blurb: "Tap a spot to move an item there" },
+};
+
+const AGENT_NAME_BY_TAB: Record<FoodSubtab, ChatAgentName> = {
+  recipes: "Chef",
+  shopping: "Shopkeeper",
+  guardian: "Guardian",
+  organizer: "Organizer",
 };
 
 const RISK_BUCKETS: { key: string; label: string; test: (f: number) => boolean; hint: string }[] = [
@@ -92,11 +101,40 @@ export default function FoodHubScreen() {
     items: allItems.slice().sort((a, b2) => a.freshness - b2.freshness).filter((i) => b.test(i.freshness)),
   })).filter((g) => g.items.length > 0);
 
+  const agentName = AGENT_NAME_BY_TAB[activeTab];
+  const insightText = state.agentInsights[agentName];
+  const isActivating = state.agentInsightLoading === agentName;
+
+  const riskCount = allItems.filter((i) => i.freshness < 30).length;
+  const watchCount = allItems.filter((i) => i.freshness >= 30 && i.freshness < 60).length;
+  const freshCount = allItems.length - riskCount - watchCount;
+  const barTotal = Math.max(1, allItems.length);
+
+  const heroLine =
+    activeTab === "guardian"
+      ? allItems.length === 0
+        ? "Nothing in this fridge yet"
+        : riskCount > 0
+          ? `${riskCount} item${riskCount === 1 ? "" : "s"} need attention`
+          : "Everything's holding up well"
+      : activeTab === "recipes"
+        ? tonightPick
+          ? `${tonightPick.haveCount}/${tonightPick.total} ingredients ready for tonight`
+          : "No recipes yet"
+        : activeTab === "shopping"
+          ? recommendations.length > 0
+            ? `${recommendations.length} item${recommendations.length === 1 ? "" : "s"} to restock`
+            : "Nothing needed right now"
+          : allItems.length > 0
+            ? `${allItems.length} item${allItems.length === 1 ? "" : "s"} across ${STORAGE_LOCATIONS.length} spots`
+            : "Nothing to organize yet";
+
   return (
     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)", display: "flex", flexDirection: "column" }}>
-      <div style={{ flex: "none", padding: "28px 20px 14px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={{ fontSize: 20, fontWeight: 800 }}>Crew</div>
+      <div style={{ flex: "none", background: "linear-gradient(160deg, #1e4576 0%, #16325c 55%, #0a1a30 100%)" }}>
+      <div className="thatfridge-wide-content" style={{ padding: "24px 20px 16px", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>Crew</div>
           <div
             onClick={() => actions.goTab("home")}
             style={{
@@ -105,10 +143,10 @@ export default function FoodHubScreen() {
               gap: 5,
               padding: "5px 10px",
               borderRadius: 10,
-              background: "rgba(22,50,92,0.06)",
+              background: "rgba(255,255,255,0.12)",
               fontSize: 11,
               fontWeight: 700,
-              color: "rgba(22,50,92,0.55)",
+              color: "rgba(255,255,255,0.75)",
               cursor: "pointer",
             }}
           >
@@ -117,7 +155,60 @@ export default function FoodHubScreen() {
           </div>
         </div>
 
-        <div style={{ display: "flex", background: "rgba(255,255,255,0.6)", borderRadius: 14, padding: 4, gap: 4, marginBottom: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "138px 1fr", gap: 14, marginBottom: 18, alignItems: "stretch" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+            <Image
+              src={activeMeta.icon}
+              alt=""
+              width={118}
+              height={118}
+              unoptimized
+              style={{ objectFit: "contain", imageRendering: "pixelated", filter: "drop-shadow(0 8px 14px rgba(0,0,0,0.35))" }}
+            />
+          </div>
+          <div style={{ background: "#fff", borderRadius: 20, boxShadow: "0 10px 24px rgba(0,0,0,0.2)", padding: "14px 16px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 8 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: activeMeta.color }}>{agentName}</div>
+            <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.55)", lineHeight: 1.4 }}>{heroLine}</div>
+
+            {activeTab === "guardian" && allItems.length > 0 && (
+              <div style={{ display: "flex", height: 6, borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ width: `${(riskCount / barTotal) * 100}%`, background: "#c1452e" }} />
+                <div style={{ width: `${(watchCount / barTotal) * 100}%`, background: "#d99a2b" }} />
+                <div style={{ width: `${(freshCount / barTotal) * 100}%`, background: "#3f8f5c" }} />
+              </div>
+            )}
+
+            {insightText && (
+              <div style={{ fontSize: 11.5, color: "#16325c", lineHeight: 1.5, background: `${activeMeta.color}0f`, borderRadius: 12, padding: "9px 11px" }}>
+                <MarkdownText text={insightText} />
+              </div>
+            )}
+
+            <div
+              onClick={() => !isActivating && actions.activateAgent(agentName)}
+              style={{
+                marginTop: 2,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                padding: 8,
+                borderRadius: 11,
+                background: insightText ? `${activeMeta.color}14` : activeMeta.color,
+                color: insightText ? activeMeta.color : "#fff",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: isActivating ? "default" : "pointer",
+                opacity: isActivating ? 0.6 : 1,
+              }}
+            >
+              {insightText ? <RefreshCw size={13} strokeWidth={2.4} /> : <Sparkles size={13} strokeWidth={2.4} />}
+              {isActivating ? "Thinking…" : insightText ? "Refresh insight" : `Activate ${agentName}`}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
           {FOOD_TAB_ORDER.map((tab) => {
             const meta = TAB_META[tab];
             const active = tab === activeTab;
@@ -128,13 +219,13 @@ export default function FoodHubScreen() {
                 style={{
                   flex: 1,
                   textAlign: "center",
-                  padding: "9px 2px",
-                  borderRadius: 11,
+                  padding: "10px 4px",
+                  borderRadius: 13,
                   fontSize: 12,
                   fontWeight: 700,
                   cursor: "pointer",
-                  background: active ? meta.color : "transparent",
-                  color: active ? "#fff" : meta.color,
+                  background: active ? meta.color : "rgba(255,255,255,0.08)",
+                  color: active ? "#fff" : "rgba(255,255,255,0.55)",
                   transition: "background .15s ease, color .15s ease",
                 }}
               >
@@ -143,25 +234,10 @@ export default function FoodHubScreen() {
             );
           })}
         </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "9px 12px",
-            borderRadius: 13,
-            background: `${activeMeta.color}14`,
-          }}
-        >
-          <div style={{ position: "relative", width: 26, height: 26, flex: "none" }}>
-            <Image src={activeMeta.icon} alt="" width={26} height={26} unoptimized style={{ objectFit: "contain" }} />
-          </div>
-          <div style={{ fontSize: 11.5, fontWeight: 600, color: activeMeta.color }}>{activeMeta.blurb}</div>
-        </div>
+      </div>
       </div>
 
-      <div style={{ flex: 1, overflow: "hidden", position: "relative" }} onTouchStart={actions.onSwipeStart} onTouchEnd={actions.onSwipeEnd}>
+      <div className="thatfridge-wide-content" style={{ flex: 1, overflow: "hidden", position: "relative", boxSizing: "border-box" }} onTouchStart={actions.onSwipeStart} onTouchEnd={actions.onSwipeEnd}>
         <div
           style={{
             display: "flex",

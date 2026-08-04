@@ -22,6 +22,7 @@ import {
   scanBarcode,
   scanExpiryPhoto,
   sendChatMessage,
+  type ChatAgentName,
   updateFridge,
   updateItem,
   updateNotificationPrefs,
@@ -168,6 +169,8 @@ export interface ThatFridgeState {
   notificationEvents: NotificationEvent[];
   kitchenScope: "active" | "all";
   inventorySortMode: "category" | "expiry" | "name";
+  agentInsights: Partial<Record<ChatAgentName, string>>;
+  agentInsightLoading: ChatAgentName | null;
 }
 
 function initialState(): ThatFridgeState {
@@ -231,6 +234,8 @@ function initialState(): ThatFridgeState {
     notificationEvents: [],
     kitchenScope: "all",
     inventorySortMode: "category",
+    agentInsights: {},
+    agentInsightLoading: null,
   };
 }
 
@@ -686,6 +691,28 @@ export function useThatFridge() {
     if (key === "Enter") sendMessage();
   };
   const askQuick = (label: string) => sendChat(label);
+
+  const AGENT_ACTIVATE_PROMPT: Record<ChatAgentName, string> = {
+    Chef: "What can I cook tonight with what I have?",
+    Guardian: "What's at risk of going bad soon?",
+    Organizer: "How should I organize my fridge right now?",
+    Shopkeeper: "What should I restock?",
+  };
+  const activateAgent = (agent: ChatAgentName) => {
+    if (state.agentInsightLoading) return;
+    patch({ agentInsightLoading: agent });
+    const inventory = buildInventorySummary(state.fridges[state.activeFridge]);
+    sendChatMessage(AGENT_ACTIVATE_PROMPT[agent], agent, inventory)
+      .then((res) => {
+        patch((s) => ({
+          agentInsights: { ...s.agentInsights, [agent]: res.agent_response },
+          agentInsightLoading: null,
+        }));
+      })
+      .catch((err) => {
+        patch({ agentInsightLoading: null, syncError: describeError(err, "Couldn't reach the agent right now.") });
+      });
+  };
 
   const goHome = () =>
     patch((s) => ({
@@ -1246,6 +1273,7 @@ export function useThatFridge() {
     restoreChatThread,
     sendMessage,
     askQuick,
+    activateAgent,
     goHome,
     goTab,
     openAdd,
