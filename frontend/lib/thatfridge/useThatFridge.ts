@@ -713,6 +713,12 @@ export function useThatFridge() {
         patch({ agentInsightLoading: null, syncError: describeError(err, "Couldn't reach the agent right now.") });
       });
   };
+  const dismissAgentInsight = (agent: ChatAgentName) =>
+    patch((s) => {
+      const next = { ...s.agentInsights };
+      delete next[agent];
+      return { agentInsights: next };
+    });
 
   const goHome = () =>
     patch((s) => ({
@@ -1274,6 +1280,7 @@ export function useThatFridge() {
     sendMessage,
     askQuick,
     activateAgent,
+    dismissAgentInsight,
     goHome,
     goTab,
     openAdd,

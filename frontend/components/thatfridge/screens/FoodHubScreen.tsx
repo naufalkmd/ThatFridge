@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { MapPin, Plus, Refrigerator, RefreshCw, Sparkles } from "lucide-react";
+import { MapPin, Plus, Refrigerator, RefreshCw, Sparkles, X } from "lucide-react";
 import { FOOD_TAB_ORDER, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import {
   getExpiringOwnedItems,
@@ -179,7 +179,13 @@ export default function FoodHubScreen() {
             )}
 
             {insightText && (
-              <div style={{ fontSize: 11.5, color: "#16325c", lineHeight: 1.5, background: `${activeMeta.color}0f`, borderRadius: 12, padding: "9px 11px" }}>
+              <div style={{ position: "relative", fontSize: 11.5, color: "#16325c", lineHeight: 1.5, background: `${activeMeta.color}0f`, borderRadius: 12, padding: "9px 26px 9px 11px" }}>
+                <div
+                  onClick={() => actions.dismissAgentInsight(agentName)}
+                  style={{ position: "absolute", top: 7, right: 7, width: 18, height: 18, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(22,50,92,0.35)" }}
+                >
+                  <X size={12} strokeWidth={2.4} />
+                </div>
                 <MarkdownText text={insightText} />
               </div>
             )}
