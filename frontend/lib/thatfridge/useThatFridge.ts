@@ -353,7 +353,10 @@ export function useThatFridge() {
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
       }
-    );
+    ).catch((err) => {
+      if (cancelled) return;
+      patch({ isLoading: false, syncError: describeError(err, "Couldn't load your fridge data.") });
+    });
     return () => {
       cancelled = true;
     };

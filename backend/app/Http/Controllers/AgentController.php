@@ -17,11 +17,16 @@ class AgentController extends Controller
     /**
      * Get the authenticated user's chat history, oldest first.
      */
+    private const HISTORY_LIMIT = 200;
+
     public function history(Request $request)
     {
-        $messages = $request->user()->chatHistory()->orderBy('created_at')->get([
-            'id', 'agent', 'user_message', 'agent_response', 'created_at',
-        ]);
+        $messages = $request->user()->chatHistory()
+            ->orderBy('created_at', 'desc')
+            ->limit(self::HISTORY_LIMIT)
+            ->get(['id', 'agent', 'user_message', 'agent_response', 'created_at'])
+            ->sortBy('created_at')
+            ->values();
 
         return response()->json([
             'messages' => $messages,

@@ -10,7 +10,9 @@ class ShoppingItemController extends Controller
 {
     public function index(Request $request)
     {
-        return ShoppingItemResource::collection($request->user()->shoppingItems()->get());
+        return ShoppingItemResource::collection(
+            $request->user()->shoppingItems()->paginate(50)
+        );
     }
 
     public function store(Request $request)

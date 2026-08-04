@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Section;
 use App\Services\PhotoService;
 use Illuminate\Http\Request;
 
@@ -17,8 +18,10 @@ class PhotoController extends Controller
     /**
      * Upload fridge photo and detect items
      */
-    public function scan(Request $request, $section)
+    public function scan(Request $request, Section $section)
     {
+        $this->authorize('update', $section);
+
         $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
         ]);
@@ -41,8 +44,10 @@ class PhotoController extends Controller
     /**
      * Confirm photo detections and prepare for import
      */
-    public function confirm(Request $request, $section)
+    public function confirm(Request $request, Section $section)
     {
+        $this->authorize('update', $section);
+
         $request->validate([
             'photo_scan_id' => 'required|integer',
             'items' => 'required|array',

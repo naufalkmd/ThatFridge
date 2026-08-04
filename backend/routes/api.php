@@ -17,23 +17,22 @@ use Illuminate\Support\Facades\Route;
 // Auth routes (public)
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/test/items', [IngestionController::class, 'store']);
-
-// TRACK B: Ingestion & Agents (public - no auth required)
-Route::prefix('sections/{section}')->group(function () {
-    Route::post('items/manual', [IngestionController::class, 'store']);
-    Route::post('items/barcode', [BarcodeController::class, 'scan']);
-    Route::post('items/receipt/scan', [ReceiptController::class, 'scan']);
-    Route::post('items/receipt/confirm', [ReceiptController::class, 'confirm']);
-    Route::post('items/photo/scan', [PhotoController::class, 'scan']);
-    Route::post('items/photo/confirm', [PhotoController::class, 'confirm']);
-    Route::post('items/expiry-scan', [ExpiryScanController::class, 'scan']);
-});
 
 // Protected routes (Track A - requires auth)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+
+    // TRACK B: Ingestion & Agents
+    Route::prefix('sections/{section}')->group(function () {
+        Route::post('items/manual', [IngestionController::class, 'store']);
+        Route::post('items/barcode', [BarcodeController::class, 'scan']);
+        Route::post('items/receipt/scan', [ReceiptController::class, 'scan']);
+        Route::post('items/receipt/confirm', [ReceiptController::class, 'confirm']);
+        Route::post('items/photo/scan', [PhotoController::class, 'scan']);
+        Route::post('items/photo/confirm', [PhotoController::class, 'confirm']);
+        Route::post('items/expiry-scan', [ExpiryScanController::class, 'scan']);
+    });
 
     // Chat history is per-user, so it needs auth to know whose history to read/write.
     Route::prefix('chat')->group(function () {

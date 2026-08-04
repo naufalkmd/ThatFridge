@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Section;
 use App\Services\BarcodeService;
 use Illuminate\Http\Request;
 
@@ -17,8 +18,10 @@ class BarcodeController extends Controller
     /**
      * Scan barcode, lookup product, return suggestion
      */
-    public function scan(Request $request, $section)
+    public function scan(Request $request, Section $section)
     {
+        $this->authorize('update', $section);
+
         $request->validate([
             'barcode' => 'required|string',
         ]);

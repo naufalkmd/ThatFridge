@@ -2,24 +2,45 @@
 
 namespace App\Services;
 
+use App\Models\Product;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class BarcodeService
 {
     /**
-     * Lookup product info from Open Food Facts by barcode
+     * Lookup product info by barcode, preferring our local cache over
+     * Open Food Facts (product data barely changes once scanned).
      */
     public function lookup($barcode)
     {
+        $cached = Product::where('barcode', $barcode)->first();
+
+        if ($cached) {
+            return [
+                'name' => $cached->name,
+                'category' => $cached->category,
+                'barcode' => $cached->barcode,
+                'icon' => $cached->icon,
+                'default_shelf_life_days' => $cached->default_shelf_life_days,
+                'image_url' => $cached->image_url,
+            ];
+        }
+
         try {
             $response = Http::get("https://world.openfoodfacts.org/api/v0/product/{$barcode}.json");
-            
+
             if ($response->status() === 200) {
                 $data = $response->json();
-                return $this->parseResponse($data);
+                $product = $this->parseResponse($data);
+
+                if ($product && $product['barcode']) {
+                    Product::updateOrCreate(['barcode' => $product['barcode']], $product);
+                }
+
+                return $product;
             }
-            
+
             return null; // Barcode not found
         } catch (\Exception $e) {
             Log::error('Barcode lookup failed', ['barcode' => $barcode, 'error' => $e->getMessage()]);

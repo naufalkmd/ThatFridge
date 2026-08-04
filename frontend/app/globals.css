@@ -30,6 +30,14 @@ body {
   height: 100dvh;
 }
 
+.thatfridge-tabbar-fab {
+  transform: translateX(-50%);
+}
+
+.thatfridge-tabbar-fab:active {
+  transform: translateX(-50%) scale(0.9);
+}
+
 /* Desktop/tablet: frame the phone-shaped app as a deliberate preview instead of a
    narrow page floating on blank white. Mobile viewports are untouched below this. */
 .thatfridge-desktop-brand {
@@ -184,6 +192,10 @@ body {
 @keyframes pop {
   0% { transform: scale(.94); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
+}
+@keyframes slideUpSheet {
+  0% { transform: translateY(100%); }
+  100% { transform: translateY(0); }
 }
 @keyframes bounce {
   0%, 80%, 100% { transform: translateY(0); }

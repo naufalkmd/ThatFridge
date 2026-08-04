@@ -36,15 +36,35 @@ export default function TabBar() {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 6,
+          justifyContent: "center",
           cursor: "pointer",
-          padding: "9px 16px",
+          padding: "9px",
           borderRadius: 20,
           background: pillBg,
+          flex: "none",
+          minWidth: 0,
+          transition: "background-color .2s ease, padding .25s ease",
+          ...(active ? { padding: "9px 14px" } : {}),
         }}
       >
-        <tab.Icon size={16} color={color} strokeWidth={2.2} />
-        <div style={{ fontSize: 12, fontWeight: 700, color }}>{tab.label}</div>
+        <div style={{ flex: "none", display: "flex" }}>
+          <tab.Icon size={16} color={color} strokeWidth={2.2} />
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            maxWidth: active ? 100 : 0,
+            opacity: active ? 1 : 0,
+            marginLeft: active ? 6 : 0,
+            transition: "max-width .25s ease, opacity .2s ease, margin-left .25s ease",
+          }}
+        >
+          {tab.label}
+        </div>
       </div>
     );
   };
@@ -54,11 +74,12 @@ export default function TabBar() {
       className="thatfridge-tabbar"
       style={{
         position: "absolute",
-        left: "50%",
-        transform: "translateX(-50%)",
+        left: 16,
+        right: 16,
         bottom: 22,
         display: "flex",
         alignItems: "center",
+        justifyContent: "space-between",
         gap: 4,
         padding: 6,
         background: "rgba(255,255,255,0.85)",
@@ -69,30 +90,33 @@ export default function TabBar() {
       }}
     >
       {LEFT_TABS.map(renderTab)}
-      <div style={{ width: 58, flex: "none" }} />
-      {RIGHT_TABS.map(renderTab)}
 
-      <div
-        onClick={actions.openAdd}
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: -22,
-          transform: "translateX(-50%)",
-          width: 58,
-          height: 58,
-          borderRadius: 29,
-          background: "#16325c",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          boxShadow: "0 10px 22px rgba(22,50,92,0.35)",
-          border: "4px solid rgba(255,255,255,0.85)",
-        }}
-      >
-        <Plus size={24} color="#fff" strokeWidth={2.4} />
+      <div style={{ position: "relative", width: 58, flex: "none" }}>
+        <div
+          onClick={actions.openAdd}
+          className="thatfridge-tabbar-fab"
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: -22,
+            width: 58,
+            height: 58,
+            borderRadius: 29,
+            background: "#16325c",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            boxShadow: "0 10px 22px rgba(22,50,92,0.35)",
+            border: "4px solid rgba(255,255,255,0.85)",
+            transition: "transform .15s ease",
+          }}
+        >
+          <Plus size={24} color="#fff" strokeWidth={2.4} />
+        </div>
       </div>
+
+      {RIGHT_TABS.map(renderTab)}
     </div>
   );
 }

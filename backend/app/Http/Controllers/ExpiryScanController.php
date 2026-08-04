@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Section;
 use App\Services\ExpiryScanService;
 use Illuminate\Http\Request;
 
@@ -17,8 +18,10 @@ class ExpiryScanController extends Controller
     /**
      * Read the printed expiry date off a package photo.
      */
-    public function scan(Request $request, $section)
+    public function scan(Request $request, Section $section)
     {
+        $this->authorize('update', $section);
+
         $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
         ]);

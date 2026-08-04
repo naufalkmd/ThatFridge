@@ -24,8 +24,15 @@ class CheckItemFreshness extends Command
     {
         $items = Item::query()
             ->whereNotNull('expiry_date')
+            ->where('expiry_date', '<=', now()->addDays(self::WARNING_WINDOW_DAYS)->toDateString())
             ->with('section.fridge.user.notificationPref')
             ->get();
+
+        $alreadyNotifiedItemIds = NotificationEvent::query()
+            ->where('kind', 'expiring')
+            ->where('done', false)
+            ->pluck('item_id')
+            ->flip();
 
         $created = 0;
 
@@ -43,13 +50,7 @@ class CheckItemFreshness extends Command
                 continue;
             }
 
-            $alreadyNotified = NotificationEvent::query()
-                ->where('item_id', $item->id)
-                ->where('kind', 'expiring')
-                ->where('done', false)
-                ->exists();
-
-            if ($alreadyNotified) {
+            if ($alreadyNotifiedItemIds->has($item->id)) {
                 continue;
             }
 

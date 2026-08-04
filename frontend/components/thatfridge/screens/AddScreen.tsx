@@ -227,7 +227,17 @@ export default function AddScreen() {
   };
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,#eaf6ff,#cfe8fb)", padding: "28px 20px 30px", display: "flex", flexDirection: "column" }}>
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: "linear-gradient(180deg,#eaf6ff,#cfe8fb)",
+        padding: "28px 20px 30px",
+        display: "flex",
+        flexDirection: "column",
+        animation: "slideUpSheet .32s cubic-bezier(0.32,0.72,0,1)",
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
         <div style={{ fontSize: 20, fontWeight: 800 }}>{state.addStep === -1 ? "Add to fridge" : `Add to ${targetFridge?.name || "fridge"}`}</div>
         <div onClick={actions.goHome} style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>

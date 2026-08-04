@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Section;
 use App\Services\ReceiptService;
 use Illuminate\Http\Request;
 
@@ -17,8 +18,10 @@ class ReceiptController extends Controller
     /**
      * Upload receipt image and extract items via OCR
      */
-    public function scan(Request $request, $section)
+    public function scan(Request $request, Section $section)
     {
+        $this->authorize('update', $section);
+
         $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
             'store_name' => 'nullable|string|max:255',
@@ -47,8 +50,10 @@ class ReceiptController extends Controller
     /**
      * Confirm receipt items and prepare for import
      */
-    public function confirm(Request $request, $section)
+    public function confirm(Request $request, Section $section)
     {
+        $this->authorize('update', $section);
+
         $request->validate([
             'receipt_id' => 'required|integer',
             'items' => 'required|array',

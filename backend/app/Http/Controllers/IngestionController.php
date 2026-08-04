@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Section;
 use Illuminate\Http\Request;
 
 class IngestionController extends Controller
@@ -9,8 +10,10 @@ class IngestionController extends Controller
     /**
      * Manual item entry - Track B endpoint
      */
-    public function store(Request $request) //, $section is removed
+    public function store(Request $request, Section $section)
     {
+        $this->authorize('update', $section);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'icon' => 'required|string|max:50',
