@@ -70,44 +70,25 @@ const shellStyle: React.CSSProperties = {
   color: "#16325c",
 };
 
-function DesktopBrand() {
-  return (
-    <div className="thatfridge-desktop-brand">
-      <div className="thatfridge-desktop-brand-icon">
-        <Refrigerator size={20} color="#fff" strokeWidth={1.8} />
-      </div>
-      <div>
-        <div className="thatfridge-desktop-brand-title">ThatFridge</div>
-        <div className="thatfridge-desktop-brand-tagline">Know what&apos;s inside before you open the door.</div>
-      </div>
-    </div>
-  );
-}
-
 function AppShell() {
   const { state } = useThatFridgeCtx();
 
   if (!state.isAuthenticated) {
     return (
-      <div className="thatfridge-shell-wrap">
-        <DesktopBrand />
-        <div className="thatfridge-shell" style={shellStyle}>
-          <AuthScreen />
-        </div>
+      <div className="thatfridge-shell thatfridge-auth-shell" style={shellStyle}>
+        <AuthScreen />
       </div>
     );
   }
 
   if (state.isLoading) {
     return (
-      <div className="thatfridge-shell-wrap">
-        <DesktopBrand />
-        <div
-          className="thatfridge-shell"
-          style={{ ...shellStyle, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600 }}
-        >
-          Loading your fridge…
-        </div>
+      <div
+        className="thatfridge-shell thatfridge-auth-shell"
+        style={{ ...shellStyle, display: "flex", alignItems: "center", justifyContent: "center", gap: 12, fontSize: 14, fontWeight: 600 }}
+      >
+        <Refrigerator size={20} color="#16325c" strokeWidth={1.8} />
+        Loading your fridge…
       </div>
     );
   }

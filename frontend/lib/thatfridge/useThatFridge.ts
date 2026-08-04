@@ -954,6 +954,7 @@ export function useThatFridge() {
     setTimeout(() => {
       patch((s) => {
         const fridge = s.fridges[s.addFridgeIndex];
+        if (!fridge) return { addStep: 0, scanMethod: null, syncError: "Add a fridge first." };
         const detected: DetectedItem[] = detectedTemplates.map((t, i) => ({
           id: "nd" + (i + 1),
           name: t.name,
@@ -972,16 +973,22 @@ export function useThatFridge() {
   const lookupBarcode = async (explicitBarcode?: string) => {
     const barcode = (explicitBarcode ?? state.barcodeInput).trim();
     if (!barcode) return;
-    const fridgeIndex = state.addFridgeIndex;
-    const fridge = state.fridges[fridgeIndex];
-    if (!fridge) return;
     patch({ barcodeLoading: true, barcodeError: null, barcodeInput: barcode });
     try {
+      let fridgeIndex = state.addFridgeIndex;
+      let fridge = state.fridges[fridgeIndex];
+      if (!fridge) {
+        // Brand-new users start with zero fridges — create one on the fly, same as sections.
+        fridge = await createFridge("My Fridge");
+        fridgeIndex = state.fridges.length;
+        patch((s) => ({ fridges: [...s.fridges, fridge], activeFridge: fridgeIndex, addFridgeIndex: fridgeIndex }));
+      }
       let sectionId = fridge.sections[0]?.id;
       if (!sectionId) {
         // Brand-new fridges start with zero sections — create one on the fly, same as manual add.
         const section = await createSection(fridge.id, "General");
         sectionId = section.id;
+        fridge = { ...fridge, sections: [...fridge.sections, section] };
         patch((s) => ({
           fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections: [...f.sections, section] } : f)),
         }));
@@ -1080,10 +1087,6 @@ export function useThatFridge() {
   const confirmManualAdd = async () => {
     const name = state.manualName.trim();
     if (!name) return;
-    const fridgeIndex = state.addFridgeIndex;
-    const fridge = state.fridges[fridgeIndex];
-    let sectionId = state.manualSectionId || fridge.sections[0]?.id;
-    const icon = state.manualIcon || (sectionId && DEFAULT_ICON_BY_SECTION[sectionId]) || "leftovers";
     const note = state.manualNote.trim() || "Added manually";
     const location = state.manualLocation;
     const expiryDate = state.manualExpiryDate;
@@ -1092,6 +1095,15 @@ export function useThatFridge() {
     patch({ screen: state.lastMainScreen, addStep: 0, scanMethod: null, manualName: "", manualNote: "" });
 
     try {
+      let fridgeIndex = state.addFridgeIndex;
+      let fridge = state.fridges[fridgeIndex];
+      if (!fridge) {
+        // Brand-new users start with zero fridges — create one on the fly, same as sections.
+        fridge = await createFridge("My Fridge");
+        fridgeIndex = state.fridges.length;
+        patch((s) => ({ fridges: [...s.fridges, fridge], activeFridge: fridgeIndex, addFridgeIndex: fridgeIndex }));
+      }
+      let sectionId = state.manualSectionId || fridge.sections[0]?.id;
       if (!fridge.sections.some((sec) => sec.id === sectionId)) {
         const section = await createSection(fridge.id, "General");
         sectionId = section.id;
@@ -1099,6 +1111,7 @@ export function useThatFridge() {
           fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections: [...f.sections, section] } : f)),
         }));
       }
+      const icon = state.manualIcon || (sectionId && DEFAULT_ICON_BY_SECTION[sectionId]) || "leftovers";
       const item = await createItem(sectionId!, {
         name,
         icon,

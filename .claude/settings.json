@@ -33,7 +33,11 @@
       "Bash(node verify_dropdown.mjs)",
       "Bash(curl -s http://localhost:3000/images/thatfridge/food-icons/icon-015.png -o /tmp/icon-015-check.png)",
       "Bash(node verify_item_edit_dropdown.mjs)",
-      "Bash(node verify_autofill.mjs)"
+      "Bash(node verify_autofill.mjs)",
+      "Bash(node drive_wide_layout.mjs)",
+      "Bash(node debug_wide_css.mjs)",
+      "Bash(curl -s -o /dev/null -w \"http_code: %{http_code}\\\\n\" http://localhost:3001)",
+      "Bash(git stash *)"
     ],
     "additionalDirectories": [
       "/private/tmp",

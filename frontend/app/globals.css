@@ -38,75 +38,46 @@ body {
   transform: translateX(-50%) scale(0.9);
 }
 
-/* Desktop/tablet: frame the phone-shaped app as a deliberate preview instead of a
-   narrow page floating on blank white. Mobile viewports are untouched below this. */
-.thatfridge-desktop-brand {
+/* Auth screen: mobile is untouched full-bleed; >=640px swaps to a real split-screen
+   (brand panel + form panel) rendered by AuthScreen itself — no more phone-card-on-dark-
+   backdrop frame. Same "two clean states, one clean jump" approach as the signed-in app. */
+.thatfridge-auth-wide {
   display: none;
 }
 
 @media (min-width: 640px) {
-  /* Scoped to the auth/loading wrapper only — the signed-in app (.thatfridge-app-wrap)
-     skips this framed-preview tier entirely and stays full-bleed mobile until the real
-     sidebar layout takes over at 900px. Two clean states, one clean jump, instead of
-     mobile -> framed-phone -> sidebar. */
-  body:has(.thatfridge-shell-wrap) {
-    justify-content: center;
-    align-items: center;
-    padding: 48px 24px;
-    background: radial-gradient(ellipse 900px 700px at 50% -10%, #2f5f9e 0%, #1a3a63 45%, #0a1a30 100%);
+  .thatfridge-auth-mobile {
+    display: none;
   }
 
-  .thatfridge-shell-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 22px;
+  .thatfridge-auth-wide {
+    display: grid;
+    grid-template-columns: minmax(320px, 42%) 1fr;
   }
 
-  .thatfridge-desktop-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  /* shellStyle sets width/maxWidth/margin inline (shared with the signed-in shell), so
+     !important is the deliberate override point for the auth shell going full-width too. */
+  .thatfridge-auth-shell {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
   }
+}
 
-  .thatfridge-desktop-brand-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: none;
-  }
+.thatfridge-auth-brand-panel {
+  position: relative;
+  overflow: hidden;
+}
 
-  .thatfridge-desktop-brand-title {
-    font-size: 17px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: -0.2px;
-  }
-
-  .thatfridge-desktop-brand-tagline {
-    font-size: 12.5px;
-    color: rgba(255, 255, 255, 0.55);
-  }
-
-  .thatfridge-shell {
-    height: min(860px, 90vh);
-    border-radius: 36px;
-    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
-  }
-
-  /* Higher specificity than the plain .thatfridge-shell rule above, so the signed-in app
-     opts back out of the framed-preview sizing and stays full-bleed at this width too. */
-  .thatfridge-app-wrap .thatfridge-shell {
-    height: 100vh;
-    height: 100dvh;
-    border-radius: 0;
-    box-shadow: none;
-  }
+.thatfridge-auth-brand-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: radial-gradient(ellipse 70% 60% at 30% 20%, black, transparent 75%);
 }
 
 /* Wide (>=900px), signed-in only: a real sidebar + fluid layout, not a scaled-up phone.
