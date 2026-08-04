@@ -99,9 +99,12 @@ function AppShell() {
   //
   // Only Home/Inventory have real wide-specific layouts (their own -wide blocks fill the
   // full shell). Every other screen is still mobile-only markup — at >=900px it's wrapped
-  // in .thatfridge-screen-constrain so it renders as a centered, phone-width column instead
-  // of pinning to the top-left of a 1440px shell with the rest of the screen empty.
+  // in .thatfridge-screen-constrain so it renders as a centered column instead of pinning to
+  // the top-left of a 1440px shell with the rest of the screen empty. Chat gets a wider
+  // variant of that column (a chat thread wants more room than a settings panel does).
   const isWideNativeScreen = state.screen === "home" || state.screen === "inventory";
+  const constrainClassName =
+    state.screen === "chat" ? "thatfridge-screen-constrain thatfridge-screen-constrain--chat" : "thatfridge-screen-constrain";
   return (
     <div className="thatfridge-app-wrap">
       <Sidebar />
@@ -109,7 +112,7 @@ function AppShell() {
         {isWideNativeScreen ? (
           <Screens />
         ) : (
-          <div className="thatfridge-screen-constrain">
+          <div className={constrainClassName}>
             <Screens />
           </div>
         )}

@@ -159,6 +159,12 @@ body {
     overflow: hidden;
     box-shadow: 0 24px 60px rgba(22, 50, 92, 0.16), 0 0 0 1px rgba(22, 50, 92, 0.06);
   }
+
+  /* Chat wants more room than a settings-panel-shaped screen — a wider column instead of
+     the generic phone-width one. */
+  .thatfridge-screen-constrain--chat {
+    max-width: 760px;
+  }
 }
 
 @keyframes glow {
