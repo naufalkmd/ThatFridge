@@ -56,10 +56,12 @@ function CrewCharacter({
   zone,
   count,
   onOpenNotifications,
+  bubbleScale,
 }: {
   zone: (typeof ZONES)[number];
   count: number;
   onOpenNotifications: () => void;
+  bubbleScale: number;
 }) {
   const [lineIndex, setLineIndex] = useState(0);
   const [typing, setTyping] = useState(false);
@@ -119,14 +121,14 @@ function CrewCharacter({
           transform: "translateX(-50%)",
           background: "#fff",
           border: `1.5px solid ${zone.color}`,
-          borderRadius: 10,
-          padding: "4px 8px",
-          fontSize: 9,
+          borderRadius: 10 * bubbleScale,
+          padding: `${4 * bubbleScale}px ${8 * bubbleScale}px`,
+          fontSize: 9 * bubbleScale,
           fontWeight: isShowingAlert ? 800 : 600,
           color: isShowingAlert ? zone.color : "#16325c",
           whiteSpace: "normal",
           textAlign: "center",
-          width: 100,
+          width: 100 * bubbleScale,
           lineHeight: 1.25,
           zIndex: 2,
           cursor: isShowingAlert ? "pointer" : "default",
@@ -137,11 +139,11 @@ function CrewCharacter({
         <div
           style={{
             position: "absolute",
-            bottom: -4,
+            bottom: -4 * bubbleScale,
             left: "50%",
             transform: "translateX(-50%) rotate(45deg)",
-            width: 6,
-            height: 6,
+            width: 6 * bubbleScale,
+            height: 6 * bubbleScale,
             background: "#fff",
             borderRight: `1.5px solid ${zone.color}`,
             borderBottom: `1.5px solid ${zone.color}`,
@@ -155,8 +157,10 @@ function CrewCharacter({
   );
 }
 
-export default function CrewScene() {
+export default function CrewScene({ scale = 1, mapScale = 1, mapOffsetY = 0 }: { scale?: number; mapScale?: number; mapOffsetY?: number }) {
   const { state, actions } = useThatFridgeCtx();
+  const bubbleScale = scale === 1 ? 1 : scale * 1.1;
+  const isDesktopCrew = scale > 1;
 
   const activeFridgeId = state.fridges[state.activeFridge]?.id;
   const pendingByKind: Record<NotificationKind, number> = { expiring: 0, lowStock: 0, recipe: 0 };
@@ -170,25 +174,31 @@ export default function CrewScene() {
     <div
       style={{
         position: "relative",
-        width: "100%",
+        width: scale === 1 ? "100%" : `calc(100% / ${scale})`,
         aspectRatio: "1186 / 849",
+        transform: scale === 1 ? undefined : `scale(${scale})`,
+        transformOrigin: "top center",
+        margin: scale === 1 ? undefined : "0 auto",
       }}
     >
-      <Image src="/images/thatfridge/pixel-art-source.png" alt="Your crew's spaces" fill sizes="480px" style={{ objectFit: "contain", imageRendering: "pixelated" }} />
+      <div style={{ position: "absolute", inset: 0, transform: `translateY(${mapOffsetY}px) scale(${mapScale})`, transformOrigin: "center center" }}>
+        <Image src="/images/thatfridge/pixel-art-source.png" alt="Your crew's spaces" fill sizes="480px" style={{ objectFit: "contain", imageRendering: "pixelated" }} />
+      </div>
 
       {ZONES.map((zone) => {
         const count = zone.notifKind ? pendingByKind[zone.notifKind] : 0;
+        const topPct = isDesktopCrew && (zone.id === "guardian" || zone.id === "shopkeeper") ? zone.topPct + 4 : zone.topPct;
         return (
           <div
             key={zone.id}
             style={{
               position: "absolute",
               left: `${zone.leftPct}%`,
-              top: `${zone.topPct}%`,
+              top: `${topPct}%`,
             }}
           >
             <div onClick={() => zone.onClick(actions)}>
-              <CrewCharacter zone={zone} count={count} onOpenNotifications={actions.openNotificationHistory} />
+              <CrewCharacter zone={zone} count={count} bubbleScale={bubbleScale} onOpenNotifications={actions.openNotificationHistory} />
             </div>
           </div>
         );

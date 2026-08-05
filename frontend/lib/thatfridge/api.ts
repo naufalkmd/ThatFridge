@@ -21,6 +21,7 @@ interface RawFridge {
   id: string;
   name: string;
   style: string | null;
+  photo_url: string | null;
   sections: RawSection[];
 }
 
@@ -33,6 +34,7 @@ function toClientFridge(raw: RawFridge): Fridge {
     id: raw.id,
     name: raw.name,
     style: (raw.style as Fridge["style"]) ?? undefined,
+    photoUrl: raw.photo_url ?? undefined,
     sections: raw.sections.map(toClientSection),
   };
 }
@@ -74,7 +76,7 @@ export async function createFridge(name: string): Promise<Fridge> {
   return toClientFridge(raw);
 }
 
-export async function updateFridge(id: string, data: { name?: string; style?: string }): Promise<Fridge> {
+export async function updateFridge(id: string, data: { name?: string; style?: string; photo_url?: string | null }): Promise<Fridge> {
   const raw = await apiFetch<RawFridge>(`/fridges/${id}`, { method: "PATCH", body: JSON.stringify(data) });
   return toClientFridge(raw);
 }

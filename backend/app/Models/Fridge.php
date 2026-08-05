@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'name', 'style'])]
+#[Fillable(['user_id', 'name', 'style', 'photo_url'])]
 class Fridge extends Model
 {
     public function user(): BelongsTo

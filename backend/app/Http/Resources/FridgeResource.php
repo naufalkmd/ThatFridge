@@ -18,6 +18,7 @@ class FridgeResource extends JsonResource
             'id' => (string) $this->id,
             'name' => $this->name,
             'style' => $this->style,
+            'photo_url' => $this->photo_url,
             'sections' => SectionResource::collection($this->whenLoaded('sections')),
         ];
     }

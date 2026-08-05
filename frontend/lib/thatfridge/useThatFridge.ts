@@ -516,6 +516,18 @@ export function useThatFridge() {
     });
   };
 
+  const updateFridgePhoto = (photoUrl: string) => {
+    const index = state.stylingFridgeIndex;
+    const fridge = state.fridges[index];
+    if (!fridge) return;
+    const prevPhotoUrl = fridge.photoUrl;
+    patch((s) => ({ fridges: s.fridges.map((f, i) => (i === index ? { ...f, style: "custom", photoUrl } : f)), screen: "home" }));
+    updateFridge(fridge.id, { style: "custom", photo_url: photoUrl }).catch((err) => {
+      patch((s) => ({ fridges: s.fridges.map((f, i) => (i === index ? { ...f, photoUrl: prevPhotoUrl } : f)) }));
+      patch({ syncError: describeError(err, "Couldn't save the fridge photo.") });
+    });
+  };
+
   const renameFridge = (name: string) =>
     patch((s) => ({ fridges: s.fridges.map((f, i) => (i === s.stylingFridgeIndex ? { ...f, name } : f)) }));
   const renameFridgeBlur = () => {
@@ -1250,6 +1262,7 @@ export function useThatFridge() {
     openStylePicker,
     closeStylePicker,
     selectFridgeStyle,
+    updateFridgePhoto,
     renameFridge,
     renameFridgeBlur,
     deleteFridge,

@@ -24,9 +24,10 @@ export default function ProfileDrawer() {
     .toUpperCase();
 
   return (
-    <div style={{ position: "absolute", inset: 0, zIndex: 20 }}>
-      <div onClick={actions.closeProfile} style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.4)" }} />
+    <div className="thatfridge-profile-shell" style={{ position: "absolute", inset: 0, zIndex: 20 }}>
+      <div className="thatfridge-profile-backdrop" onClick={actions.closeProfile} style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.4)" }} />
       <div
+        className="thatfridge-profile-panel"
         style={{
           position: "absolute",
           left: 0,
@@ -42,6 +43,14 @@ export default function ProfileDrawer() {
           animation: "pop .2s ease-out",
         }}
       >
+        <div className="thatfridge-profile-desktop-header" style={{ display: "none", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+          <div style={{ marginLeft: 26 }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#16325c" }}>Profile & settings</div>
+            <div style={{ fontSize: 12, color: "rgba(22,50,92,0.5)" }}>Manage your account and app preferences</div>
+          </div>
+        </div>
+
+        <div className="thatfridge-profile-content" style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
           <div
             style={{
@@ -106,9 +115,10 @@ export default function ProfileDrawer() {
         <div style={{ flex: 1 }} />
         <div
           onClick={actions.signOut}
-          style={{ textAlign: "center", padding: 12, borderRadius: 14, background: "#eef2f7", color: "#16325c", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+          style={{ textAlign: "center", padding: 12, borderRadius: 14, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", color: "#16325c", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
         >
           Sign out
+        </div>
         </div>
       </div>
     </div>

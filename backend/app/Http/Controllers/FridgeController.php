@@ -20,6 +20,7 @@ class FridgeController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'style' => ['nullable', 'string', 'max:255'],
+            'photo_url' => ['nullable', 'string'],
         ]);
 
         $fridge = $request->user()->fridges()->create($data);
@@ -41,6 +42,7 @@ class FridgeController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'style' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'photo_url' => ['sometimes', 'nullable', 'string'],
         ]);
 
         $fridge->update($data);

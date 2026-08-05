@@ -278,6 +278,7 @@ export interface FridgeHeroView {
   color: string;
   isCustom: boolean;
   photoSrc: string;
+  photoUrl?: string | null;
   bg: string;
 }
 
@@ -288,6 +289,7 @@ export function getFridgeHeroViews(state: ThatFridgeState): FridgeHeroView[] {
     const style = f.style || "photo";
     const isCustom = style === "custom";
     const def = isCustom ? undefined : styleDef(style);
+    const photoSrc = isCustom ? f.photoUrl || DEFAULT_FRIDGE_PHOTO : def ? def.photo : DEFAULT_FRIDGE_PHOTO;
     return {
       id: f.id,
       name: f.name,
@@ -295,7 +297,8 @@ export function getFridgeHeroViews(state: ThatFridgeState): FridgeHeroView[] {
       freshness,
       color: freshColor(freshness),
       isCustom,
-      photoSrc: def ? def.photo : DEFAULT_FRIDGE_PHOTO,
+      photoSrc,
+      photoUrl: f.photoUrl,
       bg: def ? def.bg : "#4a89c9",
     };
   });

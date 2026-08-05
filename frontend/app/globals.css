@@ -160,6 +160,33 @@ body {
   .thatfridge-wide-content--chat {
     max-width: 820px;
   }
+
+  .thatfridge-profile-shell .thatfridge-profile-backdrop {
+    display: none;
+  }
+
+  .thatfridge-profile-shell .thatfridge-profile-panel {
+    width: 100% !important;
+    max-width: none !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff) !important;
+    box-shadow: none !important;
+    padding: 24px 0 28px !important;
+    animation: none !important;
+  }
+
+  .thatfridge-profile-shell .thatfridge-profile-desktop-header {
+    display: flex !important;
+  }
+
+  .thatfridge-profile-shell .thatfridge-profile-content {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    padding: 0 40px;
+    box-sizing: border-box;
+  }
 }
 
 @keyframes glow {

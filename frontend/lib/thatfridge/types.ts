@@ -30,6 +30,7 @@ export interface Fridge {
   id: string;
   name: string;
   style?: FridgeStyleKey;
+  photoUrl?: string | null;
   sections: Section[];
 }
 

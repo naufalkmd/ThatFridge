@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import { ChevronRight, ImagePlus } from "lucide-react";
 import { FRIDGE_STYLES } from "@/lib/thatfridge/data";
@@ -9,6 +9,7 @@ import { useThatFridgeCtx } from "../ThatFridgeContext";
 export default function FridgeStyleSheet() {
   const { state, actions } = useThatFridgeCtx();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const stylingFridge = state.fridges[state.stylingFridgeIndex];
   const currentStyle = stylingFridge?.style || "photo";
   const itemCount = stylingFridge?.sections.reduce((n, sec) => n + sec.items.length, 0) || 0;
@@ -18,6 +19,21 @@ export default function FridgeStyleSheet() {
     { key: "photo", label: "Original photo", photo: "/images/thatfridge/fridge-hero.png" },
     ...FRIDGE_STYLES.map((d) => ({ key: d.key, label: d.label, photo: d.photo })),
   ];
+
+  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const photoUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Couldn't read the selected image."));
+      reader.readAsDataURL(file);
+    });
+
+    actions.updateFridgePhoto(photoUrl);
+  };
 
   return (
     <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)" }}>
@@ -51,16 +67,32 @@ export default function FridgeStyleSheet() {
             ))}
           </div>
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>OR UPLOAD YOUR OWN</div>
-          <div onClick={() => actions.selectFridgeStyle("custom")} style={{ cursor: "pointer", borderRadius: 16, padding: 14, background: "#f6f8fa", display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            onClick={() => uploadInputRef.current?.click()}
+            style={{ cursor: "pointer", borderRadius: 16, padding: 14, background: "#f6f8fa", display: "flex", alignItems: "center", gap: 12 }}
+          >
             <div style={{ width: 44, height: 44, borderRadius: 12, background: "#eaf6ff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
               <ImagePlus size={19} color="#4a6fa5" strokeWidth={2} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2 }}>Photo from gallery</div>
-              <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>Drop your own fridge photo</div>
+              <div style={{ fontSize: 11.5, color: "rgba(22,50,92,0.5)" }}>{stylingFridge?.photoUrl ? "Replace the current fridge photo" : "Drop your own fridge photo"}</div>
             </div>
             <ChevronRight size={17} color="rgba(22,50,92,0.3)" />
           </div>
+          <input ref={uploadInputRef} type="file" accept="image/*" onChange={handleUpload} style={{ display: "none" }} />
+
+          {stylingFridge?.photoUrl && (
+            <div style={{ marginTop: 12, borderRadius: 16, overflow: "hidden", background: "#eaf6ff", border: "1px solid rgba(22,50,92,0.08)" }}>
+              <div style={{ position: "relative", aspectRatio: "16 / 10" }}>
+                <img
+                  src={stylingFridge.photoUrl}
+                  alt="Selected fridge photo preview"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+            </div>
+          )}
 
           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(193,69,46,0.7)", margin: "24px 0 8px" }}>DANGER ZONE</div>
           {!confirmingDelete ? (

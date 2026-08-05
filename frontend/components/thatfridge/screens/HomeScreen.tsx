@@ -318,25 +318,11 @@ export default function HomeScreen() {
                   />
                 )}
                 {fr.isCustom && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      backgroundImage: "url(/images/thatfridge/chat-wallpaper.png), linear-gradient(180deg,#eaf6ff,#cfe8fb 55%,#eaf6ff)",
-                      backgroundRepeat: "repeat, no-repeat",
-                      backgroundSize: "400px 400px, auto",
-                      imageRendering: "pixelated",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      textAlign: "center",
-                      padding: "0 24px",
-                    }}
-                  >
-                    <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(6px)", color: "#16325c", fontSize: 12.5, fontWeight: 700, padding: "9px 16px", borderRadius: 14 }}>
-                      Drop your fridge photo
-                    </div>
-                  </div>
+                  <img
+                    src={fr.photoSrc}
+                    alt="Custom fridge photo"
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 15%" }}
+                  />
                 )}
                 <div style={{ position: "absolute", top: 22, left: "16%", width: 3, height: 3, borderRadius: "50%", background: "#eaf3fb", animation: "drip 4s ease-in infinite" }} />
                 <div style={{ position: "absolute", top: 18, left: "52%", width: 3, height: 3, borderRadius: "50%", background: "#eaf3fb", animation: "drip 4s ease-in infinite 1.3s" }} />
@@ -577,6 +563,7 @@ export default function HomeScreen() {
                 key={fr.id}
                 onClick={() => actions.selectFridgeScope(i)}
                 style={{
+                  position: "relative",
                   borderRadius: 16,
                   overflow: "hidden",
                   background: "linear-gradient(160deg,#234b7a,#16325c 70%)",
@@ -589,12 +576,44 @@ export default function HomeScreen() {
                   cursor: "pointer",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800 }}>{fr.name}</div>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, background: "rgba(255,255,255,0.18)", padding: "3px 8px", borderRadius: 20, flex: "none" }}>{fr.freshness}% fresh</div>
+                <img
+                  src={fr.photoSrc}
+                  alt="Fridge preview"
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%" }}
+                />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(22,50,92,0.12) 0%, rgba(22,50,92,0.45) 100%)" }} />
+                <div style={{ position: "absolute", top: 14, left: 14, background: "rgba(255,255,255,0.85)", color: "#16325c", fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
+                  {fr.name}
                 </div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", fontWeight: 600 }}>
-                  <b style={{ color: "#fff" }}>{fr.itemCount}</b> items tracked
+                <div style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,0.85)", color: fr.color, fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
+                  {fr.freshness}% fresh
+                </div>
+                <div style={{ position: "absolute", bottom: 12, left: 16, background: "rgba(22,50,92,0.55)", backdropFilter: "blur(6px)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 20 }}>
+                  {fr.itemCount} items tracked
+                </div>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    actions.openStylePicker(i);
+                  }}
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    bottom: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "7px 10px",
+                    borderRadius: 999,
+                    background: "rgba(255,255,255,0.15)",
+                    backdropFilter: "blur(6px)",
+                    border: "1px solid rgba(255,255,255,0.14)",
+                    cursor: "pointer",
+                    boxShadow: "0 8px 16px rgba(10, 30, 60, 0.16)",
+                  }}
+                >
+                  <Palette size={14} color="#fff" strokeWidth={2.2} />
+                  <div style={{ fontSize: 11, fontWeight: 800 }}>Customize</div>
                 </div>
               </div>
             ))}
@@ -655,6 +674,13 @@ export default function HomeScreen() {
           )}
         </div>
       </div>
+
+      <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20 }}>
+        <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 14 }}>Your crew</div>
+        <CrewScene scale={1.12} mapScale={0.9} mapOffsetY={-22} />
+      </div>
+
+      <div style={{ height: 20 }} />
 
       <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20 }}>
         <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 14 }}>Your crew</div>

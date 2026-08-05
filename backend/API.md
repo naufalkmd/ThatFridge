@@ -78,6 +78,7 @@ Returns all of the current user's fridges, fully nested (sections → items).
       "id": "1",
       "name": "Kitchen",
       "style": "photo",
+      "photo_url": null,
       "sections": [
         {
           "id": "1",
@@ -104,7 +105,7 @@ Returns all of the current user's fridges, fully nested (sections → items).
 
 ### `POST /fridges` 🔒
 
-**Body** `{ "name": "Garage", "style": "classic" }` — `style` optional.
+**Body** `{ "name": "Garage", "style": "classic", "photo_url": "data:image/jpeg;base64,..." }` — `style` and `photo_url` optional.
 
 **201** — single fridge object (same shape as above, `sections: []`).
 
@@ -114,7 +115,7 @@ Returns all of the current user's fridges, fully nested (sections → items).
 
 ### `PATCH /fridges/{fridge}` 🔒
 
-**Body** — any of `name`, `style`.
+**Body** — any of `name`, `style`, `photo_url`.
 
 **200** — updated fridge.
 
