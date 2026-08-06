@@ -2,23 +2,34 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class PhotoService
 {
+    public function __construct(protected OpenRouterVisionService $vision) {}
+
     /**
-     * Process fridge photo and mock object detection
+     * Process fridge photo and detect items via OpenRouter Vision (Claude Haiku).
      */
     public function processPhoto($file)
     {
         try {
             // Save file to storage
             $path = $file->store('photos', 'public');
-            
-            // Mock detection response (in real version, call Gemini Vision here)
-            $detectedItems = $this->mockDetection();
-            
+
+            if (! $this->vision->available()) {
+                // No API key configured at all - fall back to mock data so local dev/demoing
+                // still works without anyone needing to set one up.
+                $detectedItems = $this->mockDetection();
+            } else {
+                // A key is configured, so a real call was attempted. If it failed or nothing
+                // identifiable was in the photo, return an empty result rather than fake data -
+                // the frontend already shows a proper "couldn't spot any items" message for
+                // this case, which is honest instead of silently wrong.
+                $detectedItems = $this->detectItemsWithVision($file->getRealPath(), $file->getMimeType()) ?? [];
+            }
+
             return [
                 'photo_scan_id' => rand(1, 100000),
                 'file_path' => $path,
@@ -28,12 +39,60 @@ class PhotoService
             ];
         } catch (\Exception $e) {
             Log::error('Photo processing failed', ['error' => $e->getMessage()]);
+
             return null;
         }
     }
 
     /**
-     * Mock object detection response (replace with real Gemini Vision call later)
+     * Ask OpenRouter Vision (Claude Haiku) to look at the fridge photo and return detected
+     * items in the same shape the frontend already expects from
+     * mockDetection().
+     */
+    private function detectItemsWithVision(string $imagePath, string $mimeType): ?array
+    {
+        $prompt = <<<'PROMPT'
+You are looking at a photo of the inside of a refrigerator, freezer, or pantry. Identify every distinct food or drink item visible.
+
+Return ONLY a JSON array (no prose, no markdown fences) where each element has exactly these fields:
+- "detected_name": what you actually see, in plain words, e.g. "milk bottle", "carton of eggs"
+- "parsed_name": a clean, singular, human-readable product name, e.g. "Milk"
+- "icon": one lowercase category word for icon lookup, one of: milk, cheese, egg, bread, meat, fish, vegetable, fruit, drink, snack, item
+- "matched_product_id": always null
+- "confidence": your confidence this item was correctly identified, from 0 to 1
+- "confirmed": always false
+
+Only include items you can actually see - do not guess at items that might typically be in a fridge but aren't visible.
+If nothing identifiable is visible, return an empty array.
+PROMPT;
+
+        $result = $this->vision->analyzeImage($imagePath, $mimeType, $prompt);
+
+        if (! is_array($result)) {
+            return null;
+        }
+
+        // The model occasionally wraps the array as {"items": [...]} despite the
+        // prompt; handle both shapes defensively.
+        $items = $result['items'] ?? $result;
+
+        if (! is_array($items)) {
+            return null;
+        }
+
+        return array_values(array_map(fn ($item) => [
+            'detected_name' => $item['detected_name'] ?? ($item['parsed_name'] ?? 'item'),
+            'parsed_name' => $item['parsed_name'] ?? 'Item',
+            'icon' => $item['icon'] ?? 'item',
+            'matched_product_id' => null,
+            'confidence' => is_numeric($item['confidence'] ?? null) ? (float) $item['confidence'] : 0.5,
+            'confirmed' => false,
+        ], $items));
+    }
+
+    /**
+     * Fallback response used when OPENROUTER_API_KEY isn't set, or the live
+     * call fails - keeps local dev/demoing possible without a key.
      */
     private function mockDetection()
     {
@@ -79,7 +138,7 @@ class PhotoService
     public function confirmItems($items)
     {
         return collect($items)
-            ->filter(fn($item) => $item['confirmed'] ?? false)
+            ->filter(fn ($item) => $item['confirmed'] ?? false)
             ->map(function ($item) {
                 return [
                     'name' => $item['name'] ?? $item['parsed_name'],

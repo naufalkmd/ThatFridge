@@ -22,6 +22,8 @@ import {
   register,
   scanBarcode,
   scanExpiryPhoto,
+  scanFridgePhoto,
+  scanReceipt,
   sendChatMessage,
   type ChatAgentName,
   updateFridge,
@@ -145,6 +147,8 @@ export interface ThatFridgeState {
   expiryPhotoLoading: boolean;
   expiryPhotoError: string | null;
   expiryScanNote: string | null;
+  scanImageLoading: boolean;
+  scanImageError: string | null;
   manualName: string;
   manualSectionId: string;
   manualSectionAuto: boolean;
@@ -210,6 +214,8 @@ function initialState(): ThatFridgeState {
     expiryPhotoLoading: false,
     expiryPhotoError: null,
     expiryScanNote: null,
+    scanImageLoading: false,
+    scanImageError: null,
     manualName: "",
     manualSectionId: "",
     manualSectionAuto: true,
@@ -1006,31 +1012,84 @@ export function useThatFridge() {
       patch({ scanMethod: method, addStep: 4, barcodeInput: "", barcodeError: null, expiryScanNote: null, expiryPhotoError: null });
       return;
     }
-    // Receipt & photo scanning aren't wired to a real vision backend yet — this stays a
-    // placeholder flow until that's built (see AGENTS.md / product audit notes).
-    const detectedTemplates: { name: string; icon: string; group: string }[] = [
-      { name: "Orange juice", icon: "milk", group: "dairy" },
-      { name: "Bell peppers", icon: "carrot", group: "produce" },
-      { name: "Sour cream", icon: "yogurt", group: "dairy" },
-    ];
-    patch({ scanMethod: method, addStep: 1 });
-    setTimeout(() => {
-      patch((s) => {
-        const fridge = s.fridges[s.addFridgeIndex];
-        if (!fridge) return { addStep: 0, scanMethod: null, syncError: "Add a fridge first." };
-        const detected: DetectedItem[] = detectedTemplates.map((t, i) => ({
-          id: "nd" + (i + 1),
-          name: t.name,
-          icon: t.icon,
-          section: findSectionIdForGroup(fridge.sections, t.group) || fridge.sections[0]?.id || "",
-          checked: true,
-          qty: 1,
-          expiryDate: "",
-          location: "fridge" as StorageLocation,
+    // Receipt & photo scanning: hand off to the camera capture UI (addStep 1).
+    // The actual API call happens in captureReceiptOrPhoto once a frame is captured.
+    patch({ scanMethod: method, addStep: 1, scanImageError: null });
+  };
+
+  const captureReceiptOrPhoto = async (file: File) => {
+    patch({ scanImageLoading: true, scanImageError: null });
+    try {
+      let fridgeIndex = state.addFridgeIndex;
+      let fridge = state.fridges[fridgeIndex];
+      if (!fridge) {
+        // Brand-new users start with zero fridges — create one on the fly, same as barcode/manual.
+        fridge = await createFridge("My Fridge");
+        fridgeIndex = state.fridges.length;
+        patch((s) => ({ fridges: [...s.fridges, fridge], activeFridge: fridgeIndex, addFridgeIndex: fridgeIndex }));
+      }
+      let sectionId = fridge.sections[0]?.id;
+      if (!sectionId) {
+        // Brand-new fridges start with zero sections — create one on the fly, same as barcode/manual.
+        const section = await createSection(fridge.id, "General");
+        sectionId = section.id;
+        fridge = { ...fridge, sections: [...fridge.sections, section] };
+        patch((s) => ({
+          fridges: s.fridges.map((f, i) => (i === fridgeIndex ? { ...f, sections: [...f.sections, section] } : f)),
         }));
-        return { addStep: 2, detected };
-      });
-    }, 1300);
+      }
+
+      let detected: DetectedItem[] = [];
+
+      if (state.scanMethod === "receipt") {
+        const result = await scanReceipt(sectionId, file);
+        detected = result.detected_items.map((d, i) => {
+          const icon = FOOD_ICON_KEYS.includes(d.icon) ? d.icon : guessIcon(d.parsed_name) || "leftovers";
+          const group = ICON_SECTION[icon];
+          return {
+            id: "rc" + Date.now() + i,
+            name: d.parsed_name,
+            icon,
+            section: (group && findSectionIdForGroup(fridge.sections, group)) || sectionId,
+            checked: true,
+            qty: Math.max(1, d.parsed_quantity || 1),
+            expiryDate: "",
+            location: "fridge" as StorageLocation,
+          };
+        });
+      } else {
+        const result = await scanFridgePhoto(sectionId, file);
+        detected = result.detected_items.map((d, i) => {
+          const icon = FOOD_ICON_KEYS.includes(d.icon) ? d.icon : guessIcon(d.parsed_name) || "leftovers";
+          const group = ICON_SECTION[icon];
+          return {
+            id: "ph" + Date.now() + i,
+            name: d.parsed_name,
+            icon,
+            section: (group && findSectionIdForGroup(fridge.sections, group)) || sectionId,
+            checked: true,
+            qty: 1,
+            expiryDate: "",
+            location: "fridge" as StorageLocation,
+          };
+        });
+      }
+
+      if (detected.length === 0) {
+        patch({
+          scanImageLoading: false,
+          scanImageError:
+            state.scanMethod === "receipt"
+              ? "Couldn't find any items on that receipt — try a clearer photo, or add items manually."
+              : "Couldn't spot any items in that photo — try a clearer shot, or add items manually.",
+        });
+        return;
+      }
+
+      patch({ addStep: 2, detected, scanImageLoading: false });
+    } catch (err) {
+      patch({ scanImageLoading: false, scanImageError: describeError(err, "Couldn't process that photo.") });
+    }
   };
   const onBarcodeInputChange = (value: string) => patch({ barcodeInput: value, barcodeError: null });
   const lookupBarcode = async (explicitBarcode?: string) => {
@@ -1319,6 +1378,7 @@ export function useThatFridge() {
     onBarcodeInputChange,
     lookupBarcode,
     captureExpiryPhoto,
+    captureReceiptOrPhoto,
     skipExpiryPhoto,
     selectItem,
     adjustItemQty,

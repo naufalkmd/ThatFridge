@@ -158,6 +158,67 @@ export function scanExpiryPhoto(sectionId: string, image: File): Promise<ExpiryS
   });
 }
 
+// Raw shapes returned by ReceiptService/PhotoService before the caller maps
+// them into the app's DetectedItem[] shape.
+export interface ReceiptDetectedItem {
+  raw_text: string;
+  parsed_name: string;
+  parsed_quantity: number;
+  matched_product_id: number | null;
+  icon: string;
+  confirmed: boolean;
+}
+
+export interface ReceiptScanResult {
+  receipt_id: number;
+  status: string;
+  file_url: string;
+  detected_items: ReceiptDetectedItem[];
+  message: string;
+}
+
+export function scanReceipt(
+  sectionId: string,
+  image: File,
+  storeName?: string,
+  purchasedAt?: string
+): Promise<ReceiptScanResult> {
+  const formData = new FormData();
+  formData.append("image", image);
+  if (storeName) formData.append("store_name", storeName);
+  if (purchasedAt) formData.append("purchased_at", purchasedAt);
+  return apiFetch<ReceiptScanResult>(`/sections/${sectionId}/items/receipt/scan`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export interface PhotoDetectedItem {
+  detected_name: string;
+  parsed_name: string;
+  icon: string;
+  matched_product_id: number | null;
+  confidence: number;
+  confirmed: boolean;
+}
+
+export interface PhotoScanResult {
+  photo_scan_id: number;
+  status: string;
+  file_url: string;
+  detected_items: PhotoDetectedItem[];
+  message: string;
+}
+
+export function scanFridgePhoto(sectionId: string, image: File): Promise<PhotoScanResult> {
+  const formData = new FormData();
+  formData.append("image", image);
+  return apiFetch<PhotoScanResult>(`/sections/${sectionId}/items/photo/scan`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 export function fetchShoppingItems(): Promise<ShoppingItem[]> {
   return apiFetch<ShoppingItem[]>("/shopping-items");
 }

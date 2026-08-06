@@ -158,6 +158,70 @@ export default function AddScreen() {
   // Barcode capture: live camera scan (primary), photo upload (secondary), manual entry (fallback).
   const [barcodeMode, setBarcodeMode] = useState<"camera" | "manual">("camera");
   const [cameraStatus, setCameraStatus] = useState<"starting" | "scanning" | "error">("starting");
+
+  // Receipt & fridge-photo capture: live camera preview + shutter (primary), photo upload
+  // (secondary). Same one-still-frame-on-tap pattern as expiry capture, since this is also a
+  // paid AI vision call rather than something we can run continuously per-frame.
+  const [scanCameraStatus, setScanCameraStatus] = useState<"starting" | "ready" | "error">("starting");
+  const [scanCameraError, setScanCameraError] = useState<string | null>(null);
+  const scanVideoRef = useRef<HTMLVideoElement | null>(null);
+  const scanStreamRef = useRef<MediaStream | null>(null);
+  const scanFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (state.addStep !== 1) return;
+    let cancelled = false;
+    setScanCameraStatus("starting");
+    setScanCameraError(null);
+
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } })
+      .then((stream) => {
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        scanStreamRef.current = stream;
+        if (scanVideoRef.current) scanVideoRef.current.srcObject = stream;
+        setScanCameraStatus("ready");
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setScanCameraStatus("error");
+        const msg = err instanceof Error ? err.message : String(err);
+        setScanCameraError(
+          /permission|notallowed/i.test(msg)
+            ? "Camera access was denied — use the options below instead."
+            : "Couldn't access the camera — use the options below instead."
+        );
+      });
+
+    return () => {
+      cancelled = true;
+      scanStreamRef.current?.getTracks().forEach((t) => t.stop());
+      scanStreamRef.current = null;
+    };
+  }, [state.addStep]);
+
+  const captureScanFrame = () => {
+    const video = scanVideoRef.current;
+    if (!video || !video.videoWidth) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        actions.captureReceiptOrPhoto(new File([blob], "scan.jpg", { type: "image/jpeg" }));
+      },
+      "image/jpeg",
+      0.95
+    );
+  };
+
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [photoDecodeError, setPhotoDecodeError] = useState<string | null>(null);
   const [photoDecodeLoading, setPhotoDecodeLoading] = useState(false);
@@ -448,11 +512,70 @@ export default function AddScreen() {
       )}
 
       {state.addStep === 1 && (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18 }}>
-          <div style={{ position: "relative", width: 160, height: 160, borderRadius: 24, background: "#eaf6ff", overflow: "hidden" }}>
-            <div style={{ position: "absolute", left: 0, right: 0, height: 2, background: "#4a6fa5", animation: "scanline 1.1s linear infinite" }} />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", textAlign: "center" }}>
+            {state.scanMethod === "receipt" ? "Line up the whole receipt, then tap to capture" : "Line up the inside of your fridge, then tap to capture"}
           </div>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(22,50,92,0.6)" }}>{scanningLabel}</div>
+          <div style={{ position: "relative", width: "100%", aspectRatio: "4 / 3", borderRadius: 20, overflow: "hidden", background: "#000" }}>
+            <video ref={scanVideoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          </div>
+          {scanCameraStatus === "starting" && (
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(22,50,92,0.5)", textAlign: "center" }}>Starting camera…</div>
+          )}
+          {scanCameraError && (
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center" }}>{scanCameraError}</div>
+          )}
+          {scanCameraStatus === "ready" && !state.scanImageLoading && (
+            <div
+              onClick={captureScanFrame}
+              style={{
+                alignSelf: "center",
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                background: "#16325c",
+                border: "4px solid rgba(255,255,255,0.85)",
+                boxShadow: "0 6px 16px rgba(22,50,92,0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+              }}
+            >
+              <Camera size={26} color="#fff" strokeWidth={2} />
+            </div>
+          )}
+
+          {state.scanImageLoading && <div style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(22,50,92,0.6)", textAlign: "center" }}>{scanningLabel}</div>}
+          {state.scanImageError && (
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#c1452e", textAlign: "center", padding: "0 20px" }}>{state.scanImageError}</div>
+          )}
+
+          <div style={{ display: "flex", justifyContent: "center", gap: 18 }}>
+            <div
+              onClick={() => scanFileInputRef.current?.click()}
+              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Upload a photo
+            </div>
+            <div
+              onClick={() => actions.chooseMethod("manual")}
+              style={{ fontSize: 12.5, fontWeight: 700, color: "#4a6fa5", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Skip — enter manually
+            </div>
+          </div>
+          <input
+            ref={scanFileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) actions.captureReceiptOrPhoto(file);
+              e.target.value = "";
+            }}
+          />
         </div>
       )}
 
