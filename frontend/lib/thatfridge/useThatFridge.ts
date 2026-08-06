@@ -249,6 +249,24 @@ function initialState(): ThatFridgeState {
 
 const UNDO_WINDOW_MS = 5000;
 
+// Routes a free-form chat message to whichever agent persona actually fits it,
+// instead of every message getting Chef's recipe-focused system prompt
+// regardless of what's being asked. Falls back to Chef for general chit-chat,
+// since that was the original default and works fine for anything ambiguous.
+const AGENT_KEYWORDS: { agent: ChatAgentName; pattern: RegExp }[] = [
+  { agent: "Guardian", pattern: /\b(expir(e|es|ing|ed|y)|spoil(ed|ing)?|go(es|ing)? bad|moldy|mold|smell(s|y)?|safe to eat|food safety|throw (it|them) out)\b/i },
+  { agent: "Shopkeeper", pattern: /\b(buy|shopping|shopping list|restock|grocery|groceries|running low|need to (get|buy)|out of|purchase)\b/i },
+  { agent: "Organizer", pattern: /\b(organi[sz]e|storage|store (it|them)|arrange|where should|which shelf|fridge vs freezer|freezer or fridge)\b/i },
+  { agent: "Chef", pattern: /\b(cook|recipe|meal|make (for|tonight)|dinner|lunch|breakfast|dish|ingredients)\b/i },
+];
+
+function routeChatAgent(message: string): ChatAgentName {
+  for (const { agent, pattern } of AGENT_KEYWORDS) {
+    if (pattern.test(message)) return agent;
+  }
+  return "Chef";
+}
+
 type Patch = Partial<ThatFridgeState> | ((s: ThatFridgeState) => Partial<ThatFridgeState>);
 
 export function useThatFridge() {
@@ -712,7 +730,7 @@ export function useThatFridge() {
     }
 
     const inventory = buildInventorySummary(state.fridges[state.activeFridge]);
-    sendChatMessage(trimmed, "Chef", inventory)
+    sendChatMessage(trimmed, routeChatAgent(trimmed), inventory)
       .then((res) => {
         const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: res.agent_response };
         patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false }));
