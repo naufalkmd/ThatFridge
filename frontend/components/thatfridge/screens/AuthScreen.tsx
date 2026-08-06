@@ -244,7 +244,7 @@ export default function AuthScreen() {
           <div style={{ position: "relative", fontSize: 11.5, color: "rgba(255,255,255,0.4)" }}>© {new Date().getFullYear()} ThatFridge</div>
         </div>
 
-        <div style={{ padding: "56px 64px", display: "flex", flexDirection: "column", justifyContent: "center", overflowY: "auto", background: "#fff" }}>
+        <div style={{ padding: "56px 64px", display: "flex", flexDirection: "column", justifyContent: "center", overflowY: "auto", minHeight: 0, background: "#fff" }}>
           <div style={{ maxWidth: 340, width: "100%", margin: "0 auto" }}>
             <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.4, marginBottom: 6 }}>
               {isLogin ? "Welcome back" : "Create your account"}

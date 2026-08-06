@@ -1,6 +1,6 @@
-import { EMPTY_ICON, FOOD_GROUP_LABELS, FRIDGE_STYLES, ICON_LABELS, ICON_SECTION, ICONS, RECIPE_BY_ICON } from "./data";
+import { EMPTY_ICON, FOOD_GROUP_LABELS, FRIDGE_STYLES, ICON_LABELS, ICON_SECTION, ICONS } from "./data";
 import { freshColor } from "./utils";
-import type { Fridge, Item, NotificationEvent, Section } from "./types";
+import type { Item, Section } from "./types";
 import type { ThatFridgeState } from "./useThatFridge";
 
 export function findSectionIdForGroup(sections: Section[], group: string): string | null {
@@ -104,56 +104,6 @@ export function getFridgeSummaries(state: ThatFridgeState): FridgeSummary[] {
 
 export function iconFor(icon: string) {
   return ICONS[icon] || EMPTY_ICON;
-}
-
-export function buildNotificationSeed(fridges: Fridge[]): NotificationEvent[] {
-  const events: NotificationEvent[] = [];
-  const now = Date.now();
-
-  fridges.forEach((fridge, fIdx) => {
-    const items = fridge.sections.flatMap((sec) => sec.items);
-    if (!items.length) return;
-    const guardian = items.reduce((a, b) => (a.freshness < b.freshness ? a : b));
-    const lowStock = items.find((i) => i.id !== guardian.id && /left|remaining/i.test(i.note));
-    const base = now - fIdx * 60000;
-
-    events.push({
-      id: `ev-expiring-${fridge.id}`,
-      fridgeId: fridge.id,
-      fridgeName: fridge.name,
-      kind: "expiring",
-      message:
-        guardian.freshness < 30
-          ? `${guardian.name} needs attention today — down to ${guardian.freshness}% freshness.`
-          : `Use ${guardian.name.toLowerCase()} within ${guardian.days} day${guardian.days === 1 ? "" : "s"} for best quality.`,
-      createdAt: base - 1000,
-      done: false,
-    });
-
-    if (lowStock) {
-      events.push({
-        id: `ev-lowstock-${fridge.id}`,
-        fridgeId: fridge.id,
-        fridgeName: fridge.name,
-        kind: "lowStock",
-        message: `${lowStock.name} — ${lowStock.note.toLowerCase()}`,
-        createdAt: base - 2000,
-        done: false,
-      });
-    }
-
-    events.push({
-      id: `ev-recipe-${fridge.id}`,
-      fridgeId: fridge.id,
-      fridgeName: fridge.name,
-      kind: "recipe",
-      message: `Try "${RECIPE_BY_ICON[guardian.icon] || "a quick stir-fry"}" tonight using your ${guardian.name.toLowerCase()}.`,
-      createdAt: base - 3000,
-      done: false,
-    });
-  });
-
-  return events.sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export interface RecipeView {

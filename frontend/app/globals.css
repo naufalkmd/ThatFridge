@@ -92,6 +92,13 @@ body {
   display: none;
 }
 
+/* Header nav icon that's an X (close) on mobile's sheet-style screens but a back arrow on
+   desktop's persistent-sidebar layout, where these are real pages, not overlays. Base state
+   (mobile) hides it; the wide media query below swaps which of the pair is shown. */
+.thatfridge-show-desktop {
+  display: none;
+}
+
 @media (min-width: 900px) {
   body:has(.thatfridge-app-wrap) {
     padding: 0;
@@ -108,6 +115,14 @@ body {
     width: 100%;
     max-width: 1440px;
     margin: 0 auto;
+    /* Without an explicit height, this grid sizes to its tallest child's natural content
+       height — normally the sidebar (nav + fridges list + profile), not the 100vh-pinned
+       shell next to it. A long fridges list then stretched the whole page taller than the
+       viewport, dragging the shell (and its pages) out of view on scroll instead of each
+       column handling its own overflow. Pinning this to the viewport, with the sidebar
+       scrolling internally below, keeps both columns exactly viewport height. */
+    height: 100vh;
+    height: 100dvh;
   }
 
   /* shellStyle sets width/maxWidth/margin inline (it's shared with the narrow-shell states),
@@ -124,6 +139,8 @@ body {
 
   .thatfridge-sidebar {
     display: flex;
+    overflow-y: auto;
+    min-height: 0;
   }
 
   /* TabBar sets display:flex inline; !important is the deliberate override point for
@@ -154,6 +171,37 @@ body {
     max-width: 640px;
     width: 100%;
     margin: 0 auto;
+    /* Screens give this element flex:1 + overflowY:auto to scroll their body while a
+       header/footer stays pinned. Flex items default to min-height:auto (content-based),
+       which lets it grow past the shell's bounded height instead of shrinking to fit —
+       and since .thatfridge-shell clips overflow, that pushed content (and any buttons in
+       it) past the visible area with no way to scroll to it. min-height:0 forces it to
+       actually respect flex:1 and scroll internally instead. */
+    min-height: 0;
+  }
+
+  /* Fields that only make sense on the mobile-only screens' cramped layout (e.g. AddScreen's
+     bare, chevron-less section <select>, which reads as broken text rather than a control). */
+  .thatfridge-hide-desktop {
+    display: none !important;
+  }
+
+  .thatfridge-show-desktop {
+    display: inline-flex !important;
+  }
+
+  /* AddScreen's header has the title first, close button last (mobile: title left, X right).
+     On desktop the button becomes a back arrow and belongs on the left before the title, like
+     every other screen's header — reorder visually via flex `order` rather than restructuring
+     the DOM, and swap `space-between` for a plain left-aligned group now that nothing needs
+     to be pinned to the right edge. */
+  .thatfridge-add-header {
+    justify-content: flex-start !important;
+    gap: 12px;
+  }
+
+  .thatfridge-add-header-btn {
+    order: -1;
   }
 
   /* A message thread wants more room than a settings list or a form. */

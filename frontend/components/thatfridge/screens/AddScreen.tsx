@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import type { IScannerControls } from "@zxing/browser";
-import { Camera, Check, ChevronDown, ChevronRight, Keyboard, Minus, Plus, Receipt, Refrigerator, ScanBarcode, Sparkles, X } from "lucide-react";
+import { Camera, Check, ChevronDown, ChevronLeft, ChevronRight, Keyboard, Minus, Plus, Receipt, Refrigerator, ScanBarcode, Sparkles, X } from "lucide-react";
 import { FOOD_ICON_KEYS, ICON_LABELS, STORAGE_LOCATIONS } from "@/lib/thatfridge/data";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 import FoodIcon from "../FoodIcon";
@@ -238,10 +238,15 @@ export default function AddScreen() {
       }}
     >
     <div className="thatfridge-wide-content" style={{ flex: 1, display: "flex", flexDirection: "column", padding: "28px 20px 30px", boxSizing: "border-box" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+      <div className="thatfridge-add-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
         <div style={{ fontSize: 20, fontWeight: 800 }}>{state.addStep === -1 ? "Add to fridge" : `Add to ${targetFridge?.name || "fridge"}`}</div>
-        <div onClick={actions.goHome} style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-          <X size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
+        <div
+          className="thatfridge-add-header-btn"
+          onClick={actions.goHome}
+          style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+        >
+          <X className="thatfridge-hide-desktop" size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
+          <ChevronLeft className="thatfridge-show-desktop" size={17} color="rgba(22,50,92,0.5)" strokeWidth={2.2} />
         </div>
       </div>
 
@@ -461,7 +466,7 @@ export default function AddScreen() {
           {state.expiryScanNote && (
             <div style={{ fontSize: 12, fontWeight: 600, color: "#4a6fa5", marginBottom: 14 }}>{state.expiryScanNote}</div>
           )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, overflowY: "auto" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, minHeight: 0, overflowY: "auto" }}>
             {state.detected.map((d) => (
               <div key={d.id} style={{ background: "#fff", boxShadow: "0 6px 16px rgba(22,50,92,0.06)", borderRadius: 14, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -574,7 +579,7 @@ export default function AddScreen() {
       {state.addStep === 3 && (
         <>
           <div style={{ fontSize: 13, color: "rgba(22,50,92,0.55)", marginBottom: 16 }}>Fill in the details for this item</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, overflowY: "auto" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1, minHeight: 0, overflowY: "auto" }}>
             <div>
               <div style={labelStyle}>NAME</div>
               <input
@@ -638,7 +643,10 @@ export default function AddScreen() {
                 </div>
               )}
             </div>
-            <div>
+            {/* Bare native <select> with no chevron/affordance reads as broken on desktop — the
+                section is already auto-picked from the item name (see onManualNameChange) and
+                stays editable later from Item Detail, so this only needs to exist on mobile. */}
+            <div className="thatfridge-hide-desktop">
               <div style={labelStyle}>STORE IN</div>
               <select
                 value={state.manualSectionId}

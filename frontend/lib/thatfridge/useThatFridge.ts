@@ -13,6 +13,7 @@ import {
   fetchChatHistory,
   fetchFridges,
   fetchMe,
+  fetchNotificationEvents,
   fetchNotificationPrefs,
   fetchRecipes,
   fetchShoppingItems,
@@ -25,11 +26,12 @@ import {
   type ChatAgentName,
   updateFridge,
   updateItem,
+  updateNotificationEvent,
   updateNotificationPrefs,
   updateShoppingItem,
 } from "./api";
 import { ApiError, clearToken, getToken } from "./apiClient";
-import { buildNotificationSeed, findItem, findSectionIdForGroup } from "./selectors";
+import { findItem, findSectionIdForGroup } from "./selectors";
 import type {
   AuthMode,
   ChatMessage,
@@ -340,8 +342,15 @@ export function useThatFridge() {
   useEffect(() => {
     if (!state.isAuthenticated) return;
     let cancelled = false;
-    Promise.all([fetchFridges(), fetchRecipes(), fetchShoppingItems(), fetchNotificationPrefs(), fetchChatHistory()]).then(
-      ([fridges, recipes, shoppingList, notificationPrefs, chatHistory]) => {
+    Promise.all([
+      fetchFridges(),
+      fetchRecipes(),
+      fetchShoppingItems(),
+      fetchNotificationPrefs(),
+      fetchNotificationEvents(),
+      fetchChatHistory(),
+    ]).then(
+      ([fridges, recipes, shoppingList, notificationPrefs, notificationEvents, chatHistory]) => {
         if (cancelled) return;
         const restoredChatMessages: ChatMessage[] = chatHistory.flatMap((row) => [
           { id: `u${row.id}`, from: "user" as const, text: row.user_message },
@@ -354,7 +363,7 @@ export function useThatFridge() {
           shoppingSeeded: true,
           notificationPrefs,
           isLoading: false,
-          notificationEvents: buildNotificationSeed(fridges),
+          notificationEvents: notificationEvents.slice().sort((a, b) => b.createdAt - a.createdAt),
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
       }
@@ -473,9 +482,18 @@ export function useThatFridge() {
     const event = state.notificationEvents.find((n) => n.id === id);
     if (!event || event.done) return;
     patch((s) => ({ notificationEvents: s.notificationEvents.map((n) => (n.id === id ? { ...n, done: true } : n)) }));
-    scheduleUndo(`Cleared "${event.message}"`, () => {
-      patch((s) => ({ notificationEvents: s.notificationEvents.map((n) => (n.id === id ? { ...n, done: false } : n)) }));
-    });
+    scheduleUndo(
+      `Cleared "${event.message}"`,
+      () => {
+        patch((s) => ({ notificationEvents: s.notificationEvents.map((n) => (n.id === id ? { ...n, done: false } : n)) }));
+      },
+      () => {
+        updateNotificationEvent(id, { done: true }).catch((err) => {
+          patch((s) => ({ notificationEvents: s.notificationEvents.map((n) => (n.id === id ? { ...n, done: false } : n)) }));
+          patch({ syncError: describeError(err, "Couldn't clear the notification.") });
+        });
+      }
+    );
   };
   const openAbout = () => patch({ screen: "about", showProfilePanel: false });
   const toggleNotificationPref = (key: keyof NotificationPrefs) => {

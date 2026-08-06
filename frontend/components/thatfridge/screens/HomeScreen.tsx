@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { Bell, ChevronDown, Package, Palette, Refrigerator, Sparkles, TriangleAlert, X } from "lucide-react";
+import { Bell, ChevronDown, ChevronLeft, ChevronRight, Package, Palette, Refrigerator, Sparkles, TriangleAlert, X } from "lucide-react";
 import { RECIPE_BY_ICON } from "@/lib/thatfridge/data";
 import { getExpiringOwnedItems, getFridgeHeroViews, getGuardianItem, getLowStockItem, getRecipesView, getScopeLabel, getScopedItems } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
@@ -12,6 +12,14 @@ import FoodIcon from "../FoodIcon";
 
 const CLEAR_THRESHOLD = -80;
 const OFFSCREEN_X = -420;
+// Same landscape rectangle as the mobile hero card (roughly 420x236), not a square.
+const CAROUSEL_CARD_W = 300;
+const CAROUSEL_CARD_H = 168;
+// Negative: peek cards are scaled down (CAROUSEL_PEEK_SCALE), which already opens up
+// visual whitespace within their slot, so slots need to overlap to sit visually close.
+const CAROUSEL_GAP = -24;
+const CAROUSEL_PEEK_SCALE = 0.68;
+const CAROUSEL_PEEK_OPACITY = 0.38;
 
 function SwipeToClear({ marginBottom, onClear, children }: { marginBottom: number; onClear: () => void; children: React.ReactNode }) {
   const [dragX, setDragX] = useState(0);
@@ -98,6 +106,8 @@ export default function HomeScreen() {
   const heroSlideWidthPct = 100 / heroSlideCount;
   const heroTrackWidth = `${heroSlideCount * 100}%`;
   const heroTranslate = `translateX(-${heroSlide * heroSlideWidthPct}%)`;
+  const fridgeCount = fridgesView.length;
+  const carouselIndex = fridgeCount ? Math.min(state.activeFridge, fridgeCount - 1) : 0;
 
   const guardianItem = getGuardianItem(state);
   const lowStockItem = getLowStockItem(state);
@@ -117,18 +127,20 @@ export default function HomeScreen() {
       : `Use ${guardianItem.name.toLowerCase()} within ${guardianItem.days} day${guardianItem.days === 1 ? "" : "s"} for best quality.`
     : "";
 
-  // These ids mirror buildNotificationSeed()'s per-fridge event ids, so clearing a Home
-  // card also marks the matching entry in the Notifications page as done, and clearing it
-  // there (event.done becomes true) also hides the Home card — kept in sync both ways.
-  const guardianEventId = guardianItem ? `ev-expiring-${guardianItem.fridgeId}` : null;
-  const lowStockEventId = lowStockItem ? `ev-lowstock-${lowStockItem.fridgeId}` : null;
-  const chefEventId = guardianItem ? `ev-recipe-${guardianItem.fridgeId}` : null;
+  // Only "expiring" events are generated server-side (the daily freshness cron, one per
+  // item — see backend/API.md); low-stock and recipe tips have no backend notification
+  // counterpart yet, so those two stay session-only (dismissedLowStockFor/dismissedChefFor).
+  // Correlating by itemId (rather than a synthetic id) means clearing the Guardian card here
+  // also marks the real notification_events row done, and vice versa from the Notifications page.
+  const guardianEventId = guardianItem
+    ? state.notificationEvents.find((n) => n.kind === "expiring" && n.itemId === guardianItem.id)?.id ?? null
+    : null;
   const isEventDone = (id: string | null) => !!id && state.notificationEvents.find((n) => n.id === id)?.done;
 
   const chefKey = guardianItem?.id ?? "none";
   const guardianVisible = !!guardianItem && dismissedGuardianFor !== guardianItem.id && !isEventDone(guardianEventId);
-  const lowStockVisible = !!lowStockItem && dismissedLowStockFor !== lowStockItem.id && !isEventDone(lowStockEventId);
-  const chefVisible = dismissedChefFor !== chefKey && !isEventDone(chefEventId);
+  const lowStockVisible = !!lowStockItem && dismissedLowStockFor !== lowStockItem.id;
+  const chefVisible = dismissedChefFor !== chefKey;
 
   const dotCount = heroSlideCount;
   const pendingNotifications = state.notificationEvents.filter((n) => !n.done).length;
@@ -321,7 +333,7 @@ export default function HomeScreen() {
                   <img
                     src={fr.photoSrc}
                     alt="Custom fridge photo"
-                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 15%" }}
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 15%", willChange: "transform", transform: "translateZ(0)" }}
                   />
                 )}
                 <div style={{ position: "absolute", top: 22, left: "16%", width: 3, height: 3, borderRadius: "50%", background: "#eaf3fb", animation: "drip 4s ease-in infinite" }} />
@@ -436,10 +448,7 @@ export default function HomeScreen() {
       {lowStockVisible && lowStockItem && (
         <SwipeToClear
           marginBottom={18}
-          onClear={() => {
-            setDismissedLowStockFor(lowStockItem.id);
-            if (lowStockEventId) actions.dismissNotificationWithUndo(lowStockEventId);
-          }}
+          onClear={() => setDismissedLowStockFor(lowStockItem.id)}
         >
           <div onClick={actions.openShoppingHub} style={{ background: "#fff", boxShadow: "0 10px 24px rgba(22,50,92,0.1)", borderRadius: 18, padding: "14px 16px", cursor: "pointer" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
@@ -457,10 +466,7 @@ export default function HomeScreen() {
       {chefVisible && (
         <SwipeToClear
           marginBottom={22}
-          onClear={() => {
-            setDismissedChefFor(chefKey);
-            if (chefEventId) actions.dismissNotificationWithUndo(chefEventId);
-          }}
+          onClear={() => setDismissedChefFor(chefKey)}
         >
           <div
             onClick={actions.openRecipesHub}
@@ -555,93 +561,170 @@ export default function HomeScreen() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 20, marginBottom: 20, alignItems: "start" }}>
-        <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20 }}>
+        <div style={{ background: "#fff", boxShadow: "0 6px 20px rgba(22,50,92,0.07)", borderRadius: 22, padding: 20, minWidth: 0 }}>
           <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 14 }}>Your fridges</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14 }}>
-            {fridgesView.map((fr, i) => (
+
+          <div style={{ position: "relative" }}>
+            {fridgeCount > 1 && (
               <div
-                key={fr.id}
-                onClick={() => actions.selectFridgeScope(i)}
+                onClick={() => carouselIndex > 0 && actions.selectFridgeScope(carouselIndex - 1)}
                 style={{
-                  position: "relative",
-                  borderRadius: 16,
-                  overflow: "hidden",
-                  background: "linear-gradient(160deg,#234b7a,#16325c 70%)",
-                  color: "#fff",
-                  padding: 16,
-                  minHeight: 148,
+                  position: "absolute",
+                  left: -4,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  zIndex: 3,
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  background: "#fff",
+                  boxShadow: "0 6px 16px rgba(22,50,92,0.18)",
                   display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  cursor: "pointer",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: carouselIndex === 0 ? "default" : "pointer",
+                  opacity: carouselIndex === 0 ? 0.35 : 1,
                 }}
               >
-                <img
-                  src={fr.photoSrc}
-                  alt="Fridge preview"
-                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%" }}
-                />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(22,50,92,0.12) 0%, rgba(22,50,92,0.45) 100%)" }} />
-                <div style={{ position: "absolute", top: 14, left: 14, background: "rgba(255,255,255,0.85)", color: "#16325c", fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
-                  {fr.name}
-                </div>
-                <div style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,0.85)", color: fr.color, fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
-                  {fr.freshness}% fresh
-                </div>
-                <div style={{ position: "absolute", bottom: 12, left: 16, background: "rgba(22,50,92,0.55)", backdropFilter: "blur(6px)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 20 }}>
-                  {fr.itemCount} items tracked
-                </div>
+                <ChevronLeft size={17} color="#16325c" strokeWidth={2.4} />
+              </div>
+            )}
+
+            <div style={{ overflow: "hidden", height: CAROUSEL_CARD_H + 10 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  height: "100%",
+                  transform: `translateX(calc(50% - ${carouselIndex * (CAROUSEL_CARD_W + CAROUSEL_GAP) + CAROUSEL_CARD_W / 2}px))`,
+                  transition: "transform .45s cubic-bezier(.22,.9,.34,1)",
+                }}
+              >
+                {fridgesView.map((fr, i) => {
+                  const isActive = i === carouselIndex;
+                  return (
+                    <div
+                      key={fr.id}
+                      onClick={() => actions.selectFridgeScope(i)}
+                      style={{
+                        position: "relative",
+                        flex: `0 0 ${CAROUSEL_CARD_W}px`,
+                        marginRight: CAROUSEL_GAP,
+                        height: CAROUSEL_CARD_H,
+                        borderRadius: 20,
+                        overflow: "hidden",
+                        background: "linear-gradient(160deg,#234b7a,#16325c 70%)",
+                        cursor: "pointer",
+                        transform: `scale(${isActive ? 1 : CAROUSEL_PEEK_SCALE})`,
+                        opacity: isActive ? 1 : CAROUSEL_PEEK_OPACITY,
+                        boxShadow: isActive ? "0 20px 36px rgba(22,50,92,0.28)" : "0 8px 16px rgba(22,50,92,0.12)",
+                        transition: "all .45s cubic-bezier(.22,.9,.34,1)",
+                      }}
+                    >
+                      <img
+                        src={fr.photoSrc}
+                        alt="Fridge preview"
+                        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%" }}
+                      />
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(22,50,92,0.1) 0%, rgba(22,50,92,0.5) 100%)" }} />
+                      <div style={{ position: "absolute", top: 12, left: 12, background: "rgba(255,255,255,0.85)", color: "#16325c", fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14, whiteSpace: "nowrap" }}>
+                        {fr.name}
+                      </div>
+                      <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.85)", color: fr.color, fontSize: 12, fontWeight: 800, padding: "6px 11px", borderRadius: 14 }}>
+                        {fr.freshness}%
+                      </div>
+                      {isActive && (
+                        <>
+                          <div style={{ position: "absolute", bottom: 12, left: 14, background: "rgba(22,50,92,0.55)", backdropFilter: "blur(6px)", color: "#fff", fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 20 }}>
+                            {fr.itemCount} items tracked
+                          </div>
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              actions.openStylePicker(i);
+                            }}
+                            style={{
+                              position: "absolute",
+                              right: 10,
+                              bottom: 10,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "7px 10px",
+                              borderRadius: 999,
+                              background: "rgba(255,255,255,0.15)",
+                              backdropFilter: "blur(6px)",
+                              border: "1px solid rgba(255,255,255,0.14)",
+                              cursor: "pointer",
+                              boxShadow: "0 8px 16px rgba(10, 30, 60, 0.16)",
+                            }}
+                          >
+                            <Palette size={13} color="#fff" strokeWidth={2.2} />
+                            <div style={{ fontSize: 10.5, fontWeight: 800, color: "#fff" }}>Customize</div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {fridgeCount > 1 && (
+              <div
+                onClick={() => carouselIndex < fridgeCount - 1 && actions.selectFridgeScope(carouselIndex + 1)}
+                style={{
+                  position: "absolute",
+                  right: -4,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  zIndex: 3,
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  background: "#fff",
+                  boxShadow: "0 6px 16px rgba(22,50,92,0.18)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: carouselIndex === fridgeCount - 1 ? "default" : "pointer",
+                  opacity: carouselIndex === fridgeCount - 1 ? 0.35 : 1,
+                }}
+              >
+                <ChevronRight size={17} color="#16325c" strokeWidth={2.4} />
+              </div>
+            )}
+          </div>
+
+          {fridgeCount > 1 && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 6 }}>
+              {fridgesView.map((fr, i) => (
                 <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    actions.openStylePicker(i);
-                  }}
+                  key={fr.id}
+                  onClick={() => actions.selectFridgeScope(i)}
                   style={{
-                    position: "absolute",
-                    right: 12,
-                    bottom: 12,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "7px 10px",
-                    borderRadius: 999,
-                    background: "rgba(255,255,255,0.15)",
-                    backdropFilter: "blur(6px)",
-                    border: "1px solid rgba(255,255,255,0.14)",
+                    width: i === carouselIndex ? 18 : 7,
+                    height: 7,
+                    borderRadius: 4,
+                    background: i === carouselIndex ? "#16325c" : "rgba(22,50,92,0.25)",
                     cursor: "pointer",
-                    boxShadow: "0 8px 16px rgba(10, 30, 60, 0.16)",
+                    transition: "all .3s ease",
                   }}
-                >
-                  <Palette size={14} color="#fff" strokeWidth={2.2} />
-                  <div style={{ fontSize: 11, fontWeight: 800 }}>Customize</div>
-                </div>
-              </div>
-            ))}
-            <div
-              style={{
-                borderRadius: 16,
-                background: "rgba(22,50,92,0.03)",
-                border: "2px dashed rgba(22,50,92,0.15)",
-                minHeight: 148,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                padding: 14,
-              }}
-            >
-              <div style={{ fontSize: 12.5, fontWeight: 700 }}>Add another fridge</div>
-              <input
-                value={state.newFridgeName}
-                onChange={(e) => actions.onNewFridgeNameChange(e.target.value)}
-                onKeyDown={(e) => actions.onNewFridgeNameKeyDown(e.key)}
-                placeholder="e.g. Garage, Office…"
-                style={{ width: "100%", border: "none", outline: "none", background: "#fff", borderRadius: 10, padding: "8px 10px", fontSize: 12, color: "#16325c", boxSizing: "border-box" }}
-              />
-              <div onClick={actions.addFridge} style={{ background: "#16325c", color: "#fff", fontSize: 12, fontWeight: 700, padding: "7px 14px", borderRadius: 10, cursor: "pointer" }}>
-                Add fridge
-              </div>
+                />
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <input
+              value={state.newFridgeName}
+              onChange={(e) => actions.onNewFridgeNameChange(e.target.value)}
+              onKeyDown={(e) => actions.onNewFridgeNameKeyDown(e.key)}
+              placeholder="Add another fridge — e.g. Garage, Office…"
+              style={{ flex: 1, border: "1px solid rgba(22,50,92,0.12)", outline: "none", background: "#f9fbfd", borderRadius: 10, padding: "7px 12px", fontSize: 12.5, color: "#16325c", boxSizing: "border-box" }}
+            />
+            <div onClick={actions.addFridge} style={{ background: "#16325c", color: "#fff", fontSize: 12.5, fontWeight: 700, padding: "7px 16px", borderRadius: 10, cursor: "pointer", flex: "none" }}>
+              Add
             </div>
           </div>
         </div>

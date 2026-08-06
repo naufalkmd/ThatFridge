@@ -4,6 +4,7 @@ import { useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import { ChevronRight, ImagePlus } from "lucide-react";
 import { FRIDGE_STYLES } from "@/lib/thatfridge/data";
+import { compressAndScaleImage } from "@/lib/thatfridge/image";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
 export default function FridgeStyleSheet() {
@@ -25,14 +26,12 @@ export default function FridgeStyleSheet() {
     event.target.value = "";
     if (!file) return;
 
-    const photoUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = () => reject(new Error("Couldn't read the selected image."));
-      reader.readAsDataURL(file);
-    });
-
-    actions.updateFridgePhoto(photoUrl);
+    try {
+      const photoUrl = await compressAndScaleImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.8 });
+      actions.updateFridgePhoto(photoUrl);
+    } catch (error) {
+      console.error("Fridge photo upload failed", error);
+    }
   };
 
   return (
@@ -51,7 +50,7 @@ export default function FridgeStyleSheet() {
           />
         </div>
         <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, color: "rgba(22,50,92,0.5)", marginBottom: 8 }}>CHOOSE A LOOK</div>
-        <div style={{ flex: 1, overflowY: "auto" }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
             {options.map((opt) => (
               <div
@@ -88,7 +87,7 @@ export default function FridgeStyleSheet() {
                 <img
                   src={stylingFridge.photoUrl}
                   alt="Selected fridge photo preview"
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", willChange: "transform", transform: "translateZ(0)" }}
                 />
               </div>
             </div>

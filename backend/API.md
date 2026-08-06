@@ -245,20 +245,56 @@ Singleton per user — no id in the URL. First `GET`/`PATCH` auto-creates the ro
 
 ---
 
+## Notification events
+
+Read-only history of things the freshness cron (below) has flagged, plus a way to mark one done. Scoped through the owning fridge — cross-user access returns **403**, same as fridges/sections/items.
+
+### `GET /notification-events` 🔒
+
+Returns all events across all of the current user's fridges, newest first.
+
+**200**
+```json
+{
+  "data": [
+    {
+      "id": "1",
+      "fridgeId": "3",
+      "fridgeName": "Kitchen",
+      "itemId": "12",
+      "kind": "expiring",
+      "message": "\"Milk\" expires in 1 day(s)",
+      "createdAt": 1785949268000,
+      "done": false
+    }
+  ]
+}
+```
+
+`createdAt` is a Unix ms timestamp. `itemId` is nullable (present for `expiring` events, which are always tied to one item). Only the `expiring` kind is generated today — see the cron notes below.
+
+### `PATCH /notification-events/{notificationEvent}` 🔒
+
+**Body** `{ "done": true }`
+
+**200** — updated event, same shape as above.
+
+---
+
 ## Freshness cron (not an HTTP endpoint)
 
 `app:check-item-freshness` runs daily at 07:00 (`routes/console.php`). Scans all items with an `expiry_date` within 3 days (or already past), and for each one:
 
 - skips it if the owning user has `expiryAlerts` off
 - skips it if an undone `expiring` notification already exists for that item (no duplicate spam)
-- otherwise creates a `notification_events` row: `{ fridge_id, item_id, kind: "expiring", message, done: false }`
+- otherwise creates a `notification_events` row: `{ fridge_id, item_id, kind: "expiring", message, done: false }`, readable via `GET /notification-events` above
 
 Run manually any time with:
 ```bash
 php artisan app:check-item-freshness
 ```
 
-**Not yet built:** a `GET /notification-events` endpoint for the frontend to actually read these. `lowStock`/`recipe` kinds are also not generated yet — `lowStock` needs a "usual quantity" baseline that doesn't exist (deferred `usage_history` feature), and `recipe` suggestions haven't been scoped.
+**Not yet built:** `lowStock`/`recipe` kinds are not generated yet — `lowStock` needs a "usual quantity" baseline that doesn't exist (deferred `usage_history` feature), and `recipe` suggestions haven't been scoped. The frontend's Home screen still shows its own locally-computed low-stock/recipe tip cards, but those are session-only (no persisted notification behind them) until this is built.
 
 ---
 

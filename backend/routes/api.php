@@ -9,6 +9,7 @@ use App\Http\Controllers\ExpiryScanController;
 use App\Http\Controllers\AgentController;
 use App\Http\Controllers\FridgeController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\NotificationEventController;
 use App\Http\Controllers\NotificationPrefController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShoppingItemController;
@@ -61,4 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::get('/notification-prefs', [NotificationPrefController::class, 'show']);
     Route::patch('/notification-prefs', [NotificationPrefController::class, 'update']);
+
+    Route::get('/notification-events', [NotificationEventController::class, 'index']);
+    Route::patch('/notification-events/{notificationEvent}', [NotificationEventController::class, 'update']);
 });

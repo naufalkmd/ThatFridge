@@ -1,4 +1,4 @@
-import type { CurrentUser, Fridge, NotificationPrefs, Recipe, Section, ShoppingItem, StorageLocation } from "./types";
+import type { CurrentUser, Fridge, NotificationEvent, NotificationPrefs, Recipe, Section, ShoppingItem, StorageLocation } from "./types";
 import { RECIPES } from "./data";
 import { apiFetch, setToken, type RawItem, toClientItem } from "./apiClient";
 
@@ -180,6 +180,14 @@ export function fetchNotificationPrefs(): Promise<NotificationPrefs> {
 
 export function updateNotificationPrefs(data: Partial<NotificationPrefs>): Promise<NotificationPrefs> {
   return apiFetch<NotificationPrefs>("/notification-prefs", { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function fetchNotificationEvents(): Promise<NotificationEvent[]> {
+  return apiFetch<NotificationEvent[]>("/notification-events");
+}
+
+export function updateNotificationEvent(id: string, data: { done: boolean }): Promise<NotificationEvent> {
+  return apiFetch<NotificationEvent>(`/notification-events/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 }
 
 export type ChatAgentName = "Chef" | "Guardian" | "Organizer" | "Shopkeeper";

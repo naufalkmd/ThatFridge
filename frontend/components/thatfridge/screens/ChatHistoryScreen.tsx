@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageCircle, Trash2, X } from "lucide-react";
+import { ChevronLeft, MessageCircle, Trash2, X } from "lucide-react";
 import { timeAgo } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
 
@@ -15,7 +15,8 @@ export default function ChatHistoryScreen() {
           onClick={actions.closeChatHistory}
           style={{ width: 32, height: 32, borderRadius: 16, background: "#fff", border: "1px solid rgba(22,50,92,0.1)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
         >
-          <X size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
+          <X className="thatfridge-hide-desktop" size={15} color="rgba(22,50,92,0.5)" strokeWidth={2} />
+          <ChevronLeft className="thatfridge-show-desktop" size={17} color="rgba(22,50,92,0.5)" strokeWidth={2.2} />
         </div>
         <div>
           <div style={{ fontSize: 18, fontWeight: 800 }}>Chat History</div>

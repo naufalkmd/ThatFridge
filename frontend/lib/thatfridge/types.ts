@@ -135,6 +135,7 @@ export interface NotificationEvent {
   id: string;
   fridgeId: string;
   fridgeName: string;
+  itemId: string | null;
   kind: NotificationKind;
   message: string;
   createdAt: number;

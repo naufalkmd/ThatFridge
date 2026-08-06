@@ -38,7 +38,7 @@ export default function ItemDetailSheet() {
 
   if (state.isEditingItem) {
     return (
-      <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)" }}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(22,50,92,0.32)", overflowY: "auto" }}>
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, background: "#fff", borderRadius: "28px 28px 0 0", padding: "14px 22px 30px", animation: "pop .22s ease-out" }}>
           <div onClick={() => {
             setShowIconPicker(false);
