@@ -257,12 +257,18 @@ export interface SendChatMessageResult {
   agent: ChatAgentName;
   user_message: string;
   agent_response: string;
+  session_id: string;
 }
 
-export function sendChatMessage(message: string, agent: ChatAgentName, inventory?: string): Promise<SendChatMessageResult> {
+export function sendChatMessage(
+  message: string,
+  agent: ChatAgentName,
+  inventory?: string,
+  sessionId?: string | null
+): Promise<SendChatMessageResult> {
   return apiFetch<SendChatMessageResult>("/chat", {
     method: "POST",
-    body: JSON.stringify({ message, agent, inventory }),
+    body: JSON.stringify({ message, agent, inventory, session_id: sessionId || undefined }),
   });
 }
 
@@ -274,7 +280,33 @@ export interface ChatHistoryRow {
   created_at: string;
 }
 
-export async function fetchChatHistory(): Promise<ChatHistoryRow[]> {
-  const res = await apiFetch<{ messages: ChatHistoryRow[] }>("/chat");
-  return res.messages;
+export interface ChatHistoryResult {
+  messages: ChatHistoryRow[];
+  session_id: string | null;
+}
+
+// Restores only the most recent session's messages (so a refresh continues where
+// you left off), not the user's entire chat history flattened into one thread.
+export async function fetchChatHistory(): Promise<ChatHistoryResult> {
+  return apiFetch<ChatHistoryResult>("/chat");
+}
+
+export interface ChatSessionSummary {
+  session_id: string;
+  first_message: string;
+  updated_at: string;
+  message_count: number;
+}
+
+export async function fetchChatSessions(): Promise<ChatSessionSummary[]> {
+  const res = await apiFetch<{ sessions: ChatSessionSummary[] }>("/chat/sessions");
+  return res.sessions;
+}
+
+export async function fetchChatSessionMessages(sessionId: string): Promise<ChatHistoryResult> {
+  return apiFetch<ChatHistoryResult>(`/chat/sessions/${sessionId}`);
+}
+
+export async function deleteChatSession(sessionId: string): Promise<void> {
+  await apiFetch(`/chat/sessions/${sessionId}`, { method: "DELETE" });
 }

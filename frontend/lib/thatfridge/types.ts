@@ -79,7 +79,7 @@ export interface ChatMessage {
 export interface ChatThread {
   id: string;
   title: string;
-  messages: ChatMessage[];
+  messageCount: number;
   updatedAt: number;
 }
 

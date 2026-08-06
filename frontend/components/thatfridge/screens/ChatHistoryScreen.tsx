@@ -50,7 +50,7 @@ export default function ChatHistoryScreen() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{thread.title}</div>
                   <div style={{ fontSize: 11, color: "rgba(22,50,92,0.4)" }}>
-                    {thread.messages.length} message{thread.messages.length === 1 ? "" : "s"} · {timeAgo(thread.updatedAt)}
+                    {thread.messageCount} message{thread.messageCount === 1 ? "" : "s"} · {timeAgo(thread.updatedAt)}
                   </div>
                 </div>
                 <div

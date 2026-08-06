@@ -7,10 +7,13 @@ import {
   createItem,
   createSection,
   createShoppingItem,
+  deleteChatSession,
   deleteFridge as apiDeleteFridge,
   deleteItem,
   deleteShoppingItem,
   fetchChatHistory,
+  fetchChatSessionMessages,
+  fetchChatSessions,
   fetchFridges,
   fetchMe,
   fetchNotificationEvents,
@@ -63,21 +66,10 @@ function buildInventorySummary(fridge: Fridge | undefined): string | undefined {
   return lines.length ? lines.join("\n") : "Fridge is currently empty.";
 }
 
-function deriveThreadTitle(messages: ChatMessage[]): string {
-  const firstUserMsg = messages.find((m) => m.from === "user")?.text.trim();
-  if (!firstUserMsg) return "Conversation";
-  return firstUserMsg.length > 40 ? firstUserMsg.slice(0, 40) + "…" : firstUserMsg;
-}
-
-function archiveCurrentThread(s: ThatFridgeState): ChatThread[] {
-  if (s.chatMessages.length <= 1) return s.chatThreads;
-  const archived: ChatThread = {
-    id: "t" + Date.now(),
-    title: deriveThreadTitle(s.chatMessages),
-    messages: s.chatMessages,
-    updatedAt: Date.now(),
-  };
-  return [archived, ...s.chatThreads];
+function deriveThreadTitle(firstMessage: string): string {
+  const trimmed = firstMessage.trim();
+  if (!trimmed) return "Conversation";
+  return trimmed.length > 40 ? trimmed.slice(0, 40) + "…" : trimmed;
 }
 
 function toISODate(date: Date): string {
@@ -168,6 +160,7 @@ export interface ThatFridgeState {
   chatDraft: string;
   isTyping: boolean;
   chatThreads: ChatThread[];
+  currentSessionId: string | null;
   stylingFridgeIndex: number;
   undoMessage: string | null;
   syncError: string | null;
@@ -235,6 +228,7 @@ function initialState(): ThatFridgeState {
     chatDraft: "",
     isTyping: false,
     chatThreads: [],
+    currentSessionId: null,
     stylingFridgeIndex: 0,
     undoMessage: null,
     syncError: null,
@@ -376,7 +370,7 @@ export function useThatFridge() {
     ]).then(
       ([fridges, recipes, shoppingList, notificationPrefs, notificationEvents, chatHistory]) => {
         if (cancelled) return;
-        const restoredChatMessages: ChatMessage[] = chatHistory.flatMap((row) => [
+        const restoredChatMessages: ChatMessage[] = chatHistory.messages.flatMap((row) => [
           { id: `u${row.id}`, from: "user" as const, text: row.user_message },
           ...(row.agent_response ? [{ id: `b${row.id}`, from: "bot" as const, text: row.agent_response }] : []),
         ]);
@@ -387,6 +381,7 @@ export function useThatFridge() {
           shoppingSeeded: true,
           notificationPrefs,
           isLoading: false,
+          currentSessionId: chatHistory.session_id,
           notificationEvents: notificationEvents.slice().sort((a, b) => b.createdAt - a.createdAt),
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
@@ -530,13 +525,24 @@ export function useThatFridge() {
   };
 
   const openAIDataSettings = () => patch({ screen: "aiData", showProfilePanel: false });
-  const deleteChatThread = (id: string) => patch((s) => ({ chatThreads: s.chatThreads.filter((t) => t.id !== id) }));
+  const deleteChatThread = (id: string) => {
+    patch((s) => ({ chatThreads: s.chatThreads.filter((t) => t.id !== id) }));
+    deleteChatSession(id).catch((err) => {
+      // Restoring the exact original list on failure isn't worth the complexity here -
+      // a re-open of Chat History re-fetches the real list anyway.
+      patch({ syncError: describeError(err, "Couldn't delete that conversation.") });
+    });
+    if (state.currentSessionId === id) {
+      patch({ chatMessages: DEFAULT_CHAT_MESSAGES, currentSessionId: null });
+    }
+  };
   const clearAllChatData = () =>
     patch({
       chatThreads: [],
       chatMessages: DEFAULT_CHAT_MESSAGES,
       chatDraft: "",
       isTyping: false,
+      currentSessionId: null,
     });
   const deleteUsageHistoryEntry = (key: string) => patch((s) => ({ usageHistory: s.usageHistory.filter((h) => h.key !== key) }));
   const clearUsageHistory = () => patch({ usageHistory: [] });
@@ -696,27 +702,39 @@ export function useThatFridge() {
 
   const onDraftChange = (value: string) => patch({ chatDraft: value });
   const startNewChat = () =>
-    patch((s) => ({
-      chatThreads: archiveCurrentThread(s),
+    patch({
       chatMessages: DEFAULT_CHAT_MESSAGES,
       chatDraft: "",
       isTyping: false,
-    }));
-  const openChatHistory = () => patch({ screen: "chatHistory" });
-  const closeChatHistory = () => patch({ screen: "chat" });
-  const restoreChatThread = (id: string) =>
-    patch((s) => {
-      const thread = s.chatThreads.find((t) => t.id === id);
-      if (!thread) return { screen: "chat" };
-      const remaining = s.chatThreads.filter((t) => t.id !== id);
-      return {
-        chatThreads: archiveCurrentThread({ ...s, chatThreads: remaining }),
-        chatMessages: thread.messages,
-        chatDraft: "",
-        isTyping: false,
-        screen: "chat",
-      };
+      currentSessionId: null, // next message starts a fresh session server-side
     });
+  const openChatHistory = () => {
+    patch({ screen: "chatHistory" });
+    fetchChatSessions()
+      .then((sessions) => {
+        const threads: ChatThread[] = sessions.map((s) => ({
+          id: s.session_id,
+          title: deriveThreadTitle(s.first_message),
+          messageCount: s.message_count,
+          updatedAt: new Date(s.updated_at).getTime(),
+        }));
+        patch({ chatThreads: threads });
+      })
+      .catch((err) => patch({ syncError: describeError(err, "Couldn't load your past conversations.") }));
+  };
+  const closeChatHistory = () => patch({ screen: "chat" });
+  const restoreChatThread = (id: string) => {
+    patch({ screen: "chat", chatDraft: "", isTyping: false });
+    fetchChatSessionMessages(id)
+      .then((result) => {
+        const restored: ChatMessage[] = result.messages.flatMap((row) => [
+          { id: `u${row.id}`, from: "user" as const, text: row.user_message },
+          ...(row.agent_response ? [{ id: `b${row.id}`, from: "bot" as const, text: row.agent_response }] : []),
+        ]);
+        patch({ chatMessages: restored.length ? restored : DEFAULT_CHAT_MESSAGES, currentSessionId: result.session_id });
+      })
+      .catch((err) => patch({ syncError: describeError(err, "Couldn't load that conversation.") }));
+  };
   const sendChat = (text: string, attachmentName?: string) => {
     const trimmed = (text || "").trim();
     if (!trimmed && !attachmentName) return;
@@ -730,10 +748,10 @@ export function useThatFridge() {
     }
 
     const inventory = buildInventorySummary(state.fridges[state.activeFridge]);
-    sendChatMessage(trimmed, routeChatAgent(trimmed), inventory)
+    sendChatMessage(trimmed, routeChatAgent(trimmed), inventory, state.currentSessionId)
       .then((res) => {
         const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: res.agent_response };
-        patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false }));
+        patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false, currentSessionId: res.session_id }));
       })
       .catch((err) => {
         const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: describeError(err, "Sorry, I couldn't reach the assistant right now.") };

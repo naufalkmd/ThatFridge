@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'agent', 'user_message', 'agent_response'])]
+#[Fillable(['user_id', 'session_id', 'agent', 'user_message', 'agent_response'])]
 class ChatHistory extends Model
 {
     // The migration created a singular `chat_history` table, not Eloquent's default

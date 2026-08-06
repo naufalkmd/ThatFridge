@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\AgentService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class AgentController extends Controller
 {
@@ -14,27 +15,98 @@ class AgentController extends Controller
         $this->agentService = $agentService;
     }
 
-    /**
-     * Get the authenticated user's chat history, oldest first.
-     */
     private const HISTORY_LIMIT = 200;
+    private const SESSION_LIST_LIMIT = 50;
 
+    /**
+     * Get the authenticated user's most recent chat session, oldest message first.
+     * Used to restore "where you left off" on login/refresh - not the entire
+     * chat history, which would merge every past conversation into one thread.
+     */
     public function history(Request $request)
     {
+        $latestSessionId = $request->user()->chatHistory()
+            ->latest('created_at')
+            ->value('session_id');
+
+        if (! $latestSessionId) {
+            return response()->json(['messages' => [], 'session_id' => null], 200);
+        }
+
         $messages = $request->user()->chatHistory()
-            ->orderBy('created_at', 'desc')
+            ->where('session_id', $latestSessionId)
+            ->orderBy('created_at')
             ->limit(self::HISTORY_LIMIT)
-            ->get(['id', 'agent', 'user_message', 'agent_response', 'created_at'])
-            ->sortBy('created_at')
-            ->values();
+            ->get(['id', 'agent', 'user_message', 'agent_response', 'created_at']);
 
         return response()->json([
+            'messages' => $messages,
+            'session_id' => $latestSessionId,
+        ], 200);
+    }
+
+    /**
+     * List the authenticated user's past chat sessions, most recent first, for
+     * the Chat History screen. One row per session with a preview and timing,
+     * not the full message list (see sessionMessages() for that).
+     */
+    public function sessions(Request $request)
+    {
+        $sessions = $request->user()->chatHistory()
+            ->selectRaw('session_id, MIN(user_message) as first_message, MAX(created_at) as updated_at, COUNT(*) as message_count')
+            ->whereNotNull('session_id')
+            ->groupBy('session_id')
+            ->orderByDesc('updated_at')
+            ->limit(self::SESSION_LIST_LIMIT)
+            ->get();
+
+        return response()->json(['sessions' => $sessions], 200);
+    }
+
+    /**
+     * Get every message in one specific past session, oldest first - used when
+     * the user taps a session in Chat History to resume it.
+     */
+    public function sessionMessages(Request $request, string $sessionId)
+    {
+        $messages = $request->user()->chatHistory()
+            ->where('session_id', $sessionId)
+            ->orderBy('created_at')
+            ->limit(self::HISTORY_LIMIT)
+            ->get(['id', 'agent', 'user_message', 'agent_response', 'created_at']);
+
+        if ($messages->isEmpty()) {
+            return response()->json(['error' => 'Session not found'], 404);
+        }
+
+        return response()->json([
+            'session_id' => $sessionId,
             'messages' => $messages,
         ], 200);
     }
 
     /**
-     * Send message to agent, persist the exchange, and return the response
+     * Delete every message in one of the authenticated user's own past sessions.
+     */
+    public function deleteSession(Request $request, string $sessionId)
+    {
+        $deleted = $request->user()->chatHistory()
+            ->where('session_id', $sessionId)
+            ->delete();
+
+        if ($deleted === 0) {
+            return response()->json(['error' => 'Session not found'], 404);
+        }
+
+        return response()->json(['session_id' => $sessionId, 'deleted' => true], 200);
+    }
+
+    /**
+     * Send message to agent, persist the exchange under a session, and return the response.
+     *
+     * If the client doesn't pass a session_id, this is the first message of a new
+     * conversation - generate one and hand it back so the client can reuse it for
+     * every subsequent message in that same conversation.
      */
     public function send(Request $request)
     {
@@ -42,6 +114,7 @@ class AgentController extends Controller
             'message' => 'required|string|max:1000',
             'agent' => 'required|in:Chef,Guardian,Organizer,Shopkeeper',
             'inventory' => 'nullable|string', // JSON string of inventory for context
+            'session_id' => 'nullable|uuid',
         ]);
 
         $result = $this->agentService->chat(
@@ -54,7 +127,10 @@ class AgentController extends Controller
             return response()->json(['error' => 'Failed to get agent response'], 500);
         }
 
+        $sessionId = $request->input('session_id') ?: (string) Str::uuid();
+
         $record = $request->user()->chatHistory()->create([
+            'session_id' => $sessionId,
             'agent' => $result['agent'],
             'user_message' => $result['user_message'],
             'agent_response' => $result['agent_response'],
@@ -62,6 +138,7 @@ class AgentController extends Controller
 
         return response()->json([
             'id' => $record->id,
+            'session_id' => $sessionId,
             'user_message' => $record->user_message,
             'agent' => $record->agent,
             'agent_response' => $record->agent_response,

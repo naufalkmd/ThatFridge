@@ -39,6 +39,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('chat')->group(function () {
         Route::get('/', [AgentController::class, 'history']);
         Route::post('/', [AgentController::class, 'send']);
+        Route::get('/sessions', [AgentController::class, 'sessions']);
+        Route::get('/sessions/{sessionId}', [AgentController::class, 'sessionMessages']);
+        Route::delete('/sessions/{sessionId}', [AgentController::class, 'deleteSession']);
     });
     
     Route::get('/fridges', [FridgeController::class, 'index']);
