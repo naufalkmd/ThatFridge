@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FOOD_ICON_KEYS, FOOD_TAB_ORDER, ICON_SECTION, guessIcon, guessLocation, suggestShelfLifeDays } from "./data";
 import {
+  clearUsageHistoryApi,
   createFridge,
   createItem,
   createSection,
@@ -11,6 +12,7 @@ import {
   deleteFridge as apiDeleteFridge,
   deleteItem,
   deleteShoppingItem,
+  deleteUsageHistoryEntryApi,
   fetchChatHistory,
   fetchChatSessionMessages,
   fetchChatSessions,
@@ -20,14 +22,17 @@ import {
   fetchNotificationPrefs,
   fetchRecipes,
   fetchShoppingItems,
+  fetchUsageHistory,
   login,
   logout,
+  recordItemUsage,
   register,
   scanBarcode,
   scanExpiryPhoto,
   scanFridgePhoto,
   scanReceipt,
   sendChatMessage,
+  suggestItemDetails,
   type ChatAgentName,
   updateFridge,
   updateItem,
@@ -64,6 +69,19 @@ function buildInventorySummary(fridge: Fridge | undefined): string | undefined {
     section.items.map((item) => `${item.name} — qty ${item.qty}, ${item.location ?? "fridge"}, use within ${item.days} day${item.days === 1 ? "" : "s"}`)
   );
   return lines.length ? lines.join("\n") : "Fridge is currently empty.";
+}
+
+// Sent alongside every chat/agent-activation call so the model can actually reason about
+// past usage (see AgentService::getSystemPrompt) instead of that data only ever being
+// displayed locally on the AI Data & Memory screen.
+function buildUsageSummary(usageHistory: UsageHistoryEntry[]): string | undefined {
+  if (!usageHistory.length) return undefined;
+  return usageHistory
+    .slice()
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+    .map((h) => `${h.name} (used ${h.count}×)`)
+    .join("\n");
 }
 
 function deriveThreadTitle(firstMessage: string): string {
@@ -141,6 +159,8 @@ export interface ThatFridgeState {
   expiryScanNote: string | null;
   scanImageLoading: boolean;
   scanImageError: string | null;
+  manualAutoFillLoading: boolean;
+  detectedAutoFillLoadingId: string | null;
   manualName: string;
   manualSectionId: string;
   manualSectionAuto: boolean;
@@ -169,7 +189,12 @@ export interface ThatFridgeState {
   kitchenScope: "active" | "all";
   inventorySortMode: "category" | "expiry" | "name";
   agentInsights: Partial<Record<ChatAgentName, string>>;
-  agentInsightLoading: ChatAgentName | null;
+  // Per-agent, not a single value — Home can auto-activate Guardian/Chef/Shopkeeper
+  // concurrently on load, not just one at a time like the FoodHub "Activate" button did.
+  agentInsightLoading: Partial<Record<ChatAgentName, boolean>>;
+  // Guards the *auto* activation only (Home's tip cards) so a failed fetch doesn't retry on
+  // every re-render; the manual "Activate"/"Refresh insight" button in FoodHub bypasses this.
+  agentAutoFetched: Partial<Record<ChatAgentName, boolean>>;
 }
 
 function initialState(): ThatFridgeState {
@@ -209,6 +234,8 @@ function initialState(): ThatFridgeState {
     expiryScanNote: null,
     scanImageLoading: false,
     scanImageError: null,
+    manualAutoFillLoading: false,
+    detectedAutoFillLoadingId: null,
     manualName: "",
     manualSectionId: "",
     manualSectionAuto: true,
@@ -237,7 +264,8 @@ function initialState(): ThatFridgeState {
     kitchenScope: "all",
     inventorySortMode: "category",
     agentInsights: {},
-    agentInsightLoading: null,
+    agentInsightLoading: {},
+    agentAutoFetched: {},
   };
 }
 
@@ -367,8 +395,9 @@ export function useThatFridge() {
       fetchNotificationPrefs(),
       fetchNotificationEvents(),
       fetchChatHistory(),
+      fetchUsageHistory(),
     ]).then(
-      ([fridges, recipes, shoppingList, notificationPrefs, notificationEvents, chatHistory]) => {
+      ([fridges, recipes, shoppingList, notificationPrefs, notificationEvents, chatHistory, usageHistory]) => {
         if (cancelled) return;
         const restoredChatMessages: ChatMessage[] = chatHistory.messages.flatMap((row) => [
           { id: `u${row.id}`, from: "user" as const, text: row.user_message },
@@ -383,6 +412,7 @@ export function useThatFridge() {
           isLoading: false,
           currentSessionId: chatHistory.session_id,
           notificationEvents: notificationEvents.slice().sort((a, b) => b.createdAt - a.createdAt),
+          usageHistory,
           ...(restoredChatMessages.length ? { chatMessages: restoredChatMessages } : {}),
         });
       }
@@ -544,8 +574,14 @@ export function useThatFridge() {
       isTyping: false,
       currentSessionId: null,
     });
-  const deleteUsageHistoryEntry = (key: string) => patch((s) => ({ usageHistory: s.usageHistory.filter((h) => h.key !== key) }));
-  const clearUsageHistory = () => patch({ usageHistory: [] });
+  const deleteUsageHistoryEntry = (id: string) => {
+    patch((s) => ({ usageHistory: s.usageHistory.filter((h) => h.id !== id) }));
+    deleteUsageHistoryEntryApi(id).catch((err) => patch({ syncError: describeError(err, "Couldn't remove that entry.") }));
+  };
+  const clearUsageHistory = () => {
+    patch({ usageHistory: [] });
+    clearUsageHistoryApi().catch((err) => patch({ syncError: describeError(err, "Couldn't clear personalization memory.") }));
+  };
 
   const openStylePicker = (i: number) => patch({ stylingFridgeIndex: i, screen: "fridgeStyle" });
   const closeStylePicker = () => patch({ screen: "home" });
@@ -748,7 +784,8 @@ export function useThatFridge() {
     }
 
     const inventory = buildInventorySummary(state.fridges[state.activeFridge]);
-    sendChatMessage(trimmed, routeChatAgent(trimmed), inventory, state.currentSessionId)
+    const usageSummary = buildUsageSummary(state.usageHistory);
+    sendChatMessage(trimmed, routeChatAgent(trimmed), inventory, state.currentSessionId, usageSummary)
       .then((res) => {
         const reply: ChatMessage = { id: "b" + Date.now(), from: "bot", text: res.agent_response };
         patch((s) => ({ chatMessages: [...s.chatMessages, reply], isTyping: false, currentSessionId: res.session_id }));
@@ -771,19 +808,29 @@ export function useThatFridge() {
     Shopkeeper: "What should I restock?",
   };
   const activateAgent = (agent: ChatAgentName) => {
-    if (state.agentInsightLoading) return;
-    patch({ agentInsightLoading: agent });
+    if (state.agentInsightLoading[agent]) return;
+    patch((s) => ({ agentInsightLoading: { ...s.agentInsightLoading, [agent]: true } }));
     const inventory = buildInventorySummary(state.fridges[state.activeFridge]);
-    sendChatMessage(AGENT_ACTIVATE_PROMPT[agent], agent, inventory)
+    const usageSummary = buildUsageSummary(state.usageHistory);
+    sendChatMessage(AGENT_ACTIVATE_PROMPT[agent], agent, inventory, undefined, usageSummary)
       .then((res) => {
         patch((s) => ({
           agentInsights: { ...s.agentInsights, [agent]: res.agent_response },
-          agentInsightLoading: null,
+          agentInsightLoading: { ...s.agentInsightLoading, [agent]: false },
         }));
       })
       .catch((err) => {
-        patch({ agentInsightLoading: null, syncError: describeError(err, "Couldn't reach the agent right now.") });
+        patch((s) => ({ agentInsightLoading: { ...s.agentInsightLoading, [agent]: false } }));
+        patch({ syncError: describeError(err, "Couldn't reach the agent right now.") });
       });
+  };
+  // Home's tip cards call this instead of activateAgent directly: fires the real agent call
+  // at most once per session per agent (agentAutoFetched), so a slow network or a failed
+  // request can't retry on every re-render the way an unguarded effect would.
+  const ensureAgentInsight = (agent: ChatAgentName) => {
+    if (state.agentAutoFetched[agent] || state.agentInsightLoading[agent] || state.agentInsights[agent]) return;
+    patch((s) => ({ agentAutoFetched: { ...s.agentAutoFetched, [agent]: true } }));
+    activateAgent(agent);
   };
   const dismissAgentInsight = (agent: ChatAgentName) =>
     patch((s) => {
@@ -950,14 +997,19 @@ export function useThatFridge() {
     }, 450);
   };
 
-  const recordUsage = (s: ThatFridgeState, name: string, icon: string): UsageHistoryEntry[] => {
-    const key = name.trim().toLowerCase();
-    if (!key) return s.usageHistory;
-    const existing = s.usageHistory.find((h) => h.key === key);
-    if (existing) {
-      return s.usageHistory.map((h) => (h.key === key ? { ...h, count: h.count + 1, lastAt: Date.now() } : h));
-    }
-    return [...s.usageHistory, { key, name, icon, count: 1, lastAt: Date.now() }];
+  const recordUsage = (name: string, icon: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    recordItemUsage(trimmed, icon)
+      .then((entry) => {
+        patch((s) => {
+          const existingIndex = s.usageHistory.findIndex((h) => h.key === entry.key);
+          const usageHistory =
+            existingIndex === -1 ? [...s.usageHistory, entry] : s.usageHistory.map((h, i) => (i === existingIndex ? entry : h));
+          return { usageHistory };
+        });
+      })
+      .catch((err) => patch({ syncError: describeError(err, "Couldn't update your usage history.") }));
   };
 
   const removeItemWithUndo = (id: string, message: string, onCommit?: () => void) => {
@@ -1024,7 +1076,7 @@ export function useThatFridge() {
     if (!found) return;
     const { item } = found;
     removeItemWithUndo(state.selectedItemId, `Removed "${item.name}"`, () => {
-      patch((s) => ({ usageHistory: recordUsage(s, item.name, item.icon) }));
+      recordUsage(item.name, item.icon);
     });
   };
 
@@ -1208,16 +1260,24 @@ export function useThatFridge() {
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, expiryDate: value } : d)) }));
   const onDetectedLocationChange = (id: string, location: StorageLocation) =>
     patch((s) => ({ detected: s.detected.map((d) => (d.id === id ? { ...d, location } : d)) }));
-  const suggestDetectedDetails = (id: string) =>
-    patch((s) => {
-      const item = s.detected.find((d) => d.id === id);
-      if (!item) return {};
-      const target = new Date();
-      target.setDate(target.getDate() + suggestShelfLifeDays(item.icon));
-      const expiryDate = toISODate(target);
-      const location = guessLocation(item.name);
-      return { detected: s.detected.map((d) => (d.id === id ? { ...d, expiryDate, location } : d)) };
-    });
+  const suggestDetectedDetails = (id: string) => {
+    const item = state.detected.find((d) => d.id === id);
+    if (!item || state.detectedAutoFillLoadingId) return;
+    patch({ detectedAutoFillLoadingId: id });
+    suggestItemDetails(item.name, item.icon)
+      .then(({ shelf_life_days, location }) => {
+        const target = new Date();
+        target.setDate(target.getDate() + shelf_life_days);
+        const expiryDate = toISODate(target);
+        patch((s) => ({
+          detected: s.detected.map((d) => (d.id === id ? { ...d, expiryDate, location } : d)),
+          detectedAutoFillLoadingId: null,
+        }));
+      })
+      .catch((err) => {
+        patch({ detectedAutoFillLoadingId: null, syncError: describeError(err, "Couldn't get a suggestion for that item.") });
+      });
+  };
 
   const onManualNameChange = (value: string) =>
     patch((s) => {
@@ -1235,12 +1295,20 @@ export function useThatFridge() {
   const onManualIconChange = (value: string) => patch({ manualIcon: value, manualIconAuto: false });
   const onManualExpiryDateChange = (value: string) => patch({ manualExpiryDate: value });
   const onManualLocationChange = (location: StorageLocation) => patch({ manualLocation: location });
-  const suggestManualDetails = () =>
-    patch((s) => {
-      const target = new Date();
-      target.setDate(target.getDate() + suggestShelfLifeDays(s.manualIcon));
-      return { manualExpiryDate: toISODate(target), manualLocation: guessLocation(s.manualName) };
-    });
+  const suggestManualDetails = () => {
+    const name = state.manualName.trim();
+    if (!name || state.manualAutoFillLoading) return;
+    patch({ manualAutoFillLoading: true });
+    suggestItemDetails(name, state.manualIcon)
+      .then(({ shelf_life_days, location }) => {
+        const target = new Date();
+        target.setDate(target.getDate() + shelf_life_days);
+        patch({ manualExpiryDate: toISODate(target), manualLocation: location, manualAutoFillLoading: false });
+      })
+      .catch((err) => {
+        patch({ manualAutoFillLoading: false, syncError: describeError(err, "Couldn't get a suggestion for that item.") });
+      });
+  };
   const onManualNoteChange = (value: string) => patch({ manualNote: value });
   const confirmManualAdd = async () => {
     const name = state.manualName.trim();
@@ -1406,6 +1474,7 @@ export function useThatFridge() {
     sendMessage,
     askQuick,
     activateAgent,
+    ensureAgentInsight,
     dismissAgentInsight,
     goHome,
     goTab,

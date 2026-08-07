@@ -52,4 +52,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(ChatHistory::class);
     }
+
+    public function usageHistory(): HasMany
+    {
+        return $this->hasMany(UsageHistory::class);
+    }
 }

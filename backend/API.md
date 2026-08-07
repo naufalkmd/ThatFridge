@@ -197,6 +197,27 @@ Always created/modified under a parent section. **This is the contract Track B's
 
 ---
 
+## Item detail suggestions
+
+### `POST /items/suggest-details` 🔒
+
+Backs the Add-item form's "Auto-fill" button. Stateless — the item doesn't need to exist yet, since this runs while the form is still being filled in.
+
+**Body**
+```json
+{ "name": "Sourdough bread", "icon": "bread" }
+```
+`icon` is optional.
+
+**200**
+```json
+{ "shelf_life_days": 3, "location": "pantry" }
+```
+
+Calls the same OpenRouter model as `/chat`. Without `OPENROUTER_API_KEY` configured, or if the call fails, falls back to a small static lookup table server-side (see `AgentService::fallbackItemSuggestion`) so the button still does something reasonable offline.
+
+---
+
 ## Shopping list
 
 Flat list, scoped directly to the user (not nested under a fridge).
@@ -278,6 +299,41 @@ Returns all events across all of the current user's fridges, newest first.
 **Body** `{ "done": true }`
 
 **200** — updated event, same shape as above.
+
+---
+
+## Usage history
+
+Tracks items the user has used up (see `POST /usage-history`), scoped per user. This is what backs the "AI Data & Memory" screen's "Personalization Memory" section, and is fed back into the Shopkeeper agent's prompt as real context (see `AgentService::getSystemPrompt`'s `$usageContext`) — not just a locally-displayed log.
+
+### `GET /usage-history` 🔒
+
+Newest-used first.
+
+**200**
+```json
+{
+  "data": [
+    { "id": "3", "key": "bananas", "name": "Bananas", "icon": "banana", "count": 1, "lastAt": 1786036186000 }
+  ]
+}
+```
+
+### `POST /usage-history` 🔒
+
+Records that an item was used up. Upserts by a normalized `key` (lowercased, trimmed `name`) scoped to the user — an existing entry gets `count` incremented and `last_used_at` bumped rather than a duplicate row being created.
+
+**Body** `{ "name": "Bananas", "icon": "banana" }`
+
+**200** — the created/updated entry, same shape as above.
+
+### `DELETE /usage-history/{usageHistory}` 🔒
+
+Removes one entry. **204**.
+
+### `DELETE /usage-history` 🔒
+
+Clears every entry for the current user. **204**.
 
 ---
 

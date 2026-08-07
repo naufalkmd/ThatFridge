@@ -103,7 +103,7 @@ export default function FoodHubScreen() {
 
   const agentName = AGENT_NAME_BY_TAB[activeTab];
   const insightText = state.agentInsights[agentName];
-  const isActivating = state.agentInsightLoading === agentName;
+  const isActivating = !!state.agentInsightLoading[agentName];
 
   const riskCount = allItems.filter((i) => i.freshness < 30).length;
   const watchCount = allItems.filter((i) => i.freshness >= 30 && i.freshness < 60).length;

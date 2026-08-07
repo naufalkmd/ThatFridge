@@ -122,6 +122,7 @@ export interface NotificationPrefs {
 }
 
 export interface UsageHistoryEntry {
+  id: string;
   key: string;
   name: string;
   icon: string;

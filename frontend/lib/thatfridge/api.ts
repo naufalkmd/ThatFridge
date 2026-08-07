@@ -1,4 +1,4 @@
-import type { CurrentUser, Fridge, NotificationEvent, NotificationPrefs, Recipe, Section, ShoppingItem, StorageLocation } from "./types";
+import type { CurrentUser, Fridge, NotificationEvent, NotificationPrefs, Recipe, Section, ShoppingItem, StorageLocation, UsageHistoryEntry } from "./types";
 import { RECIPES } from "./data";
 import { apiFetch, setToken, type RawItem, toClientItem } from "./apiClient";
 
@@ -264,11 +264,12 @@ export function sendChatMessage(
   message: string,
   agent: ChatAgentName,
   inventory?: string,
-  sessionId?: string | null
+  sessionId?: string | null,
+  usageHistory?: string
 ): Promise<SendChatMessageResult> {
   return apiFetch<SendChatMessageResult>("/chat", {
     method: "POST",
-    body: JSON.stringify({ message, agent, inventory, session_id: sessionId || undefined }),
+    body: JSON.stringify({ message, agent, inventory, session_id: sessionId || undefined, usage_history: usageHistory }),
   });
 }
 
@@ -309,4 +310,42 @@ export async function fetchChatSessionMessages(sessionId: string): Promise<ChatH
 
 export async function deleteChatSession(sessionId: string): Promise<void> {
   await apiFetch(`/chat/sessions/${sessionId}`, { method: "DELETE" });
+}
+
+export interface ItemDetailsSuggestion {
+  shelf_life_days: number;
+  location: StorageLocation;
+}
+
+// Backs the Add-item form's "Auto-fill" button — previously a static lookup table with no
+// AI call despite the sparkle-icon styling; now asks the model, with the same lookup table
+// kept server-side purely as an offline/no-key fallback (see AgentService::suggestItemDetails).
+export function suggestItemDetails(name: string, icon?: string): Promise<ItemDetailsSuggestion> {
+  return apiFetch<ItemDetailsSuggestion>("/items/suggest-details", {
+    method: "POST",
+    body: JSON.stringify({ name, icon }),
+  });
+}
+
+export function fetchUsageHistory(): Promise<UsageHistoryEntry[]> {
+  return apiFetch<UsageHistoryEntry[]>("/usage-history");
+}
+
+// Called when an item is used up/discarded. The backend increments the existing entry for
+// this item name or creates one — this record is what the Shopkeeper agent's prompt actually
+// reads (see AgentService::getSystemPrompt), making the "AI Data & Memory" screen's claim
+// that "Shopkeeper remembers items you use often" true instead of a local-only display.
+export function recordItemUsage(name: string, icon: string): Promise<UsageHistoryEntry> {
+  return apiFetch<UsageHistoryEntry>("/usage-history", {
+    method: "POST",
+    body: JSON.stringify({ name, icon }),
+  });
+}
+
+export function deleteUsageHistoryEntryApi(id: string): Promise<void> {
+  return apiFetch<void>(`/usage-history/${id}`, { method: "DELETE" });
+}
+
+export function clearUsageHistoryApi(): Promise<void> {
+  return apiFetch<void>("/usage-history", { method: "DELETE" });
 }

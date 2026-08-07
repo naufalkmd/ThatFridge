@@ -79,7 +79,7 @@ export default function AIDataScreen() {
                     </div>
                   </div>
                   <div
-                    onClick={() => actions.deleteUsageHistoryEntry(h.key)}
+                    onClick={() => actions.deleteUsageHistoryEntry(h.id)}
                     style={{ width: 30, height: 30, borderRadius: 15, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flex: "none" }}
                   >
                     <Trash2 size={15} color="rgba(22,50,92,0.35)" strokeWidth={2} />

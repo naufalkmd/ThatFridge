@@ -13,6 +13,7 @@ use App\Http\Controllers\NotificationEventController;
 use App\Http\Controllers\NotificationPrefController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\ShoppingItemController;
+use App\Http\Controllers\UsageHistoryController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes (public)
@@ -43,6 +44,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/sessions/{sessionId}', [AgentController::class, 'sessionMessages']);
         Route::delete('/sessions/{sessionId}', [AgentController::class, 'deleteSession']);
     });
+
+    Route::post('/items/suggest-details', [AgentController::class, 'suggestItemDetails']);
     
     Route::get('/fridges', [FridgeController::class, 'index']);
     Route::post('/fridges', [FridgeController::class, 'store']);
@@ -68,4 +71,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/notification-events', [NotificationEventController::class, 'index']);
     Route::patch('/notification-events/{notificationEvent}', [NotificationEventController::class, 'update']);
+
+    Route::get('/usage-history', [UsageHistoryController::class, 'index']);
+    Route::post('/usage-history', [UsageHistoryController::class, 'store']);
+    Route::delete('/usage-history', [UsageHistoryController::class, 'clear']);
+    Route::delete('/usage-history/{usageHistory}', [UsageHistoryController::class, 'destroy']);
 });

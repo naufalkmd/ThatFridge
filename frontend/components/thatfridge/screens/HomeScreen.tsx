@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Bell, ChevronDown, ChevronLeft, ChevronRight, Package, Palette, Refrigerator, Sparkles, TriangleAlert, X } from "lucide-react";
-import { RECIPE_BY_ICON } from "@/lib/thatfridge/data";
 import { getExpiringOwnedItems, getFridgeHeroViews, getGuardianItem, getLowStockItem, getRecipesView, getScopeLabel, getScopedItems } from "@/lib/thatfridge/selectors";
 import { daysLabel, freshColor } from "@/lib/thatfridge/utils";
 import { useThatFridgeCtx } from "../ThatFridgeContext";
@@ -112,20 +111,11 @@ export default function HomeScreen() {
   const guardianItem = getGuardianItem(state);
   const lowStockItem = getLowStockItem(state);
   const scopedItems = getScopedItems(state);
+  const hasItems = scopedItems.length > 0;
 
   const totalItemCount = scopedItems.length;
   const expiringCount = scopedItems.filter((i) => i.freshness < 50).length;
   const suggestionCount = getRecipesView(state).filter((r) => r.haveCount > 0).length;
-
-  const chefMessage = guardianItem
-    ? `Try "${RECIPE_BY_ICON[guardianItem.icon] || "a quick stir-fry"}" tonight using your ${guardianItem.name.toLowerCase()}.`
-    : "Your kitchen looks well stocked tonight.";
-
-  const guardianMessage = guardianItem
-    ? guardianItem.freshness < 30
-      ? `${guardianItem.name} needs attention today — down to ${guardianItem.freshness}% freshness.`
-      : `Use ${guardianItem.name.toLowerCase()} within ${guardianItem.days} day${guardianItem.days === 1 ? "" : "s"} for best quality.`
-    : "";
 
   // Only "expiring" events are generated server-side (the daily freshness cron, one per
   // item — see backend/API.md); low-stock and recipe tips have no backend notification
@@ -141,6 +131,25 @@ export default function HomeScreen() {
   const guardianVisible = !!guardianItem && dismissedGuardianFor !== guardianItem.id && !isEventDone(guardianEventId);
   const lowStockVisible = !!lowStockItem && dismissedLowStockFor !== lowStockItem.id;
   const chefVisible = dismissedChefFor !== chefKey;
+
+  // These cards used to interpolate a canned template ("Try X tonight...") and label it
+  // Chef/Guardian/Shopkeeper — styled as AI advice but never actually asked an agent
+  // anything. They now show the real per-agent chat response (same call FoodHub's
+  // "Activate {agent}" button makes), fetched once per session via ensureAgentInsight.
+  const chefMessage = !hasItems
+    ? "Your kitchen looks well stocked tonight."
+    : state.agentInsights.Chef ?? (state.agentInsightLoading.Chef ? "Thinking…" : "");
+  const guardianMessage = state.agentInsights.Guardian ?? (state.agentInsightLoading.Guardian ? "Thinking…" : "");
+  const shopkeeperMessage = state.agentInsights.Shopkeeper ?? (state.agentInsightLoading.Shopkeeper ? "Thinking…" : "");
+
+  useEffect(() => {
+    if (guardianVisible) actions.ensureAgentInsight("Guardian");
+    if (chefVisible && hasItems) actions.ensureAgentInsight("Chef");
+    if (lowStockVisible) actions.ensureAgentInsight("Shopkeeper");
+    // actions is a fresh object every render; guardianVisible/chefVisible/lowStockVisible/
+    // hasItems are the only things this effect should react to.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guardianVisible, chefVisible, lowStockVisible, hasItems]);
 
   const dotCount = heroSlideCount;
   const pendingNotifications = state.notificationEvents.filter((n) => !n.done).length;
@@ -455,9 +464,7 @@ export default function HomeScreen() {
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.4, color: "#16325c" }}>LOW STOCK</div>
               <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#3f8f5c", background: "#3f8f5c1a", padding: "2px 7px", borderRadius: 6 }}>SHOPKEEPER</div>
             </div>
-            <div style={{ fontSize: 13.5, color: "#16325c" }}>
-              {lowStockItem.name} — {lowStockItem.note.toLowerCase()}
-            </div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.4, color: "#16325c" }}>{shopkeeperMessage}</div>
           </div>
         </SwipeToClear>
       )}
@@ -795,9 +802,7 @@ export default function HomeScreen() {
                   <div style={{ fontSize: 12.5, fontWeight: 800 }}>Shopkeeper</div>
                   <div style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 0.3, color: "#3f8f5c", background: "#3f8f5c1a", padding: "2px 7px", borderRadius: 6 }}>LOW STOCK</div>
                 </div>
-                <div style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.75)" }}>
-                  {lowStockItem.name} — {lowStockItem.note.toLowerCase()}
-                </div>
+                <div style={{ fontSize: 12, lineHeight: 1.5, color: "rgba(22,50,92,0.75)" }}>{shopkeeperMessage}</div>
               </div>
             )}
           </div>

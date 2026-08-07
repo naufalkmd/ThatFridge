@@ -40,15 +40,28 @@ const labelStyle: React.CSSProperties = {
 
 const AUTO_FILL_COLOR = "#7a5cc9";
 
-function AutoFillButton({ onClick }: { onClick: () => void }) {
+function AutoFillButton({ onClick, loading }: { onClick: () => void; loading?: boolean }) {
   return (
     <div
-      onClick={onClick}
-      title="Auto-fill expiry date and storage location"
-      style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 10px", borderRadius: 10, background: `${AUTO_FILL_COLOR}1a`, color: AUTO_FILL_COLOR, fontSize: 11.5, fontWeight: 700, cursor: "pointer", flex: "none" }}
+      onClick={loading ? undefined : onClick}
+      title="Ask the AI to suggest an expiry date and storage location"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "0 10px",
+        borderRadius: 10,
+        background: `${AUTO_FILL_COLOR}1a`,
+        color: AUTO_FILL_COLOR,
+        fontSize: 11.5,
+        fontWeight: 700,
+        cursor: loading ? "default" : "pointer",
+        opacity: loading ? 0.6 : 1,
+        flex: "none",
+      }}
     >
       <Sparkles size={13} strokeWidth={2.2} />
-      Auto-fill
+      {loading ? "Thinking…" : "Auto-fill"}
     </div>
   );
 }
@@ -688,7 +701,7 @@ export default function AddScreen() {
                     style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "#eaf6ff", borderRadius: 10, padding: "8px 10px", fontSize: 12.5, color: "#16325c" }}
                   />
                   <LocationPicker value={d.location} onChange={(loc) => actions.onDetectedLocationChange(d.id, loc)} />
-                  <AutoFillButton onClick={() => actions.suggestDetectedDetails(d.id)} />
+                  <AutoFillButton onClick={() => actions.suggestDetectedDetails(d.id)} loading={state.detectedAutoFillLoadingId === d.id} />
                 </div>
               </div>
             ))}
@@ -796,7 +809,7 @@ export default function AddScreen() {
                   onChange={(e) => actions.onManualExpiryDateChange(e.target.value)}
                   style={{ ...fieldStyle, flex: 1 }}
                 />
-                <AutoFillButton onClick={actions.suggestManualDetails} />
+                <AutoFillButton onClick={actions.suggestManualDetails} loading={state.manualAutoFillLoading} />
               </div>
             </div>
             <div>

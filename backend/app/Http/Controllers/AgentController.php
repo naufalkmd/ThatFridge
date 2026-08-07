@@ -114,13 +114,15 @@ class AgentController extends Controller
             'message' => 'required|string|max:1000',
             'agent' => 'required|in:Chef,Guardian,Organizer,Shopkeeper',
             'inventory' => 'nullable|string', // JSON string of inventory for context
+            'usage_history' => 'nullable|string', // frequently-used-items summary for context
             'session_id' => 'nullable|uuid',
         ]);
 
         $result = $this->agentService->chat(
             $request->input('message'),
             $request->input('agent'),
-            $request->input('inventory')
+            $request->input('inventory'),
+            $request->input('usage_history')
         );
 
         if (!$result) {
@@ -144,5 +146,22 @@ class AgentController extends Controller
             'agent_response' => $record->agent_response,
             'created_at' => $record->created_at->toIso8601String(),
         ], 200);
+    }
+
+    /**
+     * Suggest a shelf life and storage location for an item name, for the Add-item form's
+     * "Auto-fill" button. Stateless - no item needs to exist yet, since this runs while the
+     * form is still being filled in.
+     */
+    public function suggestItemDetails(Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'icon' => 'nullable|string|max:255',
+        ]);
+
+        $suggestion = $this->agentService->suggestItemDetails($data['name'], $data['icon'] ?? null);
+
+        return response()->json($suggestion, 200);
     }
 }
