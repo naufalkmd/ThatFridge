@@ -112,6 +112,7 @@ export interface UpdateItemInput {
   location?: StorageLocation;
   quantity?: number;
   expiry_date?: string;
+  shelf_life_days?: number;
   note?: string;
 }
 

@@ -72,7 +72,7 @@ export default function ItemDetailSheet() {
             </select>
           </div>
 
-          <div style={{ marginBottom: 22 }}>
+          <div style={{ marginBottom: 14 }}>
             <div style={labelStyle}>PICTURE</div>
             <div
               onClick={() => setShowIconPicker((v) => !v)}
@@ -124,6 +124,26 @@ export default function ItemDetailSheet() {
                 </div>
               </div>
             )}
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <div style={labelStyle}>BEST BEFORE</div>
+            <input
+              type="date"
+              value={state.editExpiryDate}
+              onChange={(e) => actions.onEditExpiryDateChange(e.target.value)}
+              style={fieldStyle}
+            />
+          </div>
+
+          <div style={{ marginBottom: 22 }}>
+            <div style={labelStyle}>NOTE (OPTIONAL)</div>
+            <input
+              value={state.editNote}
+              onChange={(e) => actions.onEditNoteChange(e.target.value)}
+              placeholder="e.g. 2 loaves"
+              style={fieldStyle}
+            />
           </div>
 
           <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>

@@ -147,6 +147,8 @@ export interface ThatFridgeState {
   editSectionId: string;
   editIcon: string;
   editFridgeIndex: number;
+  editExpiryDate: string;
+  editNote: string;
   addStep: number;
   addFridgeIndex: number;
   scanMethod: ScanMethod | null;
@@ -222,6 +224,8 @@ function initialState(): ThatFridgeState {
     editSectionId: "",
     editIcon: "",
     editFridgeIndex: 0,
+    editExpiryDate: "",
+    editNote: "",
     addStep: 0,
     addFridgeIndex: 0,
     scanMethod: null,
@@ -887,18 +891,27 @@ export function useThatFridge() {
     if (!state.selectedItemId) return;
     const found = findItem(state, state.selectedItemId);
     if (!found) return;
+    // The client Item shape only keeps the computed `days`, not the raw expiry_date the
+    // server derived it from — reconstruct the same calendar date from it (today + days),
+    // which is exactly invertible since the server computes days as a whole-day diff.
+    const target = new Date();
+    target.setDate(target.getDate() + found.item.days);
     patch({
       isEditingItem: true,
       editName: found.item.name,
       editSectionId: found.section.id,
       editIcon: found.item.icon,
       editFridgeIndex: found.fridgeIndex,
+      editExpiryDate: toISODate(target),
+      editNote: found.item.note,
     });
   };
   const cancelEditItem = () => patch({ isEditingItem: false });
   const onEditNameChange = (value: string) => patch({ editName: value });
   const onEditSectionChange = (value: string) => patch({ editSectionId: value });
   const onEditIconChange = (value: string) => patch({ editIcon: value });
+  const onEditExpiryDateChange = (value: string) => patch({ editExpiryDate: value });
+  const onEditNoteChange = (value: string) => patch({ editNote: value });
   const confirmEditItem = () => {
     const id = state.selectedItemId;
     if (!id) return;
@@ -909,14 +922,20 @@ export function useThatFridge() {
     const { item: prevItem, section: fromSection } = found;
     const toSectionId = state.editSectionId || fromSection.id;
     const icon = state.editIcon || prevItem.icon;
+    const note = state.editNote.trim();
     const moved = toSectionId !== fromSection.id;
+
+    const expiryDate = state.editExpiryDate;
+    const shelfLifeDays = Math.max(1, daysUntil(expiryDate));
+    const newDays = daysUntil(expiryDate);
+    const newFreshness = Math.max(0, Math.min(100, Math.round((newDays / shelfLifeDays) * 100)));
 
     patch((s) => {
       const found2 = findItem(s, id);
       if (!found2) return {};
       const { item, section: fromSec, fridgeIndex } = found2;
       const fridge = s.fridges[fridgeIndex];
-      const updatedItem = { ...item, name, icon };
+      const updatedItem = { ...item, name, icon, note, days: newDays, freshness: newFreshness };
 
       const sections =
         toSectionId === fromSec.id
@@ -935,7 +954,14 @@ export function useThatFridge() {
       };
     });
 
-    updateItem(id, { name, icon, ...(moved ? { section_id: toSectionId } : {}) }).catch((err) => {
+    updateItem(id, {
+      name,
+      icon,
+      note,
+      expiry_date: expiryDate,
+      shelf_life_days: shelfLifeDays,
+      ...(moved ? { section_id: toSectionId } : {}),
+    }).catch((err) => {
       patch((s) => {
         const found3 = findItem(s, id);
         if (!found3) return {};
@@ -1494,6 +1520,8 @@ export function useThatFridge() {
     onEditNameChange,
     onEditSectionChange,
     onEditIconChange,
+    onEditExpiryDateChange,
+    onEditNoteChange,
     confirmEditItem,
     undoLastRemoval,
     dismissSyncError,

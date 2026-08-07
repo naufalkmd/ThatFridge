@@ -9,6 +9,7 @@ export function freshColor(freshness: number): string {
 }
 
 export function daysLabel(days: number): string {
+  if (days < 0) return "Expired";
   return days <= 1 ? "Today" : `${days}d left`;
 }
 
